@@ -316,13 +316,15 @@ class ParticleFiltering(ParticleGibbs):
     ) -> str | ParticleFilteringResult:
         result = super().infer(lm, prompt, budget, return_response_only=False)
 
-        if return_response_only:
-            return result.the_one
-
         # Flatten the single-iteration result
-        return ParticleFilteringResult(
+        flattened_result = ParticleFilteringResult(
             responses_lst=result.responses_lst[0],
             log_weights_lst=result.log_weights_lst[0],
             selected_index=result.selected_index,
             steps_used_lst=result.steps_used_lst[0],
         )
+
+        if return_response_only:
+            return flattened_result.the_one
+
+        return flattened_result
