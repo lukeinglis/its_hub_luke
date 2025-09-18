@@ -46,10 +46,10 @@ class BestOfN(AbstractScalingAlgorithm):
         # Currently hardcoded to True, will be addressed in future PR
         batched = True
         if batched:
-            scores = self.orm.score(chat_messages, responses)
+            scores = self.orm.score(chat_messages, response_contents)
         else:
             scores = []
-            for r in responses:
+            for r in response_contents:
                 scores.append(self.orm.score(chat_messages, r))
 
 
