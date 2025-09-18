@@ -19,7 +19,7 @@ from its_hub.algorithms.self_consistency import (
     create_regex_projection_function,
 )
 from its_hub.lms import OpenAICompatibleLanguageModel, StepGeneration
-from its_hub.types import ChatMessage
+from its_hub.types import ChatMessage, ChatMessages
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -262,21 +262,15 @@ async def chat_completions(request: ChatCompletionRequest) -> ChatCompletionResp
         if request.temperature is not None:
             lm.temperature = request.temperature
 
-        # Set system prompt if provided
-        if len(request.messages) == 2:
-            lm.system_prompt = request.messages[0].content
-        else:
-            lm.system_prompt = None
-
-        # Extract user prompt
-        prompt = request.messages[-1].content
+        # Create ChatMessages from the full conversation history
+        chat_messages = ChatMessages(request.messages)
 
         logger.info(
             f"Processing request for model={request.model}, budget={request.budget}"
         )
 
-        # Generate response using scaling algorithm
-        response_content = SCALING_ALG.infer(lm, prompt, request.budget)
+        # Generate response using scaling algorithm with full conversation context
+        response_content = SCALING_ALG.infer(lm, chat_messages, request.budget)
 
         # TODO: Implement proper token counting
         response = ChatCompletionResponse(
