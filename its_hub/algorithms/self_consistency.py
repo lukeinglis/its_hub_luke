@@ -118,11 +118,10 @@ class SelfConsistency(AbstractScalingAlgorithm):
         return_response_only: bool = True,
     ) -> str | SelfConsistencyResult:
         # Convert to uniform ChatMessages format
-        if not isinstance(prompt_or_messages, ChatMessages):
-            prompt_or_messages = ChatMessages(prompt_or_messages)
+        chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
 
         # generate responses
-        responses = lm.generate(prompt_or_messages.to_batch(budget))
+        responses = lm.generate(chat_messages.to_batch(budget))
 
         # extract content from message dict responses for projection
         # TODO: Add tool-vote capability to handle tool calls in consistency voting

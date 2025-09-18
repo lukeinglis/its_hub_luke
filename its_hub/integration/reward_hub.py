@@ -19,8 +19,7 @@ class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
         response_or_responses: str | list[str],
     ) -> float:
         # Convert to uniform ChatMessages format
-        if not isinstance(prompt_or_messages, ChatMessages):
-            prompt_or_messages = ChatMessages(prompt_or_messages)
+        chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
 
         is_single_response = isinstance(response_or_responses, str)
         responses = (
@@ -29,10 +28,8 @@ class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
 
         # Build conversation messages with responses (convert system to user for reward model compatibility)
         base_msgs = [
-            ChatMessage(role="user", content=f"System: {msg.content}")
-            if msg.role == "system"
-            else msg
-            for msg in prompt_or_messages.to_chat_messages()
+            ChatMessage(role="user", content=f"System: {msg.content}") if msg.role == "system" else msg
+            for msg in chat_messages.to_chat_messages()
         ]
         messages = [
             [

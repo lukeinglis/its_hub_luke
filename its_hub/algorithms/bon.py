@@ -33,11 +33,10 @@ class BestOfN(AbstractScalingAlgorithm):
         return_response_only: bool = True,
     ) -> str | BestOfNResult:
         # Convert to uniform ChatMessages format
-        if not isinstance(prompt_or_messages, ChatMessages):
-            prompt_or_messages = ChatMessages(prompt_or_messages)
+        chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
 
         # generate responses
-        responses = lm.generate(prompt_or_messages.to_batch(budget))
+        responses = lm.generate(chat_messages.to_batch(budget))
 
         # extract content from message dict responses
         response_contents = [extract_content_from_lm_response(r) for r in responses]
@@ -47,11 +46,12 @@ class BestOfN(AbstractScalingAlgorithm):
         # Currently hardcoded to True, will be addressed in future PR
         batched = True
         if batched:
-            scores = self.orm.score(prompt_or_messages, response_contents)
+            scores = self.orm.score(chat_messages, responses)
         else:
             scores = []
-            for r in response_contents:
-                scores.append(self.orm.score(prompt_or_messages, r))
+            for r in responses:
+                scores.append(self.orm.score(chat_messages, r))
+
 
         # select the best response
         selected_index = scores.index(max(scores))
