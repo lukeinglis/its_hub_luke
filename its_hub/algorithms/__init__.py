@@ -51,7 +51,6 @@ class MetropolisHastings(AbstractScalingAlgorithm):
         return_response_only: bool = True,
     ) -> str | MetropolisHastingsResult:
         # Convert to uniform ChatMessages format
-        if not isinstance(prompt_or_messages, ChatMessages):
-            prompt_or_messages = ChatMessages(prompt_or_messages)
+        chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
         # TODO: Implement Metropolis-Hastings algorithm
         raise NotImplementedError("Metropolis-Hastings algorithm not yet implemented")

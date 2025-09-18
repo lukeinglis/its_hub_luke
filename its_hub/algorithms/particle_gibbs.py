@@ -192,8 +192,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         return_response_only: bool = True,
     ) -> str | ParticleGibbsResult:
         # Convert to uniform ChatMessages format
-        if not isinstance(prompt_or_messages, ChatMessages):
-            prompt_or_messages = ChatMessages(prompt_or_messages)
+        chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
         assert budget % self.num_iterations == 0, (
             "budget must be divisible by num_iterations"
         )
@@ -218,7 +217,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
 
             while not all(p.is_stopped for p in particles):
                 # TODO: Update _propagate to support native ChatMessages format instead of string conversion
-                particles = self._propagate(lm, particles, prompt_or_messages.to_string(), batched=True)
+                particles = self._propagate(lm, particles, chat_messages.to_string(), batched=True)
                 current_step += 1  # Increment after propagation
 
                 # resampling (free) particles
