@@ -377,8 +377,9 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         stop: str | None = None,
         max_tokens: int | None = None,
         temperature: float | list[float] | None = None,
-        include_stop_str_in_output: bool
-        | None = None,  # If True, keep stop strings in generated text; if False, strip them
+        include_stop_str_in_output: bool | None = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> str | list[str]:
         # Check if we have a single list of messages or a list of message lists
         # Single list: [{"role": "user", "content": "..."}] or [Message(...)]
