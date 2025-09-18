@@ -148,6 +148,7 @@ class BeamSearch(AbstractScalingAlgorithm):
         ]
 
         while not all(c.is_stopped for c in candidates):
+            # TODO: Update _search_one_level to support native ChatMessages format instead of string conversion
             candidates = self._search_one_level(lm, candidates, prompt_or_messages.to_string(), batched=True)
 
             # get the top beam_width candidates
