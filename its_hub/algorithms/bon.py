@@ -7,6 +7,7 @@ from its_hub.base import (
     AbstractScalingResult,
 )
 from its_hub.types import ChatMessage, ChatMessages
+from its_hub.utils import extract_content_from_lm_response
 
 
 @dataclass
@@ -38,15 +39,18 @@ class BestOfN(AbstractScalingAlgorithm):
         # generate responses
         responses = lm.generate(prompt_or_messages.to_batch(budget))
 
+        # extract content from message dict responses
+        response_contents = [extract_content_from_lm_response(r) for r in responses]
+
         # score responses
         # TODO: make batched a configurable parameter or remove non-batched branch
         # Currently hardcoded to True, will be addressed in future PR
         batched = True
         if batched:
-            scores = self.orm.score(prompt_or_messages, responses)
+            scores = self.orm.score(prompt_or_messages, response_contents)
         else:
             scores = []
-            for r in responses:
+            for r in response_contents:
                 scores.append(self.orm.score(prompt_or_messages, r))
 
         # select the best response
@@ -54,7 +58,7 @@ class BestOfN(AbstractScalingAlgorithm):
 
         # return the result
         result = BestOfNResult(
-            responses=responses,
+            responses=response_contents,
             scores=scores,
             selected_index=selected_index,
         )

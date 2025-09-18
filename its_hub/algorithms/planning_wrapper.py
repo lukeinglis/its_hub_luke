@@ -9,6 +9,7 @@ from its_hub.base import (
     AbstractScalingResult,
 )
 from its_hub.types import ChatMessage, ChatMessages
+from its_hub.utils import extract_content_from_lm_response
 
 
 @dataclass
@@ -62,7 +63,7 @@ class PlanParser:
         matches = re.findall(approach_pattern, plan, re.IGNORECASE | re.MULTILINE)
 
         for match in matches:
-            approach_num, approach_desc = match
+            _approach_num, approach_desc = match
             # Clean up the approach description
             approach_desc = approach_desc.strip()
             approaches.append(approach_desc)
@@ -150,8 +151,11 @@ class PlanningWrapper(AbstractScalingAlgorithm):
         """
         # Step 1: Generate plan (uses 1 generation from budget)
         # TODO: Update PlanningPromptTemplate to support native ChatMessages format instead of string conversion
-        planning_prompt = PlanningPromptTemplate.create_planning_prompt(prompt_or_messages.to_string())
-        plan = lm.generate([ChatMessage(role="user", content=planning_prompt)])
+        planning_prompt = PlanningPromptTemplate.create_planning_prompt(
+            prompt_or_messages.to_string()
+        )
+        plan_response = lm.generate([ChatMessage(role="user", content=planning_prompt)])
+        plan = extract_content_from_lm_response(plan_response)
 
         # Step 2: Parse approaches from plan
         approaches = self.plan_parser.extract_approaches(plan)

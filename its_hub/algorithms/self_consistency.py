@@ -24,7 +24,9 @@ class SelfConsistencyResult(AbstractScalingResult):
         return self.responses[self.selected_index]
 
 
-def _select_most_common_or_random(list_to_select_from: list[str]) -> tuple[Counter, int]:
+def _select_most_common_or_random(
+    list_to_select_from: list[str],
+) -> tuple[Counter, int]:
     # count occurrences of each element
     counts = Counter(list_to_select_from)
 
@@ -44,7 +46,9 @@ def _select_most_common_or_random(list_to_select_from: list[str]) -> tuple[Count
     return counts, selected_index
 
 
-def _select_hierarchical_most_common_or_random(list_to_select_from: list[tuple]) -> tuple[Counter, int]:
+def _select_hierarchical_most_common_or_random(
+    list_to_select_from: list[tuple],
+) -> tuple[Counter, int]:
     if not list_to_select_from:
         raise ValueError("Cannot select from empty list")
 
@@ -120,16 +124,21 @@ class SelfConsistency(AbstractScalingAlgorithm):
         # generate responses
         responses = lm.generate(prompt_or_messages.to_batch(budget))
 
+        # extract content from message dict responses for projection
+        # TODO: Add tool-vote capability to handle tool calls in consistency voting
+        # For now, only vote on message content, ignoring tool calls
+        response_contents = [r.get("content", "") for r in responses]
+
         # project responses into consistency space
         responses_projected = [
-            self.consistency_space_projection_func(r) for r in responses
+            self.consistency_space_projection_func(r) for r in response_contents
         ]
 
         # determine if we're dealing with hierarchical (tuple) or flat (string) projections
         if responses_projected and isinstance(responses_projected[0], tuple):
             # hierarchical consistency space
-            response_counts, selected_index = _select_hierarchical_most_common_or_random(
-                responses_projected
+            response_counts, selected_index = (
+                _select_hierarchical_most_common_or_random(responses_projected)
             )
         else:
             # flat consistency space (backward compatibility)
@@ -139,14 +148,16 @@ class SelfConsistency(AbstractScalingAlgorithm):
 
         # return the result
         result = SelfConsistencyResult(
-            responses=responses,
+            responses=response_contents,
             response_counts=response_counts,
             selected_index=selected_index,
         )
         return result.the_one if return_response_only else result
 
 
-def create_regex_projection_function(patterns: str | list[str]) -> Callable[[str], tuple]:
+def create_regex_projection_function(
+    patterns: str | list[str],
+) -> Callable[[str], tuple]:
     """Create a hierarchical projection function from regex pattern(s).
 
     Args:
@@ -176,7 +187,9 @@ def create_regex_projection_function(patterns: str | list[str]) -> Callable[[str
         patterns = [patterns]
 
     # Compile regex patterns for efficiency
-    compiled_patterns = [re.compile(pattern, re.DOTALL | re.IGNORECASE) for pattern in patterns]
+    compiled_patterns = [
+        re.compile(pattern, re.DOTALL | re.IGNORECASE) for pattern in patterns
+    ]
 
     def projection_function(response: str) -> tuple:
         """Extract features from response using compiled regex patterns."""
