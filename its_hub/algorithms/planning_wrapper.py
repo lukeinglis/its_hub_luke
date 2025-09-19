@@ -20,12 +20,12 @@ class PlanningWrappedResult(AbstractScalingResult):
     approaches: list[str]
     approach_results: dict[str, AbstractScalingResult]
     approach_budgets: dict[str, int]
-    combined_responses: list[str]
+    combined_responses: list[dict]  # Keep original message format with tool calls
     best_approach: str
     best_approach_result: AbstractScalingResult
 
     @property
-    def the_one(self) -> str:
+    def the_one(self) -> dict:
         return self.best_approach_result.the_one
 
 
@@ -134,7 +134,9 @@ class PlanningWrapper(AbstractScalingAlgorithm):
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
         budget: int,
         return_response_only: bool = True,
-    ) -> str | PlanningWrappedResult:
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | PlanningWrappedResult:
         # Convert to uniform ChatMessages format
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
         """Run Planning-Enhanced version of the base algorithm.
@@ -191,7 +193,7 @@ class PlanningWrapper(AbstractScalingAlgorithm):
 
             # Run base algorithm for this approach
             approach_result = self.base_algorithm.infer(
-                lm, approach_prompt, approach_budget, return_response_only=False
+                lm, approach_prompt, approach_budget, return_response_only=False, tools=tools, tool_choice=tool_choice
             )
 
             # Store approach-specific result

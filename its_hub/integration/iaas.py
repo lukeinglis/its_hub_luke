@@ -58,6 +58,14 @@ class ConfigRequest(BaseModel):
     regex_patterns: list[str] | None = Field(
         None, description="Regex patterns for self-consistency projection function"
     )
+    tool_vote: str | None = Field(
+        None, 
+        description="Tool voting strategy: 'tool_name', 'tool_args', 'tool_hierarchical'"
+    )
+    exclude_args: list[str] | None = Field(
+        None,
+        description="Argument names to exclude from tool voting (e.g., timestamp, id)"
+    )
 
     @field_validator("alg")
     @classmethod
@@ -88,6 +96,7 @@ class ConfigRequest(BaseModel):
         if alg in {"particle-filtering", "best-of-n"} and not v:
             raise ValueError(f"rm_name is required when using {alg} algorithm")
         return v
+
 
 
 @app.post("/configure", status_code=status.HTTP_200_OK)
@@ -153,7 +162,11 @@ async def config_service(request: ConfigRequest) -> dict[str, str]:
         elif request.alg == "self-consistency":
             # Create projection function from regex patterns
             projection_func = create_regex_projection_function(request.regex_patterns)
-            SCALING_ALG = SelfConsistency(projection_func)
+            SCALING_ALG = SelfConsistency(
+                projection_func,
+                tool_vote=request.tool_vote,
+                exclude_args=request.exclude_args
+            )
 
         logger.info(f"Successfully configured {request.alg} algorithm")
         return {
@@ -195,6 +208,15 @@ class ChatCompletionRequest(BaseModel):
     )
     max_tokens: int | None = Field(None, ge=1, description="Maximum tokens to generate")
     stream: bool | None = Field(False, description="Stream response (not implemented)")
+    tools: list[dict[str, Any]] | None = Field(
+        None, description="Available tools for the model to call"
+    )
+    tool_choice: str | dict[str, Any] | None = Field(
+        None, description="Tool choice strategy ('auto', 'none', or specific tool)"
+    )
+    return_response_only: bool = Field(
+        True, description="Return only final response or include algorithm metadata"
+    )
 
     @field_validator("messages")
     @classmethod
@@ -227,6 +249,34 @@ class ChatCompletionUsage(BaseModel):
     total_tokens: int = Field(..., description="Total tokens used")
 
 
+def _extract_algorithm_metadata(algorithm_result: Any) -> dict[str, Any] | None:
+    """Extract metadata from algorithm results for API response."""
+    from its_hub.algorithms.self_consistency import SelfConsistencyResult
+
+    if isinstance(algorithm_result, SelfConsistencyResult):
+        return {
+            "algorithm": "self-consistency",
+            "all_responses": algorithm_result.responses,  # Now contains full message dicts with tool calls
+            "response_counts": dict(algorithm_result.response_counts),
+            "selected_index": algorithm_result.selected_index,
+        }
+
+    # TODO: Add metadata extraction for other algorithm result types
+    # elif isinstance(algorithm_result, BestOfNResult):
+    #     return {
+    #         "algorithm": "best-of-n",
+    #         "scores": algorithm_result.scores,
+    #         "selected_index": algorithm_result.selected_index,
+    #         ...
+    #     }
+    # elif isinstance(algorithm_result, BeamSearchResult):
+    #     return {...}
+    # elif isinstance(algorithm_result, ParticleGibbsResult):
+    #     return {...}
+
+    return None
+
+
 class ChatCompletionResponse(BaseModel):
     """Chat completion response."""
 
@@ -236,6 +286,7 @@ class ChatCompletionResponse(BaseModel):
     model: str = Field(..., description="Model used")
     choices: list[ChatCompletionChoice] = Field(..., description="Generated choices")
     usage: ChatCompletionUsage = Field(..., description="Token usage statistics")
+    metadata: dict[str, Any] | None = Field(None, description="Algorithm-specific metadata")
 
 
 @app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
@@ -270,13 +321,34 @@ async def chat_completions(request: ChatCompletionRequest) -> ChatCompletionResp
 
         # Create ChatMessages from the full conversation history
         chat_messages = ChatMessages(request.messages)
+        
+        # Add tools and tool_choice to the ChatMessages for this request
+        if request.tools is not None:
+            chat_messages.tools = request.tools
+        if request.tool_choice is not None:
+            chat_messages.tool_choice = request.tool_choice
 
         logger.info(
             f"Processing request for model={request.model}, budget={request.budget}"
         )
 
         # Generate response using scaling algorithm with full conversation context
-        response_content = SCALING_ALG.infer(lm, chat_messages, request.budget)
+        algorithm_result = SCALING_ALG.infer(lm, chat_messages, request.budget, 
+                                           return_response_only=request.return_response_only,
+                                           tools=request.tools, tool_choice=request.tool_choice)
+        
+        # Extract response content and metadata
+        if not request.return_response_only and hasattr(algorithm_result, 'the_one'):
+            # Got a full result object
+            response_message = algorithm_result.the_one
+            metadata = _extract_algorithm_metadata(algorithm_result)
+        else:
+            # Got just a message dict response
+            response_message = algorithm_result
+            metadata = None
+
+        # Use the selected response directly without any modification
+        response_chat_message = response_message
 
         # TODO: Implement proper token counting
         response = ChatCompletionResponse(
@@ -286,7 +358,7 @@ async def chat_completions(request: ChatCompletionRequest) -> ChatCompletionResp
             choices=[
                 ChatCompletionChoice(
                     index=0,
-                    message=ChatMessage(role="assistant", content=response_content),
+                    message=response_chat_message,
                     finish_reason="stop",
                 )
             ],
@@ -295,10 +367,11 @@ async def chat_completions(request: ChatCompletionRequest) -> ChatCompletionResp
                 completion_tokens=0,  # TODO: Implement token counting
                 total_tokens=0,  # TODO: Implement token counting
             ),
+            metadata=metadata,
         )
 
         logger.info(
-            f"Successfully generated response (length: {len(response_content)})"
+            f"Successfully generated response (content length: {len(response_message.get('content') or '')})"
         )
         return response
 

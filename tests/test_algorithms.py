@@ -97,7 +97,8 @@ class TestSelfConsistency:
         assert len(result.responses) == 4
         assert isinstance(result.response_counts, Counter)
         # "1" appears twice (from "answer1"), should be selected
-        assert result.the_one in ["answer1", "answer1"]
+        assert result.the_one["content"] in ["answer1", "answer1"]
+        assert result.the_one["role"] == "assistant"
 
     def test_self_consistency_hierarchical_projection(self):
         """Test SelfConsistency with hierarchical (tuple) projection function."""
@@ -113,7 +114,8 @@ class TestSelfConsistency:
         assert len(result.responses) == 4
         assert isinstance(result.response_counts, Counter)
         # "a" is most common at level 0, so should select either "a1" or "a2"
-        assert result.the_one in ["a1", "a2"]
+        assert result.the_one["content"] in ["a1", "a2"]
+        assert result.the_one["role"] == "assistant"
 
     def test_self_consistency_return_response_only(self):
         """Test SelfConsistency with return_response_only=True."""
@@ -125,8 +127,9 @@ class TestSelfConsistency:
         sc = SelfConsistency(hierarchical_projection)
         result = sc.infer(mock_lm, "test prompt", budget=4, return_response_only=True)
 
-        assert isinstance(result, str)
-        assert result in ["a1", "a2"]  # Should be one of the "a" responses
+        assert isinstance(result, dict)
+        assert result["content"] in ["a1", "a2"]  # Should be one of the "a" responses
+        assert result["role"] == "assistant"
 
     def test_self_consistency_with_chat_messages_class(self):
         """Test SelfConsistency with ChatMessages class input."""
@@ -144,7 +147,8 @@ class TestSelfConsistency:
         assert isinstance(result, SelfConsistencyResult)
         assert len(result.responses) == 4
         # "1" appears twice (from "answer1"), should be selected
-        assert result.the_one in ["answer1", "answer1"]
+        assert result.the_one["content"] in ["answer1", "answer1"]
+        assert result.the_one["role"] == "assistant"
 
     def test_create_regex_projection_function_single_pattern(self):
         """Test creating projection function from single regex pattern."""
@@ -247,7 +251,7 @@ class TestSelfConsistency:
 
         assert isinstance(result, SelfConsistencyResult)
         # "42" appears 3 times, should be selected over "24" (1 time)
-        extracted_answer = proj_func(result.the_one)[0]
+        extracted_answer = proj_func(result.the_one["content"])[0]
         assert extracted_answer == "42"
 
     def test_create_regex_projection_function_hierarchical_with_self_consistency(self):
@@ -273,7 +277,7 @@ class TestSelfConsistency:
 
         assert isinstance(result, SelfConsistencyResult)
         # "algebra" appears twice (most common approach), so should select from those
-        extracted = proj_func(result.the_one)
+        extracted = proj_func(result.the_one["content"])
         assert extracted[0] == "algebra"  # Should be algebra approach
         assert extracted[1] in ["42", "24"]  # Should be one of the algebra answers
 
@@ -319,7 +323,11 @@ class TestBestOfN:
 
     def test_result_structure(self):
         """Test BestOfNResult data structure."""
-        responses = ["response1", "response2", "response3"]
+        responses = [
+            {"role": "assistant", "content": "response1"},
+            {"role": "assistant", "content": "response2"},
+            {"role": "assistant", "content": "response3"}
+        ]
         scores = [0.5, 0.8, 0.3]
         selected_index = 1
 
@@ -328,7 +336,7 @@ class TestBestOfN:
         assert result.responses == responses
         assert result.scores == scores
         assert result.selected_index == selected_index
-        assert result.the_one == "response2"
+        assert result.the_one["content"] == "response2"
 
     @pytest.mark.parametrize("responses,scores,expected_index,expected_response", [
         (["response1", "response2", "response3"], [0.5, 0.8, 0.3], 1, "response2"),
@@ -344,7 +352,7 @@ class TestBestOfN:
         result = bon.infer(mock_lm, "test prompt", budget=len(responses), return_response_only=False)
 
         assert result.selected_index == expected_index
-        assert result.the_one == expected_response
+        assert result.the_one["content"] == expected_response
 
     def test_return_response_only(self):
         """Test return_response_only parameter."""
@@ -354,7 +362,7 @@ class TestBestOfN:
         bon = BestOfN(mock_orm)
         result = bon.infer(mock_lm, "test prompt", budget=3, return_response_only=True)
 
-        assert result == "response2"
+        assert result["content"] == "response2"
 
     def test_with_chat_messages_string(self):
         """Test BestOfN with ChatMessages wrapping a string."""
@@ -366,7 +374,7 @@ class TestBestOfN:
         result = bon.infer(mock_lm, chat_messages, budget=3, return_response_only=False)
 
         assert isinstance(result, BestOfNResult)
-        assert result.the_one == "response2"
+        assert result.the_one["content"] == "response2"
         assert len(result.responses) == 3
 
     def test_with_chat_messages_conversation(self):
@@ -387,7 +395,7 @@ class TestBestOfN:
         result = bon.infer(mock_lm, chat_messages, budget=3, return_response_only=False)
 
         assert isinstance(result, BestOfNResult)
-        assert result.the_one == "response2"
+        assert result.the_one["content"] == "response2"
         # Verify the reward model received the ChatMessages object
         assert len(result.responses) == 3
 
@@ -403,7 +411,7 @@ class TestBestOfN:
         bon = BestOfN(mock_orm)
         result = bon.infer(mock_lm, messages, budget=2, return_response_only=True)
 
-        assert result == "response2"
+        assert result["content"] == "response2"
 
 
 class TestBeamSearch:
@@ -411,7 +419,11 @@ class TestBeamSearch:
 
     def test_result_structure(self):
         """Test BeamSearchResult data structure."""
-        responses = ["response1", "response2", "response3"]
+        responses = [
+            {"role": "assistant", "content": "response1"},
+            {"role": "assistant", "content": "response2"},
+            {"role": "assistant", "content": "response3"}
+        ]
         scores = [0.5, 0.8, 0.3]
         selected_index = 1
         steps_used = [2, 3, 1]
@@ -422,7 +434,7 @@ class TestBeamSearch:
         assert result.scores == scores
         assert result.selected_index == selected_index
         assert result.steps_used == steps_used
-        assert result.the_one == "response2"
+        assert result.the_one["content"] == "response2"
 
     def test_basic_functionality(self):
         """Test basic beam search functionality."""
@@ -434,7 +446,7 @@ class TestBeamSearch:
 
         result = beam_search.infer(mock_lm, "Solve this problem:", budget=2, return_response_only=True)
 
-        assert isinstance(result, str)
+        assert isinstance(result, dict)
 
     def test_budget_validation(self):
         """Test budget validation constraints."""
@@ -473,7 +485,7 @@ class TestBeamSearch:
         result = beam_search.infer(mock_lm, chat_messages, budget=2, return_response_only=False)
 
         assert isinstance(result, BeamSearchResult)
-        assert isinstance(result.the_one, str)
+        assert isinstance(result.the_one, dict)
 
     def test_with_chat_messages_conversation(self):
         """Test BeamSearch with ChatMessages containing conversation history."""
@@ -490,7 +502,7 @@ class TestBeamSearch:
         beam_search = BeamSearch(sg, mock_prm, beam_width=2)
         result = beam_search.infer(mock_lm, chat_messages, budget=2, return_response_only=True)
 
-        assert isinstance(result, str)
+        assert isinstance(result, dict)
 
 
 class TestParticleGibbs:
@@ -498,7 +510,10 @@ class TestParticleGibbs:
 
     def test_result_structure(self):
         """Test ParticleGibbsResult data structure."""
-        responses_lst = [["response1", "response2"], ["response3", "response4"]]
+        responses_lst = [
+            [{"role": "assistant", "content": "response1"}, {"role": "assistant", "content": "response2"}],
+            [{"role": "assistant", "content": "response3"}, {"role": "assistant", "content": "response4"}]
+        ]
         log_weights_lst = [[0.1, 0.2], [0.3, 0.4]]
         ref_indices_lst = [[0], [1]]
         selected_index = 1
@@ -517,7 +532,7 @@ class TestParticleGibbs:
         assert result.ref_indices_lst == ref_indices_lst
         assert result.selected_index == selected_index
         assert result.steps_used_lst == steps_used_lst
-        assert result.the_one == "response4"
+        assert result.the_one["content"] == "response4"
 
     def test_basic_functionality(self):
         """Test basic particle Gibbs functionality."""
@@ -529,7 +544,7 @@ class TestParticleGibbs:
 
         result = particle_gibbs.infer(mock_lm, "Solve this:", budget=2, return_response_only=True)
 
-        assert isinstance(result, str)
+        assert isinstance(result, dict)
 
     def test_budget_validation(self):
         """Test budget validation for particle Gibbs."""
@@ -543,9 +558,9 @@ class TestParticleGibbs:
             particle_gibbs.infer(mock_lm, "test prompt", budget=4)
 
     @pytest.mark.parametrize("selection_method,expected_type", [
-        (SelectionMethod.ARGMAX, str),
-        (SelectionMethod.SAMPLE, str),
-        ("argmax", str),  # Test string conversion
+        (SelectionMethod.ARGMAX, dict),
+        (SelectionMethod.SAMPLE, dict),
+        ("argmax", dict),  # Test string conversion
     ])
     def test_selection_methods(self, selection_method, expected_type):
         """Test different selection methods."""
@@ -605,7 +620,7 @@ class TestParticleGibbs:
         result = particle_gibbs.infer(mock_lm, chat_messages, budget=2, return_response_only=False)
 
         assert isinstance(result, ParticleGibbsResult)
-        assert isinstance(result.the_one, str)
+        assert isinstance(result.the_one, dict)
 
     def test_with_chat_messages_conversation(self):
         """Test ParticleGibbs with ChatMessages containing conversation history."""
@@ -622,7 +637,7 @@ class TestParticleGibbs:
         particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX)
         result = particle_gibbs.infer(mock_lm, chat_messages, budget=2, return_response_only=True)
 
-        assert isinstance(result, str)
+        assert isinstance(result, dict)
 
 
 class TestParticleFiltering:
@@ -643,7 +658,7 @@ class TestParticleFiltering:
 
         # Test that .the_one property works correctly with flattened structure
         assert result.the_one == result.responses[result.selected_index]
-        assert isinstance(result.the_one, str)
+        assert isinstance(result.the_one, dict)
 
     def test_particle_filtering_return_response_only(self):
         """Test ParticleFiltering with return_response_only=True."""
@@ -655,8 +670,8 @@ class TestParticleFiltering:
         particle_filtering = ParticleFiltering(sg, mock_prm, selection_method=SelectionMethod.ARGMAX)
         result = particle_filtering.infer(mock_lm, "Solve this:", budget=2, return_response_only=True)
 
-        # Should return just the string response
-        assert isinstance(result, str)
+        # Should return just the dict response
+        assert isinstance(result, dict)
         assert result  # Should not be empty
 
     def test_with_chat_messages_string(self):
@@ -671,7 +686,7 @@ class TestParticleFiltering:
         result = particle_filtering.infer(mock_lm, chat_messages, budget=2, return_response_only=False)
 
         assert isinstance(result, ParticleFilteringResult)
-        assert isinstance(result.the_one, str)
+        assert isinstance(result.the_one, dict)
 
     def test_with_chat_messages_conversation(self):
         """Test ParticleFiltering with ChatMessages containing conversation history."""
@@ -688,4 +703,4 @@ class TestParticleFiltering:
         particle_filtering = ParticleFiltering(sg, mock_prm, selection_method=SelectionMethod.ARGMAX)
         result = particle_filtering.infer(mock_lm, chat_messages, budget=2, return_response_only=True)
 
-        assert isinstance(result, str)
+        assert isinstance(result, dict)

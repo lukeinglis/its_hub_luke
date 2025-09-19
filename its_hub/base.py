@@ -58,6 +58,8 @@ class AbstractScalingAlgorithm(ABC):
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
         budget: int,
         return_response_only: bool = True,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> str | AbstractScalingResult:
         """
         run inference with the given language model and prompt under the specified budget
@@ -67,6 +69,8 @@ class AbstractScalingAlgorithm(ABC):
             prompt_or_messages: the input prompt (string) or conversation history (list of ChatMessage) or ChatMessages object
             budget: the computational budget for inference
             return_response_only: whether to return only the selected response
+            tools: available tools for the model to call
+            tool_choice: tool choice strategy ('auto', 'none', or specific tool)
 
         Returns:
             the generated output string or the complete scaling result

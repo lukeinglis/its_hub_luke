@@ -15,12 +15,12 @@ from its_hub.types import ChatMessage, ChatMessages
 
 @dataclass
 class SelfConsistencyResult(AbstractScalingResult):
-    responses: list[str]
+    responses: list[dict]  # Keep original message format with tool calls
     response_counts: Counter[str] | Counter[tuple] | Counter
     selected_index: int
 
     @property
-    def the_one(self) -> str:
+    def the_one(self) -> dict:
         return self.responses[self.selected_index]
 
 
@@ -151,12 +151,14 @@ class SelfConsistency(AbstractScalingAlgorithm):
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
         budget: int,
         return_response_only: bool = True,
-    ) -> str | SelfConsistencyResult:
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | SelfConsistencyResult:
         # Convert to uniform ChatMessages format
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
 
         # generate responses
-        responses = lm.generate(chat_messages.to_batch(budget))
+        responses = lm.generate(chat_messages.to_batch(budget), tools=tools, tool_choice=tool_choice)
 
         # Check if we should use tool-vote or content-vote
         has_tool_calls = any(r.get("tool_calls") for r in responses)
@@ -185,14 +187,9 @@ class SelfConsistency(AbstractScalingAlgorithm):
                 responses_projected
             )
 
-        # Get response contents for the result
-        if has_tool_calls and self.tool_vote:
-            response_contents = [r.get("content", "") for r in responses]
-        # else: response_contents already set above
-
-        # return the result
+        # return the result - preserve original message format with tool calls
         result = SelfConsistencyResult(
-            responses=response_contents,
+            responses=responses,  # Keep original dict format with tool calls
             response_counts=response_counts,
             selected_index=selected_index,
         )
@@ -208,8 +205,21 @@ class SelfConsistency(AbstractScalingAlgorithm):
         function_name = first_tc.get("function", {}).get("name")
         function_args = first_tc.get("function", {}).get("arguments", {})
 
+        # Handle case where arguments might be a JSON string instead of dict
+        if isinstance(function_args, str):
+            try:
+                import json
+                function_args = json.loads(function_args)
+            except (json.JSONDecodeError, TypeError):
+                # If parsing fails, treat as empty dict
+                function_args = {}
+        
+        # Ensure function_args is a dict
+        if not isinstance(function_args, dict):
+            function_args = {}
+
         # Filter arguments if specified
-        if self.exclude_args and isinstance(function_args, dict):
+        if self.exclude_args:
             function_args = {
                 k: v for k, v in function_args.items() if k not in self.exclude_args
             }

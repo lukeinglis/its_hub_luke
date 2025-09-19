@@ -17,26 +17,26 @@ from its_hub.types import ChatMessage, ChatMessages
 
 @dataclass
 class ParticleGibbsResult(AbstractScalingResult):
-    responses_lst: list[list[str]]
+    responses_lst: list[list[dict]]  # Keep original message format with tool calls
     log_weights_lst: list[list[float]]
     ref_indices_lst: list[list[int]]
     selected_index: int
     steps_used_lst: list[list[int]]
 
     @property
-    def the_one(self) -> str:
+    def the_one(self) -> dict:
         return self.responses_lst[-1][self.selected_index]
 
 
 @dataclass
 class ParticleFilteringResult(AbstractScalingResult):
-    responses: list[str]
+    responses: list[dict]  # Keep original message format with tool calls
     log_weights_lst: list[float]
     selected_index: int
     steps_used_lst: list[int]
 
     @property
-    def the_one(self) -> str:
+    def the_one(self) -> dict:
         return self.responses[self.selected_index]
 
 
@@ -114,6 +114,8 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         particles: list[Particle],
         prompt: str,
         batched: bool = False,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> list[Particle]:
         if not batched:
             # forward each particle
@@ -121,7 +123,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
                 if p.is_stopped:
                     continue
 
-                next_step, is_stopped = self.sg.forward(lm, prompt, p.steps)
+                next_step, is_stopped = self.sg.forward(lm, prompt, p.steps, tools=tools, tool_choice=tool_choice)
                 p.steps.append(next_step)
                 p.is_stopped = is_stopped
                 score = self.prm.score(
@@ -143,7 +145,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
             steps_so_far.append(p.steps)
 
         # collect batch outputs
-        sg_forward_results = self.sg.forward(lm, prompts, steps_so_far)
+        sg_forward_results = self.sg.forward(lm, prompts, steps_so_far, tools=tools, tool_choice=tool_choice)
 
         # update particles
         i = 0
@@ -190,7 +192,9 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
         budget: int,
         return_response_only: bool = True,
-    ) -> str | ParticleGibbsResult:
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | ParticleGibbsResult:
         # Convert to uniform ChatMessages format
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
         assert budget % self.num_iterations == 0, (
@@ -218,7 +222,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
             while not all(p.is_stopped for p in particles):
                 # TODO: Update _propagate to support native ChatMessages format instead of string conversion
                 particles = self._propagate(
-                    lm, particles, chat_messages.to_prompt(), batched=True
+                    lm, particles, chat_messages.to_prompt(), batched=True, tools=tools, tool_choice=tool_choice
                 )
 
                 current_step += 1  # Increment after propagation
@@ -266,7 +270,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
             ref_particles = [particles[i] for i in ref_indices]
 
             responses_lst.append(
-                [self.sg._post_process(p.steps, stopped=True) for p in particles]
+                [{"role": "assistant", "content": self.sg._post_process(p.steps, stopped=True)} for p in particles]
             )
             log_weights_lst.append(log_weights)
             ref_indices_lst.append(ref_indices)
@@ -320,7 +324,7 @@ class ParticleFiltering(ParticleGibbs):
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
         budget: int,
         return_response_only: bool = True,
-    ) -> str | ParticleFilteringResult:
+    ) -> dict | ParticleFilteringResult:
         result = super().infer(
             lm, prompt_or_messages, budget, return_response_only=False
         )

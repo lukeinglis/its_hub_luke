@@ -101,6 +101,7 @@ class StepGeneration:
                     temperature, open_token, close_token = self.temperature_switch
                     if (
                         hasattr(messages[-1], "content")
+                        and messages[-1].content is not None
                         and open_token in messages[-1].content
                         and close_token not in messages[-1].content
                     ):
@@ -120,6 +121,8 @@ class StepGeneration:
         lm: AbstractLanguageModel,
         prompt_or_prompts: str | list[str],
         steps_so_far: list[str] | list[list[str]] | None = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> tuple[str, bool] | list[tuple[str, bool]]:
         if steps_so_far is None:
             steps_so_far = []
@@ -144,6 +147,8 @@ class StepGeneration:
                 max_tokens=self.tokens_per_step,
                 temperature=self._get_temperature(messages),
                 include_stop_str_in_output=self.include_stop_str_in_output,
+                tools=tools,
+                tool_choice=tool_choice,
             )
             next_step = extract_content_from_lm_response(next_step_response)
             is_stopped = len(steps_so_far) >= self.max_steps
@@ -179,6 +184,8 @@ class StepGeneration:
                 max_tokens=self.tokens_per_step,
                 temperature=self._get_temperature(messages_lst),
                 include_stop_str_in_output=self.include_stop_str_in_output,
+                tools=tools,
+                tool_choice=tool_choice,
             )
             next_steps = [
                 extract_content_from_lm_response(r) for r in next_steps_responses

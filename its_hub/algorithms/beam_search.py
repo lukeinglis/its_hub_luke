@@ -15,13 +15,13 @@ from its_hub.types import ChatMessage, ChatMessages
 
 @dataclass
 class BeamSearchResult(AbstractScalingResult):
-    responses: list[str]
+    responses: list[dict]  # Keep original message format with tool calls
     scores: list[float]
     selected_index: int
     steps_used: list[int]
 
     @property
-    def the_one(self) -> str:
+    def the_one(self) -> dict:
         return self.responses[self.selected_index]
 
 
@@ -57,13 +57,15 @@ class BeamSearch(AbstractScalingAlgorithm):
         candidates: list[Path],
         prompt: str,
         batched: bool = False,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> list[Path]:
         if not batched:
             for c in candidates:
                 if c.is_stopped:
                     continue
 
-                next_step, is_stopped = self.sg.forward(lm, prompt, c.steps)
+                next_step, is_stopped = self.sg.forward(lm, prompt, c.steps, tools=tools, tool_choice=tool_choice)
                 c.steps.append(next_step)
                 c.is_stopped = is_stopped
                 score = self.prm.score(
@@ -85,7 +87,7 @@ class BeamSearch(AbstractScalingAlgorithm):
             steps_so_far.append(c.steps)
 
         # collect batch outputs
-        sg_forward_results = self.sg.forward(lm, prompts, steps_so_far)
+        sg_forward_results = self.sg.forward(lm, prompts, steps_so_far, tools=tools, tool_choice=tool_choice)
 
         # update candidates
         i = 0
@@ -132,7 +134,9 @@ class BeamSearch(AbstractScalingAlgorithm):
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
         budget: int,
         return_response_only: bool = True,
-    ) -> str | BeamSearchResult:
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | BeamSearchResult:
         # Convert to uniform ChatMessages format
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
         assert budget % self.beam_width == 0, "budget must be divisible by beam_width"
@@ -149,7 +153,7 @@ class BeamSearch(AbstractScalingAlgorithm):
         while not all(c.is_stopped for c in candidates):
             # TODO: Update _search_one_level to support native ChatMessages format instead of string conversion
             candidates = self._search_one_level(
-                lm, candidates, chat_messages.to_prompt(), batched=True
+                lm, candidates, chat_messages.to_prompt(), batched=True, tools=tools, tool_choice=tool_choice
             )
 
             # get the top beam_width candidates
@@ -167,7 +171,7 @@ class BeamSearch(AbstractScalingAlgorithm):
         steps_used = [len(c.steps) for c in candidates]
         result = BeamSearchResult(
             responses=[
-                self.sg._post_process(c.steps, stopped=True) for c in candidates
+                {"role": "assistant", "content": self.sg._post_process(c.steps, stopped=True)} for c in candidates
             ],
             scores=scores,
             selected_index=int(np.argmax(scores)),

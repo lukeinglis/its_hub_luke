@@ -61,13 +61,15 @@ class TestToolCallHandling:
         
         assert isinstance(result, SelfConsistencyResult)
         # Should vote on content only, ignoring tool calls
-        assert result.the_one in ["I need to calculate this. The answer is 42.", "The answer is 42."]
+        assert result.the_one["content"] in ["I need to calculate this. The answer is 42.", "The answer is 42."]
         assert len(result.responses) == 4
         
-        # Verify that responses contain the extracted content (not full message dicts)
+        # Verify that responses contain the full message dicts
         for response in result.responses:
-            assert isinstance(response, str)
-            assert "42" in response
+            assert isinstance(response, dict)
+            assert "role" in response
+            assert "content" in response
+            assert "42" in response["content"]
     
     def test_self_consistency_tool_calls_content_voting(self):
         """Test that self-consistency votes on content, not tool calls."""
@@ -83,14 +85,15 @@ class TestToolCallHandling:
         # Should have 2 responses of each type
         response_counts = {}
         for response in result.responses:
-            response_counts[response] = response_counts.get(response, 0) + 1
+            content = response["content"]
+            response_counts[content] = response_counts.get(content, 0) + 1
         
         # Both response types should appear
         assert "I need to calculate this. The answer is 42." in response_counts
         assert "The answer is 42." in response_counts
         
         # The selected response should be one of the content strings
-        assert result.the_one in ["I need to calculate this. The answer is 42.", "The answer is 42."]
+        assert result.the_one["content"] in ["I need to calculate this. The answer is 42.", "The answer is 42."]
     
     def test_self_consistency_with_empty_content_and_tool_calls(self):
         """Test self-consistency when responses have tool calls but empty content."""
@@ -125,8 +128,8 @@ class TestToolCallHandling:
         result = sc.infer(mock_lm, "Search for information", budget=3, return_response_only=False)
         
         # All responses should be empty strings (content extracted from tool call responses)
-        assert all(response == "" for response in result.responses)
-        assert result.the_one == ""
+        assert all(response["content"] == "" for response in result.responses)
+        assert result.the_one["content"] == ""
         assert len(result.responses) == 3
 
 
@@ -148,8 +151,8 @@ class TestToolCallVotingBackwardCompatibility:
         
         # Should behave exactly as before - vote on content only
         assert isinstance(result, SelfConsistencyResult)
-        assert result.the_one in ["I need to calculate this. The answer is 42.", "The answer is 42."]
-        assert all("42" in response for response in result.responses)
+        assert result.the_one["content"] in ["I need to calculate this. The answer is 42.", "The answer is 42."]
+        assert all("42" in response["content"] for response in result.responses)
 
 
 class TestToolCallVoting:
@@ -275,7 +278,7 @@ class TestToolCallVoting:
         # Should fall back to content voting since no tool calls
         assert result.response_counts["42"] == 2
         assert result.response_counts["24"] == 1
-        assert result.the_one == "Answer: 42"  # Returns full content, not extracted value
+        assert result.the_one["content"] == "Answer: 42"  # Returns full content, not extracted value
     
     def test_mixed_responses_with_and_without_tool_calls(self):
         """Test behavior when some responses have tool calls and others don't."""

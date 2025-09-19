@@ -30,7 +30,7 @@ class ChatMessage:
     """A chat message with role and content."""
 
     role: Literal["system", "user", "assistant", "tool"]
-    content: str
+    content: str | None
     tool_calls: list[ToolCall] | None = None
     tool_call_id: str | None = None
 
