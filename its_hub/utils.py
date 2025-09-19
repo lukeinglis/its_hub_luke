@@ -4,3 +4,22 @@ SAL_STEP_BY_STEP_SYSTEM_PROMPT = "Solve the following math problem efficiently a
 QWEN_SYSTEM_PROMPT = (
     "Please reason step by step, and put your final answer within \\boxed{}."
 )
+
+
+def extract_content_from_lm_response(message: dict) -> str:
+    """
+    Extract content from a single LM response message object.
+
+    Args:
+        message: A message dict returned by fetch_single_response.
+
+    Returns:
+        The content string.
+
+    Raises:
+        NotImplementedError: If tool calls are present in the message.
+    """
+    if message.get("tool_calls"):
+        raise NotImplementedError("Tool calls are not supported by this algorithm yet")
+
+    return message.get("content", "")

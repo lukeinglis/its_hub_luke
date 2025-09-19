@@ -46,8 +46,12 @@ class ConfigRequest(BaseModel):
     alg: str = Field(..., description="Scaling algorithm to use")
     step_token: str | None = Field(None, description="Token to mark generation steps")
     stop_token: str | None = Field(None, description="Token to stop generation")
-    rm_name: str | None = Field(None, description="Reward model name (not required for self-consistency)")
-    rm_device: str | None = Field(None, description="Device for reward model (e.g., 'cuda:0')")
+    rm_name: str | None = Field(
+        None, description="Reward model name (not required for self-consistency)"
+    )
+    rm_device: str | None = Field(
+        None, description="Device for reward model (e.g., 'cuda:0')"
+    )
     rm_agg_method: str | None = Field(
         None, description="Reward model aggregation method"
     )
@@ -71,7 +75,9 @@ class ConfigRequest(BaseModel):
     def validate_regex_patterns(cls, v, info):
         """Validate regex patterns are provided when using self-consistency."""
         if info.data.get("alg") == "self-consistency" and not v:
-            raise ValueError("regex_patterns are required when using self-consistency algorithm")
+            raise ValueError(
+                "regex_patterns are required when using self-consistency algorithm"
+            )
         return v
 
     @field_validator("rm_name")

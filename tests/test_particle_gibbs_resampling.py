@@ -20,14 +20,21 @@ class MockLanguageModelForResampling(AbstractLanguageModel):
     def __init__(self):
         self.step_counter = 0
 
-    def generate(self, prompt, max_tokens=100, **kwargs):
-        # Generate different steps based on counter
-        step = f"step{self.step_counter}"
-        self.step_counter += 1
-        return step
-
-    def generate_batch(self, prompts, max_tokens=100, **kwargs):
-        return [self.generate(p, max_tokens, **kwargs) for p in prompts]
+    def generate(self, messages, max_tokens=100, **kwargs):
+        # Handle both single and batch calls like OpenAICompatibleLanguageModel
+        if isinstance(messages, list) and len(messages) > 0 and isinstance(messages[0], list):
+            # Batch generation
+            results = []
+            for _ in messages:
+                step = f"step{self.step_counter}"
+                self.step_counter += 1
+                results.append({"role": "assistant", "content": step})
+            return results
+        else:
+            # Single generation
+            step = f"step{self.step_counter}"
+            self.step_counter += 1
+            return {"role": "assistant", "content": step}
 
     def evaluate(self, prompt, response):
         # Not used in these tests

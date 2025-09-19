@@ -15,6 +15,7 @@ from .error_handling import (
     should_retry,
 )
 from .types import ChatMessage
+from .utils import extract_content_from_lm_response
 
 
 def rstrip_iff_entire(s: str, subs: str) -> str:
@@ -137,13 +138,14 @@ class StepGeneration:
                         role="assistant", content=self._post_process(steps_so_far)
                     )
                 )
-            next_step = lm.generate(
+            next_step_response = lm.generate(
                 messages,
                 stop=self.step_token,
                 max_tokens=self.tokens_per_step,
                 temperature=self._get_temperature(messages),
                 include_stop_str_in_output=self.include_stop_str_in_output,
             )
+            next_step = extract_content_from_lm_response(next_step_response)
             is_stopped = len(steps_so_far) >= self.max_steps
             if self.stop_token:
                 is_stopped = is_stopped or self.stop_token in next_step
@@ -171,13 +173,16 @@ class StepGeneration:
                         )
                     )
                 messages_lst.append(messages)
-            next_steps = lm.generate(
+            next_steps_responses = lm.generate(
                 messages_lst,
                 stop=self.step_token,
                 max_tokens=self.tokens_per_step,
                 temperature=self._get_temperature(messages_lst),
                 include_stop_str_in_output=self.include_stop_str_in_output,
             )
+            next_steps = [
+                extract_content_from_lm_response(r) for r in next_steps_responses
+            ]
             is_stopped = [
                 len(steps_so_far_per_prompt) >= self.max_steps
                 for steps_so_far_per_prompt in steps_so_far
@@ -244,6 +249,8 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         max_tokens: int | None = None,
         temperature: float | None = None,
         include_stop_str_in_output: bool | None = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
     ) -> dict:
         # helper method to prepare request data for both sync and async methods
         # Convert dict messages to Message objects if needed
@@ -260,7 +267,7 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
 
         request_data = {
             "model": self.model_name,
-            "messages": [msg.__dict__ for msg in messages],
+            "messages": [msg.to_dict() for msg in messages],
         }
 
         if self.endpoint_type == "vllm":
@@ -276,9 +283,13 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                 )
                 request_data["include_stop_str_in_output"] = include_stop_str_in_output
         else:
-            logging.info("openai endpoint does not support add_generation_prompt, continue_final_message, or include_stop_str_in_output")
+            logging.info(
+                "openai endpoint does not support add_generation_prompt, continue_final_message, or include_stop_str_in_output"
+            )
             if include_stop_str_in_output is not None:
-                logging.warning("include_stop_str_in_output parameter is not supported with OpenAI endpoints and will be ignored")
+                logging.warning(
+                    "include_stop_str_in_output parameter is not supported with OpenAI endpoints and will be ignored"
+                )
 
         # set default runtime parameters
         if self.stop is not None:
@@ -296,6 +307,12 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         if temperature is not None:
             request_data["temperature"] = temperature
 
+        # add tools and tool_choice if provided
+        if tools is not None:
+            request_data["tools"] = tools
+        if tool_choice is not None:
+            request_data["tool_choice"] = tool_choice
+
         return request_data
 
     async def _generate(
@@ -305,7 +322,9 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         max_tokens: int | None = None,
         temperature: float | None = None,
         include_stop_str_in_output: bool | None = None,
-    ) -> list[str]:
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> list[dict]:
         # limit concurrency to max_concurrency using a semaphore
         semaphore = asyncio.Semaphore(
             len(messages_lst) if self.max_concurrency == -1 else self.max_concurrency
@@ -321,7 +340,9 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                 on_backoff=enhanced_on_backoff,
                 giveup=lambda e: not should_retry(e),
             )
-            async def fetch_response(messages: list[ChatMessage], _temperature: float | None) -> str:
+            async def fetch_response(
+                messages: list[ChatMessage], _temperature: float | None
+            ) -> dict:
                 async with semaphore:
                     request_data = self._prepare_request_data(
                         messages,
@@ -329,6 +350,8 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                         max_tokens,
                         _temperature,
                         include_stop_str_in_output,
+                        tools,
+                        tool_choice,
                     )
 
                     async with session.post(
@@ -343,18 +366,27 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                                 logging.error(format_non_retryable_error(api_error))
                             raise api_error
                         response_json = await response.json()
-                        return response_json["choices"][0]["message"]["content"]
+                        # Return the full message object to preserve tool calls
+                        return response_json["choices"][0]["message"]
 
-            async def safe_fetch_response(messages: list[ChatMessage], _temperature: float | None) -> str:
+            async def safe_fetch_response(
+                messages: list[ChatMessage], _temperature: float | None
+            ) -> dict:
                 if self.replace_error_with_message is not None:
                     try:
                         return await fetch_response(messages, _temperature)
                     except (aiohttp.ClientError, TimeoutError) as e:
                         logging.error(f"Network error during async generation: {e}")
-                        return self.replace_error_with_message
+                        return {
+                            "role": "assistant",
+                            "content": self.replace_error_with_message,
+                        }
                     except APIError as e:
                         logging.error(f"API error during async generation: {e}")
-                        return self.replace_error_with_message
+                        return {
+                            "role": "assistant",
+                            "content": self.replace_error_with_message,
+                        }
                 else:
                     return await fetch_response(messages, _temperature)
 
@@ -377,9 +409,10 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         stop: str | None = None,
         max_tokens: int | None = None,
         temperature: float | list[float] | None = None,
-        include_stop_str_in_output: bool
-        | None = None,  # If True, keep stop strings in generated text; if False, strip them
-    ) -> str | list[str]:
+        include_stop_str_in_output: bool | None = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | list[dict]:
         # Check if we have a single list of messages or a list of message lists
         # Single list: [{"role": "user", "content": "..."}] or [Message(...)]
         # Multiple lists: [[{"role": "user", "content": "..."}], [{"role": "user", "content": "..."}]]
@@ -396,6 +429,8 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                     max_tokens,
                     temperature,
                     include_stop_str_in_output,
+                    tools,
+                    tool_choice,
                 )
             )
         else:
@@ -407,9 +442,17 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                 on_backoff=enhanced_on_backoff,
                 giveup=lambda e: not should_retry(e),
             )
-            def fetch_single_response(messages: list[ChatMessage], _temperature: float | None) -> str:
+            def fetch_single_response(
+                messages: list[ChatMessage], _temperature: float | None
+            ) -> dict:
                 request_data = self._prepare_request_data(
-                    messages, stop, max_tokens, _temperature, include_stop_str_in_output
+                    messages,
+                    stop,
+                    max_tokens,
+                    _temperature,
+                    include_stop_str_in_output,
+                    tools,
+                    tool_choice,
                 )
 
                 response = requests.post(
@@ -425,18 +468,27 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                     raise api_error
 
                 response_json = response.json()
-                return response_json["choices"][0]["message"]["content"]
+                # Return the full message object to preserve tool calls
+                return response_json["choices"][0]["message"]
 
-            def safe_fetch_single_response(messages: list[ChatMessage], _temperature: float | None) -> str:
+            def safe_fetch_single_response(
+                messages: list[ChatMessage], _temperature: float | None
+            ) -> dict:
                 if self.replace_error_with_message is not None:
                     try:
                         return fetch_single_response(messages, _temperature)
                     except requests.RequestException as e:
                         logging.error(f"Network error during sync generation: {e}")
-                        return self.replace_error_with_message
+                        return {
+                            "role": "assistant",
+                            "content": self.replace_error_with_message,
+                        }
                     except APIError as e:
                         logging.error(f"API error during sync generation: {e}")
-                        return self.replace_error_with_message
+                        return {
+                            "role": "assistant",
+                            "content": self.replace_error_with_message,
+                        }
                 else:
                     return fetch_single_response(messages, _temperature)
 
@@ -445,11 +497,10 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                 if isinstance(temperature, list)
                 else [temperature] * len(messages_lst)
             )
-            responses = [
+            response_or_responses = [
                 safe_fetch_single_response(messages, _temperature)
                 for messages, _temperature in zip(messages_lst, temperature_lst)
             ]
-            response_or_responses = responses
         return response_or_responses[0] if is_single else response_or_responses
 
     # TODO implement evaluation

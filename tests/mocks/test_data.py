@@ -78,11 +78,11 @@ class TestDataFactory:
 TEST_SCENARIOS = {
     "simple_chat": {
         "user_content": "Hello, world!",
-        "expected_response": "Response to: Hello, world!"
+        "expected_response": {"role": "assistant", "content": "Response to: Hello, world!"}
     },
     "math_problem": {
         "user_content": "Solve 2+2",
-        "expected_response": "Response to: Solve 2+2"
+        "expected_response": {"role": "assistant", "content": "Response to: Solve 2+2"}
     },
     "error_trigger": {
         "user_content": "trigger_error",
@@ -95,7 +95,7 @@ TEST_SCENARIOS = {
     "with_system_prompt": {
         "system_content": "You are a helpful assistant",
         "user_content": "How can I help you?",
-        "expected_response": "Response to: How can I help you?"
+        "expected_response": {"role": "assistant", "content": "Response to: How can I help you?"}
     }
 }
 

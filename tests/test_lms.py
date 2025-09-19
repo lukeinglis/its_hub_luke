@@ -25,7 +25,7 @@ class TestOpenAICompatibleLanguageModel:
 
         chat_messages = TestDataFactory.create_chat_messages("Hello, world!")
         response = model.generate(chat_messages.to_chat_messages())
-        assert response == "Response to: Hello, world!"
+        assert response == {"role": "assistant", "content": "Response to: Hello, world!"}
 
     @pytest.mark.parametrize("scenario_name", ["simple_chat", "math_problem", "with_system_prompt"])
     def test_generate_scenarios(self, openai_server, scenario_name):
@@ -71,7 +71,8 @@ class TestOpenAICompatibleLanguageModel:
             include_stop_str_in_output=include_stop
         )
 
-        expected = "Response to: Hello, world!" + expected_suffix
+        expected_content = "Response to: Hello, world!" + expected_suffix
+        expected = {"role": "assistant", "content": expected_content}
         assert response == expected
 
     def test_batch_generation(self, openai_server):
@@ -89,7 +90,10 @@ class TestOpenAICompatibleLanguageModel:
         ]
 
         responses = model.generate(messages_lst)
-        expected = ["Response to: Hello, world!", "Response to: How are you?"]
+        expected = [
+            {"role": "assistant", "content": "Response to: Hello, world!"},
+            {"role": "assistant", "content": "Response to: How are you?"}
+        ]
         assert responses == expected
 
     def test_async_generation(self, openai_server):
@@ -108,7 +112,10 @@ class TestOpenAICompatibleLanguageModel:
         ]
 
         responses = async_model.generate(messages_lst)
-        expected = [f"Response to: Message {i}" for i in range(4)]
+        expected = [
+            {"role": "assistant", "content": f"Response to: Message {i}"}
+            for i in range(4)
+        ]
         assert responses == expected
 
     @pytest.mark.parametrize("max_concurrency,expected_semaphore_value", [
@@ -172,7 +179,8 @@ class TestOpenAICompatibleLanguageModel:
                 model.generate(chat_messages.to_chat_messages())
         else:
             result = model.generate(chat_messages.to_chat_messages())
-            assert result == expected_result
+            expected = {"role": "assistant", "content": expected_result}
+            assert result == expected
 
     def test_replace_error_with_message_batch(self, openai_server):
         """Test error replacement in batch requests."""
@@ -193,9 +201,9 @@ class TestOpenAICompatibleLanguageModel:
 
         results = model.generate(messages_lst)
         expected = [
-            "Response to: Hello, world!",
-            error_message,
-            "Response to: How are you?"
+            {"role": "assistant", "content": "Response to: Hello, world!"},
+            {"role": "assistant", "content": error_message},
+            {"role": "assistant", "content": "Response to: How are you?"}
         ]
         assert results == expected
 
@@ -380,7 +388,7 @@ class TestStepGeneration:
         from unittest.mock import Mock
 
         mock_lm = Mock()
-        mock_lm.generate.return_value = "test response"
+        mock_lm.generate.return_value = {"role": "assistant", "content": "test response"}
 
         step_gen = StepGeneration(tokens_per_step=100, max_steps=3)
         step_gen.forward(mock_lm, "test prompt")

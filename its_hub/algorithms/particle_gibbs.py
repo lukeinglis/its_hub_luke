@@ -218,6 +218,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
             while not all(p.is_stopped for p in particles):
                 # TODO: Update _propagate to support native ChatMessages format instead of string conversion
                 particles = self._propagate(lm, particles, chat_messages.to_prompt(), batched=True)
+
                 current_step += 1  # Increment after propagation
 
                 # resampling (free) particles
@@ -318,7 +319,9 @@ class ParticleFiltering(ParticleGibbs):
         budget: int,
         return_response_only: bool = True,
     ) -> str | ParticleFilteringResult:
-        result = super().infer(lm, prompt_or_messages, budget, return_response_only=False)
+        result = super().infer(
+            lm, prompt_or_messages, budget, return_response_only=False
+        )
 
         # Flatten the single-iteration result
         flattened_result = ParticleFilteringResult(

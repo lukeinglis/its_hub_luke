@@ -14,14 +14,14 @@ class SimpleMockLanguageModel:
     def generate(self, messages, stop=None, max_tokens=None, temperature=None, include_stop_str_in_output=None):
         if isinstance(messages[0], list):
             # Multiple message lists
-            responses = self.responses[self.call_count:self.call_count + len(messages)]
+            content_responses = self.responses[self.call_count:self.call_count + len(messages)]
             self.call_count += len(messages)
-            return responses
+            return [{"role": "assistant", "content": content} for content in content_responses]
         else:
             # Single message list
-            response = self.responses[self.call_count]
+            content = self.responses[self.call_count]
             self.call_count += 1
-            return response
+            return {"role": "assistant", "content": content}
 
 
 class StepMockLanguageModel(AbstractLanguageModel):
@@ -38,14 +38,15 @@ class StepMockLanguageModel(AbstractLanguageModel):
             responses = []
             for i in range(num_requests):
                 response_idx = (self.call_count + i) % len(self.step_responses)
-                responses.append(self.step_responses[response_idx])
+                content = self.step_responses[response_idx]
+                responses.append({"role": "assistant", "content": content})
             self.call_count += num_requests
             return responses
         else:
             # Single generation
-            response = self.step_responses[self.call_count % len(self.step_responses)]
+            content = self.step_responses[self.call_count % len(self.step_responses)]
             self.call_count += 1
-            return response
+            return {"role": "assistant", "content": content}
 
     def evaluate(self, prompt: str, generation: str) -> list[float]:
         """Return mock evaluation scores."""
@@ -73,14 +74,15 @@ class ErrorMockLanguageModel(AbstractLanguageModel):
                 if (self.call_count + i) in self.error_on_calls:
                     raise Exception("Simulated LM error in batch")
                 response_idx = (self.call_count + i) % len(self.responses)
-                responses.append(self.responses[response_idx])
+                content = self.responses[response_idx]
+                responses.append({"role": "assistant", "content": content})
             self.call_count += num_requests
             return responses
         else:
             # Single generation
-            response = self.responses[self.call_count % len(self.responses)]
+            content = self.responses[self.call_count % len(self.responses)]
             self.call_count += 1
-            return response
+            return {"role": "assistant", "content": content}
 
     def evaluate(self, prompt: str, generation: str) -> list[float]:
         return [0.1] * len(generation.split())

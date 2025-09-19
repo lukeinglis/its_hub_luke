@@ -46,12 +46,13 @@ class MockLanguageModel(AbstractLanguageModel):
             results = []
             for i in range(batch_size):
                 response_idx = (self.call_count + i) % len(self.responses)
-                results.append(self.responses[response_idx])
+                content = self.responses[response_idx]
+                results.append({"role": "assistant", "content": content})
             self.call_count += batch_size
             return results
         else:
             # Single generation (for planning)
-            return self.planning_response
+            return {"role": "assistant", "content": self.planning_response}
 
     def evaluate(self, prompt: str, generation: str) -> list[float]:
         """Return dummy evaluation scores."""
@@ -340,7 +341,7 @@ class TestPlanningWrapper:
         results = lm.generate(batch_messages)
         assert isinstance(results, list)
         assert len(results) == 3
-        assert all(isinstance(result, str) for result in results)
+        assert all(isinstance(result, dict) and "content" in result for result in results)
 
     def test_mock_language_model_single_generation(self):
         """Test that mock language model handles single generation correctly."""
@@ -349,6 +350,7 @@ class TestPlanningWrapper:
         # Test single generation
         single_message = [{"role": "user", "content": "Single problem"}]
         result = lm.generate(single_message)
-        assert isinstance(result, str)
-        assert "APPROACH" in result
+        assert isinstance(result, dict)
+        assert "content" in result
+        assert "APPROACH" in result["content"]
 
