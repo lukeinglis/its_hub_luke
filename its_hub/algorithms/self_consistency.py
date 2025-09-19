@@ -225,7 +225,19 @@ class SelfConsistency(AbstractScalingAlgorithm):
             }
 
         # Convert dict to hashable tuple for Counter compatibility
-        args_tuple = tuple(sorted(function_args.items())) if function_args else ()
+        # handles nested structures
+        def make_hashable(obj):
+            """Recursively convert nested structures to hashable types."""
+            if isinstance(obj, dict):
+                return tuple(sorted((k, make_hashable(v)) for k, v in obj.items()))
+            elif isinstance(obj, list):
+                return tuple(make_hashable(item) for item in obj)
+            elif isinstance(obj, set):
+                return tuple(sorted(make_hashable(item) for item in obj))
+            else:
+                return obj
+        
+        args_tuple = make_hashable(function_args) if function_args else ()
 
         if self.tool_vote == "tool_name":
             return function_name
