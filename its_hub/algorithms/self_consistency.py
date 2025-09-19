@@ -108,29 +108,29 @@ def _select_hierarchical_most_common_or_random(
 
 class SelfConsistency(AbstractScalingAlgorithm):
     def __init__(
-        self, 
+        self,
         consistency_space_projection_func: Callable,
         tool_vote: str | None = None,
-        exclude_args: list[str] | None = None
+        exclude_args: list[str] | None = None,
     ):
         """Initialize SelfConsistency algorithm with optional tool-vote capability.
-        
+
         Args:
-            consistency_space_projection_func: Function that maps response content (str) 
-                to a comparable value for voting. Used when tool_vote is None or when 
+            consistency_space_projection_func: Function that maps response content (str)
+                to a comparable value for voting. Used when tool_vote is None or when
                 responses don't contain tool calls. Can return str, tuple, or any hashable type.
-                
+
             tool_vote: Tool voting strategy when responses contain tool calls. Options:
                 - None (default): Vote on message content using consistency_space_projection_func
                 - "tool_name": Vote on tool function names only
                 - "tool_args": Vote on tool function arguments only (as dicts)
                 - "tool_hierarchical": Vote on tool name first, then arguments (hierarchical)
                 When tool calls exist and tool_vote is set, this takes priority over content voting.
-                
-            exclude_args: List of argument names to exclude from tool voting when 
-                tool_vote is "tool_args" or "tool_hierarchical". Useful for filtering out 
+
+            exclude_args: List of argument names to exclude from tool voting when
+                tool_vote is "tool_args" or "tool_hierarchical". Useful for filtering out
                 non-semantic arguments like timestamps, request IDs, etc.
-                
+
         Raises:
             ValueError: If tool_vote is not one of the supported options.
         """
@@ -140,7 +140,7 @@ class SelfConsistency(AbstractScalingAlgorithm):
             raise ValueError(
                 f"tool_vote must be one of {valid_tool_vote_options}, got: {tool_vote}"
             )
-        
+
         self.consistency_space_projection_func = consistency_space_projection_func
         self.tool_vote = tool_vote
         self.exclude_args = exclude_args or []
@@ -160,7 +160,7 @@ class SelfConsistency(AbstractScalingAlgorithm):
 
         # Check if we should use tool-vote or content-vote
         has_tool_calls = any(r.get("tool_calls") for r in responses)
-        
+
         if has_tool_calls and self.tool_vote:
             # Vote on tool calls directly
             responses_projected = [
@@ -189,7 +189,7 @@ class SelfConsistency(AbstractScalingAlgorithm):
         if has_tool_calls and self.tool_vote:
             response_contents = [r.get("content", "") for r in responses]
         # else: response_contents already set above
-        
+
         # return the result
         result = SelfConsistencyResult(
             responses=response_contents,
@@ -197,27 +197,29 @@ class SelfConsistency(AbstractScalingAlgorithm):
             selected_index=selected_index,
         )
         return result.the_one if return_response_only else result
-    
+
     def _extract_tool_call_features(self, message_obj: dict):
         """Extract tool call features for voting based on tool_vote type."""
         tool_calls = message_obj.get("tool_calls", [])
         if not tool_calls:
             return None if self.tool_vote == "tool_name" else (None, None)
-        
+
         first_tc = tool_calls[0]
         function_name = first_tc.get("function", {}).get("name")
         function_args = first_tc.get("function", {}).get("arguments", {})
-        
+
         # Filter arguments if specified
         if self.exclude_args and isinstance(function_args, dict):
-            function_args = {k: v for k, v in function_args.items() if k not in self.exclude_args}
-        
+            function_args = {
+                k: v for k, v in function_args.items() if k not in self.exclude_args
+            }
+
         # Convert dict to hashable tuple for Counter compatibility
         args_tuple = tuple(sorted(function_args.items())) if function_args else ()
-        
+
         if self.tool_vote == "tool_name":
             return function_name
-        elif self.tool_vote == "tool_args": 
+        elif self.tool_vote == "tool_args":
             return args_tuple  # Use tuple instead of dict
         elif self.tool_vote == "tool_hierarchical":
             return (function_name, args_tuple)  # Use tuple instead of dict

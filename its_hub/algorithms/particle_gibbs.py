@@ -217,7 +217,9 @@ class ParticleGibbs(AbstractScalingAlgorithm):
 
             while not all(p.is_stopped for p in particles):
                 # TODO: Update _propagate to support native ChatMessages format instead of string conversion
-                particles = self._propagate(lm, particles, chat_messages.to_prompt(), batched=True)
+                particles = self._propagate(
+                    lm, particles, chat_messages.to_prompt(), batched=True
+                )
 
                 current_step += 1  # Increment after propagation
 

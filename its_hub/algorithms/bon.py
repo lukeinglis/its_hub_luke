@@ -52,7 +52,6 @@ class BestOfN(AbstractScalingAlgorithm):
             for r in response_contents:
                 scores.append(self.orm.score(chat_messages, r))
 
-
         # select the best response
         selected_index = scores.index(max(scores))
 

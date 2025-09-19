@@ -28,7 +28,9 @@ class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
 
         # Build conversation messages with responses (convert system to user for reward model compatibility)
         base_msgs = [
-            ChatMessage(role="user", content=f"System: {msg.content}") if msg.role == "system" else msg
+            ChatMessage(role="user", content=f"System: {msg.content}")
+            if msg.role == "system"
+            else msg
             for msg in chat_messages.to_chat_messages()
         ]
         messages = [

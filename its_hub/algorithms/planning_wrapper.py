@@ -150,7 +150,9 @@ class PlanningWrapper(AbstractScalingAlgorithm):
         """
         # Step 1: Generate plan (uses 1 generation from budget)
         # TODO: Update PlanningPromptTemplate to support native ChatMessages format instead of string conversion
-        planning_prompt = PlanningPromptTemplate.create_planning_prompt(chat_messages.to_prompt())
+        planning_prompt = PlanningPromptTemplate.create_planning_prompt(
+            chat_messages.to_prompt()
+        )
         plan_response = lm.generate([ChatMessage(role="user", content=planning_prompt)])
         plan = extract_content_from_lm_response(plan_response)
 
