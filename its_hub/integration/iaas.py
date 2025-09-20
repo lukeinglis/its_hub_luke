@@ -315,12 +315,6 @@ async def chat_completions(request: ChatCompletionRequest) -> ChatCompletionResp
 
         # Create ChatMessages from the full conversation history
         chat_messages = ChatMessages(request.messages)
-        
-        # Add tools and tool_choice to the ChatMessages for this request
-        if request.tools is not None:
-            chat_messages.tools = request.tools
-        if request.tool_choice is not None:
-            chat_messages.tool_choice = request.tool_choice
 
         logger.info(
             f"Processing request for model={request.model}, budget={request.budget}"
