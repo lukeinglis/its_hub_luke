@@ -292,12 +292,6 @@ async def chat_completions(request: ChatCompletionRequest) -> ChatCompletionResp
             detail="Streaming responses not yet implemented",
         )
 
-    if SCALING_ALG is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service not configured. Please call /configure first.",
-        )
-
     try:
         lm = LM_DICT[request.model]
     except KeyError:
@@ -306,6 +300,12 @@ async def chat_completions(request: ChatCompletionRequest) -> ChatCompletionResp
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Model '{request.model}' not found. Available models: {available_models}",
         ) from None
+
+    if SCALING_ALG is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service not configured. Please call /configure first.",
+        )
 
     try:
         # Configure language model for this request

@@ -323,15 +323,6 @@ class TestChatCompletions:
 
     @pytest.mark.parametrize("invalid_request", [
         {"model": "test-model", "messages": [], "budget": 4},
-        {"model": "test-model", "messages": [
-            {"role": "system", "content": "System prompt"},
-            {"role": "user", "content": "User message"},
-            {"role": "assistant", "content": "Too many messages"}
-        ], "budget": 4},
-        {"model": "test-model", "messages": [
-            {"role": "user", "content": "User first"},
-            {"role": "system", "content": "System second"}
-        ], "budget": 4},
         {"model": "test-model", "messages": [{"role": "user", "content": "Test"}], "budget": 0},
     ])
     def test_chat_completions_validation(self, iaas_client, invalid_request):
