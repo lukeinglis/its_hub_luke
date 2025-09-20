@@ -175,7 +175,8 @@ class TestPlanningWrapper:
         assert hasattr(result, 'best_approach')
 
         # Verify response contains expected content
-        assert isinstance(result.the_one, str)
+        assert isinstance(result.the_one, dict)
+        assert "content" in result.the_one
         assert len(result.approaches) > 0
         assert result.best_approach is not None
 
@@ -192,7 +193,8 @@ class TestPlanningWrapper:
         assert hasattr(result, 'best_approach')
 
         # Verify response contains expected content
-        assert isinstance(result.the_one, str)
+        assert isinstance(result.the_one, dict)
+        assert "content" in result.the_one
         assert len(result.approaches) > 0
         assert result.best_approach is not None
 
@@ -209,7 +211,8 @@ class TestPlanningWrapper:
         assert hasattr(result, 'best_approach')
 
         # Verify response contains expected content
-        assert isinstance(result.the_one, str)
+        assert isinstance(result.the_one, dict)
+        assert "content" in result.the_one
         assert len(result.approaches) > 0
         assert result.best_approach is not None
 
@@ -224,8 +227,10 @@ class TestPlanningWrapper:
         planning_result = planning_sc.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
 
         # Both should produce results
-        assert isinstance(vanilla_result.the_one, str)
-        assert isinstance(planning_result.the_one, str)
+        assert isinstance(vanilla_result.the_one, dict)
+        assert "content" in vanilla_result.the_one
+        assert isinstance(planning_result.the_one, dict)
+        assert "content" in planning_result.the_one
 
         # Planning result should have additional attributes
         assert hasattr(planning_result, 'approaches')
@@ -243,8 +248,10 @@ class TestPlanningWrapper:
         planning_result = planning_bon.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
 
         # Both should produce results
-        assert isinstance(vanilla_result.the_one, str)
-        assert isinstance(planning_result.the_one, str)
+        assert isinstance(vanilla_result.the_one, dict)
+        assert "content" in vanilla_result.the_one
+        assert isinstance(planning_result.the_one, dict)
+        assert "content" in planning_result.the_one
 
         # Planning result should have additional attributes
         assert hasattr(planning_result, 'approaches')
@@ -262,8 +269,10 @@ class TestPlanningWrapper:
         planning_result = planning_pf.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
 
         # Both should produce results
-        assert isinstance(vanilla_result.the_one, str)
-        assert isinstance(planning_result.the_one, str)
+        assert isinstance(vanilla_result.the_one, dict)
+        assert "content" in vanilla_result.the_one
+        assert isinstance(planning_result.the_one, dict)
+        assert "content" in planning_result.the_one
 
         # Planning result should have additional attributes
         assert hasattr(planning_result, 'approaches')
@@ -309,7 +318,8 @@ class TestPlanningWrapper:
 
         # Test with return_response_only=True
         result_only = planning_sc.infer(mock_language_model, test_problem, budget=4, return_response_only=True)
-        assert isinstance(result_only, str)
+        assert isinstance(result_only, dict)
+        assert "content" in result_only
 
         # Test with return_response_only=False
         result_full = planning_sc.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
@@ -324,7 +334,8 @@ class TestPlanningWrapper:
         # Test with different budgets
         for budget in [2, 4, 8]:
             result = planning_sc.infer(mock_language_model, test_problem, budget=budget, return_response_only=False)
-            assert isinstance(result.the_one, str)
+            assert isinstance(result.the_one, dict)
+            assert "content" in result.the_one
             assert len(result.approaches) > 0
 
     def test_mock_language_model_batch_generation(self):
