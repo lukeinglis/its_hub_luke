@@ -1,6 +1,7 @@
 import logging
 import random
 import re
+import math
 from collections import Counter
 from collections.abc import Callable
 
@@ -165,7 +166,8 @@ class SelfConsistency(AbstractScalingAlgorithm):
 
         # Check if majority of responses have tool calls to decide voting method
         tool_call_count = sum(1 for r in responses if r.get("tool_calls"))
-        has_majority_tool_calls = tool_call_count >= len(responses) // 2
+        required_majority = math.ceil(len(responses) / 2)
+        has_majority_tool_calls = tool_call_count >= required_majority
 
         if has_majority_tool_calls and self.tool_vote:
             logging.info("Tool voting is invoked")
