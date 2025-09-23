@@ -1,6 +1,6 @@
-import logging
 import random
 import re
+import math
 from collections import Counter
 from collections.abc import Callable
 
@@ -146,7 +146,7 @@ class SelfConsistency(AbstractScalingAlgorithm):
         self.tool_vote = tool_vote
         self.exclude_args = exclude_args or []
 
-    def infer(
+    async def ainfer(
         self,
         lm: AbstractLanguageModel,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
@@ -155,20 +155,35 @@ class SelfConsistency(AbstractScalingAlgorithm):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | SelfConsistencyResult:
+        """Async version of infer for true async performance."""
         # Convert to uniform ChatMessages format
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
 
-        # generate responses
-        responses = lm.generate(
-            chat_messages.to_batch(budget), tools=tools, tool_choice=tool_choice
-        )
+        # generate responses using async method
+        if hasattr(lm, 'agenerate'):
+            responses = await lm.agenerate(
+                chat_messages.to_batch(budget), tools=tools, tool_choice=tool_choice
+            )
+        else:
+            # Fall back to sync generation if async not available
+            responses = lm.generate(
+                chat_messages.to_batch(budget), tools=tools, tool_choice=tool_choice
+            )
 
+        return self._process_responses(responses, return_response_only)
+
+    def _process_responses(
+        self,
+        responses: list[dict],
+        return_response_only: bool = True
+    ) -> dict | SelfConsistencyResult:
+        """Process responses and return result."""
         # Check if majority of responses have tool calls to decide voting method
         tool_call_count = sum(1 for r in responses if r.get("tool_calls"))
-        has_majority_tool_calls = tool_call_count >= len(responses) // 2
+        required_majority = math.ceil(len(responses) / 2)
+        has_majority_tool_calls = tool_call_count >= required_majority
 
         if has_majority_tool_calls and self.tool_vote:
-            logging.info("Tool voting is invoked")
             # mutate responses variable to be only responses with tool calls;
             responses = [r for r in responses if r.get("tool_calls")]
 
@@ -178,7 +193,7 @@ class SelfConsistency(AbstractScalingAlgorithm):
             ]
         else:
             # Vote on message content (existing behavior)
-            response_contents = [r.get("content", "") for r in responses]
+            response_contents = [r.get("content", "") or "" for r in responses]
             responses_projected = [
                 self.consistency_space_projection_func(r) for r in response_contents
             ]
@@ -202,6 +217,51 @@ class SelfConsistency(AbstractScalingAlgorithm):
             selected_index=selected_index,
         )
         return result.the_one if return_response_only else result
+
+    def infer(
+        self,
+        lm: AbstractLanguageModel,
+        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
+        budget: int,
+        return_response_only: bool = True,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | SelfConsistencyResult:
+        """Sync version of infer."""
+        import asyncio
+        try:
+            # Check if we're in an async context
+            asyncio.get_running_loop()
+            # We're in an async context, but this is the sync method
+            # This should not happen in normal usage
+            raise RuntimeError("Use ainfer() method in async contexts")
+        except RuntimeError:
+            # No running loop, safe to run sync
+            pass
+
+        return self._infer_impl_sync(
+            lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
+        )
+
+    def _infer_impl_sync(
+        self,
+        lm: AbstractLanguageModel,
+        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
+        budget: int,
+        return_response_only: bool = True,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | SelfConsistencyResult:
+        """Synchronous implementation."""
+        # Convert to uniform ChatMessages format
+        chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
+
+        # generate responses
+        responses = lm.generate(
+            chat_messages.to_batch(budget), tools=tools, tool_choice=tool_choice
+        )
+
+        return self._process_responses(responses, return_response_only)
 
     def _extract_tool_call_features(self, message_obj: dict):
         """Extract tool call features for voting based on tool_vote type."""
@@ -297,6 +357,10 @@ def create_regex_projection_function(
     def projection_function(response: str) -> tuple:
         """Extract features from response using compiled regex patterns."""
         results = []
+
+        # Handle None or empty response
+        if response is None:
+            response = ""
 
         for pattern in compiled_patterns:
             match = pattern.search(response)

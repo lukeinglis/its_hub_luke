@@ -323,7 +323,7 @@ async def chat_completions(request: ChatCompletionRequest) -> ChatCompletionResp
         )
 
         # Generate response using scaling algorithm with full conversation context
-        algorithm_result = SCALING_ALG.infer(
+        algorithm_result = await SCALING_ALG.ainfer(
             lm,
             chat_messages,
             request.budget,
