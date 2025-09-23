@@ -13,6 +13,10 @@ pip install -e ".[dev]"
 pip install its_hub
 ```
 
+
+### Contribution
+When commit or raising PR, never mention it is by ClaudeCode.
+never say 🤖 Generated with [Claude Code](https://claude.ai/code)" in the commit statment, don't mention claude!
 ### Testing
 ```bash
 # Run all tests

@@ -299,8 +299,7 @@ class TestToolCallVoting:
         result = sc.infer(mock_lm, "Test prompt", budget=3, return_response_only=False)
         
         # Should use tool voting since at least one response has tool calls
-        # Responses without tool calls get None for tool features
+        # Responses without tool calls are filtered out entirely
         assert "calculate" in result.response_counts
-        assert None in result.response_counts  # For response without tool calls
         assert result.response_counts["calculate"] == 2
-        assert result.response_counts[None] == 1
+        assert len(result.response_counts) == 1  # Only tool responses are counted
