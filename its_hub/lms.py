@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import ssl
 
 import aiohttp
 import backoff
+import certifi
 import requests
 
 from .base import AbstractLanguageModel
@@ -217,6 +219,9 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         max_tries: int = 8,
         max_concurrency: int = -1,
         replace_error_with_message: str | None = None,
+        # SSL configuration
+        verify_ssl: bool = True,
+        ssl_context: ssl.SSLContext | None = None,
     ):
         assert max_concurrency == -1 or max_concurrency > 0, (
             "max_concurrency must be -1 (unlimited concurrency) or a positive integer"
@@ -235,6 +240,20 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         self.stop = stop
         self.max_tokens = max_tokens
         self.temperature = temperature
+
+        # SSL configuration
+        self.verify_ssl = verify_ssl
+        if ssl_context is not None:
+            self.ssl_context = ssl_context
+        elif not verify_ssl:
+            # Create an SSL context that doesn't verify certificates
+            self.ssl_context = ssl.create_default_context()
+            self.ssl_context.check_hostname = False
+            self.ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            # For async requests, create SSL context using the same CA bundle as requests
+            # This ensures aiohttp uses the same certificates as requests library
+            self.ssl_context = ssl.create_default_context(cafile=certifi.where())
 
         # set up headers for API requests
         self.headers = {
@@ -338,7 +357,9 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         )
 
         # create a single session for all requests in this call
-        async with aiohttp.ClientSession() as session:
+        # Use the same SSL behavior as requests library
+        connector = aiohttp.TCPConnector(ssl=self.ssl_context)
+        async with aiohttp.ClientSession(connector=connector) as session:
 
             @backoff.on_exception(
                 backoff.expo,
@@ -428,18 +449,24 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
             [messages_or_messages_lst] if is_single else messages_or_messages_lst
         )
         if self.is_async:
-            loop = asyncio.get_event_loop()
-            response_or_responses = loop.run_until_complete(
-                self._generate(
-                    messages_lst,
-                    stop,
-                    max_tokens,
-                    temperature,
-                    include_stop_str_in_output,
-                    tools,
-                    tool_choice,
+            try:
+                # Check if we're in an async context
+                asyncio.get_running_loop()
+                # Run async code in a new thread to avoid "event loop already running" error
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    response_or_responses = executor.submit(
+                        lambda: asyncio.run(self._generate(
+                            messages_lst, stop, max_tokens, temperature,
+                            include_stop_str_in_output, tools, tool_choice
+                        ))
+                    ).result()
+            except RuntimeError:
+                # No running loop, safe to use run_until_complete
+                response_or_responses = asyncio.get_event_loop().run_until_complete(
+                    self._generate(messages_lst, stop, max_tokens, temperature,
+                                 include_stop_str_in_output, tools, tool_choice)
                 )
-            )
         else:
 
             @backoff.on_exception(
@@ -466,6 +493,7 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                     self._chat_completion_endpoint,
                     headers=self.headers,
                     json=request_data,
+                    verify=self.verify_ssl,
                 )
 
                 if response.status_code != 200:
@@ -508,6 +536,36 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                 safe_fetch_single_response(messages, _temperature)
                 for messages, _temperature in zip(messages_lst, temperature_lst)
             ]
+        return response_or_responses[0] if is_single else response_or_responses
+
+    async def agenerate(
+        self,
+        messages_or_messages_lst: list[ChatMessage] | list[list[ChatMessage]],
+        stop: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | list[float] | None = None,
+        include_stop_str_in_output: bool | None = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | list[dict]:
+        """Async version of generate method for use in async contexts."""
+        # Check if we have a single list of messages or a list of message lists
+        is_single = not isinstance(messages_or_messages_lst[0], list)
+        messages_lst = (
+            [messages_or_messages_lst] if is_single else messages_or_messages_lst
+        )
+
+        # Always use async implementation for agenerate
+        response_or_responses = await self._generate(
+            messages_lst,
+            stop,
+            max_tokens,
+            temperature,
+            include_stop_str_in_output,
+            tools,
+            tool_choice,
+        )
+
         return response_or_responses[0] if is_single else response_or_responses
 
     # TODO implement evaluation
