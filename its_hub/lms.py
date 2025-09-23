@@ -554,7 +554,7 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         messages_lst = (
             [messages_or_messages_lst] if is_single else messages_or_messages_lst
         )
-        
+
         # Always use async implementation for agenerate
         response_or_responses = await self._generate(
             messages_lst,
@@ -565,7 +565,7 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
             tools,
             tool_choice,
         )
-        
+
         return response_or_responses[0] if is_single else response_or_responses
 
     # TODO implement evaluation
