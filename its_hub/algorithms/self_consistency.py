@@ -11,7 +11,7 @@ from its_hub.base import (
     AbstractScalingResult,
 )
 from its_hub.types import ChatMessage, ChatMessages
-
+import logging
 
 @dataclass
 class SelfConsistencyResult(AbstractScalingResult):
@@ -162,10 +162,15 @@ class SelfConsistency(AbstractScalingAlgorithm):
             chat_messages.to_batch(budget), tools=tools, tool_choice=tool_choice
         )
 
-        # Check if we should use tool-vote or content-vote
-        has_tool_calls = any(r.get("tool_calls") for r in responses)
+        # Check if majority of responses have tool calls to decide voting method
+        tool_call_count = sum(1 for r in responses if r.get("tool_calls"))
+        has_majority_tool_calls = tool_call_count >= len(responses) // 2
 
-        if has_tool_calls and self.tool_vote:
+        if has_majority_tool_calls and self.tool_vote:
+            logging.info("Tool voting is invoked")
+            # mutate responses variable to be only responses with tool calls;
+            responses = [r for r in responses if r.get("tool_calls")]
+
             # Vote on tool calls directly
             responses_projected = [
                 self._extract_tool_call_features(r) for r in responses
