@@ -1,3 +1,4 @@
+import logging
 import random
 import re
 from collections import Counter
@@ -11,7 +12,7 @@ from its_hub.base import (
     AbstractScalingResult,
 )
 from its_hub.types import ChatMessage, ChatMessages
-import logging
+
 
 @dataclass
 class SelfConsistencyResult(AbstractScalingResult):
