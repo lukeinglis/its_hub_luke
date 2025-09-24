@@ -178,13 +178,17 @@ class SelfConsistency(AbstractScalingAlgorithm):
         # Determine eligible responses and create projections
         if has_majority_tool_calls and self.tool_vote:
             logging.info("Tool voting is invoked")
-            eligible_indices = [i for i, r in enumerate(responses) if r.get("tool_calls")]
+            eligible_indices = [
+                i for i, r in enumerate(responses) if r.get("tool_calls")
+            ]
             responses_projected = [
                 self._extract_tool_call_features(responses[i]) for i in eligible_indices
             ]
         else:
             # Content voting - filter out tool call responses
-            eligible_indices = [i for i, r in enumerate(responses) if not r.get("tool_calls")]
+            eligible_indices = [
+                i for i, r in enumerate(responses) if not r.get("tool_calls")
+            ]
             responses_projected = [
                 self.consistency_space_projection_func(responses[i].get("content", ""))
                 for i in eligible_indices
