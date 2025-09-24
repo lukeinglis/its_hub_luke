@@ -228,39 +228,10 @@ class SelfConsistency(AbstractScalingAlgorithm):
         tool_choice: str | dict | None = None,
     ) -> dict | SelfConsistencyResult:
         """Sync version of infer."""
-        import asyncio
-        try:
-            # Check if we're in an async context
-            asyncio.get_running_loop()
-            # We're in an async context, but this is the sync method
-            # This should not happen in normal usage
-            raise RuntimeError("Use ainfer() method in async contexts")
-        except RuntimeError:
-            # No running loop, safe to run sync
-            pass
-
-        return self._infer_impl_sync(
-            lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
-        )
-
-    def _infer_impl_sync(
-        self,
-        lm: AbstractLanguageModel,
-        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
-        budget: int,
-        return_response_only: bool = True,
-        tools: list[dict] | None = None,
-        tool_choice: str | dict | None = None,
-    ) -> dict | SelfConsistencyResult:
-        """Synchronous implementation."""
-        # Convert to uniform ChatMessages format
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
-
-        # generate responses
         responses = lm.generate(
             chat_messages.to_batch(budget), tools=tools, tool_choice=tool_choice
         )
-
         return self._process_responses(responses, return_response_only)
 
     def _extract_tool_call_features(self, message_obj: dict):
