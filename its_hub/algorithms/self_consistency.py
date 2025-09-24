@@ -14,7 +14,18 @@ from its_hub.base import (
 )
 from its_hub.types import ChatMessage, ChatMessages
 
+def _default_projection_func(response: str) -> str:
+    """Default projection function that uses exact content matching.
+    This function strips whitespace and returns the content as-is for voting.
+    Responses with identical content (after stripping) will be considered equivalent.
+    Args:
+        response: The response content string to project.
+    Returns:
+        The stripped response content.
+    """
 
+
+    return response.strip()
 @dataclass
 class SelfConsistencyResult(AbstractScalingResult):
     responses: list[dict]  # Keep original message format with tool calls
@@ -24,7 +35,6 @@ class SelfConsistencyResult(AbstractScalingResult):
     @property
     def the_one(self) -> dict:
         return self.responses[self.selected_index]
-
 
 def _select_most_common_or_random(
     list_to_select_from: list[str],
@@ -111,7 +121,7 @@ def _select_hierarchical_most_common_or_random(
 class SelfConsistency(AbstractScalingAlgorithm):
     def __init__(
         self,
-        consistency_space_projection_func: Callable,
+        consistency_space_projection_func: Callable | None = None,
         tool_vote: str | None = None,
         exclude_args: list[str] | None = None,
     ):
@@ -142,8 +152,13 @@ class SelfConsistency(AbstractScalingAlgorithm):
             raise ValueError(
                 f"tool_vote must be one of {valid_tool_vote_options}, got: {tool_vote}"
             )
-
-        self.consistency_space_projection_func = consistency_space_projection_func
+        # Set default projection function if provided None
+        self.consistency_space_projection_func = (
+            consistency_space_projection_func or _default_projection_func
+        )
+        logging.info(
+            f"Initializing with projection function: {self.consistency_space_projection_func}"
+        )
         self.tool_vote = tool_vote
         self.exclude_args = exclude_args or []
 
@@ -169,39 +184,59 @@ class SelfConsistency(AbstractScalingAlgorithm):
         required_majority = math.ceil(len(responses) / 2)
         has_majority_tool_calls = tool_call_count >= required_majority
 
+        # Warn if tool calls detected but tool_vote not set
+        if tool_call_count > 0 and not self.tool_vote:
+            logging.warning(
+                f"Detected {tool_call_count}/{len(responses)} responses with tool calls, "
+                "but tool_vote is not set. Consider setting tool_vote parameter "
+                "(e.g., 'tool_name', 'tool_args', 'tool_hierarchical') for tool call voting."
+            )
+
+        # Determine eligible responses and create projections
         if has_majority_tool_calls and self.tool_vote:
             logging.info("Tool voting is invoked")
-            # mutate responses variable to be only responses with tool calls;
-            responses = [r for r in responses if r.get("tool_calls")]
-
-            # Vote on tool calls directly
+            eligible_indices = [
+                i for i, r in enumerate(responses) if r.get("tool_calls")
+            ]
             responses_projected = [
-                self._extract_tool_call_features(r) for r in responses
+                self._extract_tool_call_features(responses[i]) for i in eligible_indices
             ]
         else:
-            # Vote on message content (existing behavior)
-            response_contents = [r.get("content", "") for r in responses]
+            # Content voting - filter out tool call responses
+            eligible_indices = [
+                i for i, r in enumerate(responses) if not r.get("tool_calls")
+            ]
             responses_projected = [
-                self.consistency_space_projection_func(r) for r in response_contents
+                self.consistency_space_projection_func(responses[i].get("content", ""))
+                for i in eligible_indices
             ]
 
-        # determine if we're dealing with hierarchical (tuple) or flat (string) projections
+        # Error if no eligible responses after filtering
+        if not eligible_indices:
+            raise ValueError(
+                f"No eligible responses found after filtering. "
+                f"Total responses: {len(responses)}, responses with tool calls: {tool_call_count}. "
+                "This typically happens when tool_vote is not set but all responses contain tool calls."
+            )
+
+        # Determine if we're dealing with hierarchical (tuple) or flat projections
         if responses_projected and isinstance(responses_projected[0], tuple):
-            # hierarchical consistency space
-            response_counts, selected_index = (
+            response_counts, filtered_selected_index = (
                 _select_hierarchical_most_common_or_random(responses_projected)
             )
         else:
-            # flat consistency space (backward compatibility)
-            response_counts, selected_index = _select_most_common_or_random(
+            response_counts, filtered_selected_index = _select_most_common_or_random(
                 responses_projected
             )
 
-        # return the result - preserve original message format with tool calls
+        # Map back to original index
+        selected_index = eligible_indices[filtered_selected_index]
+
+        # Return result with original responses preserved
         result = SelfConsistencyResult(
-            responses=responses,  # Keep original dict format with tool calls
+            responses=responses,  # ALL original responses
             response_counts=response_counts,
-            selected_index=selected_index,
+            selected_index=selected_index,  # Index into original responses
         )
         return result.the_one if return_response_only else result
 
