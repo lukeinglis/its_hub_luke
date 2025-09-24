@@ -96,7 +96,7 @@ class TestToolCallHandling:
         assert result.the_one["content"] in ["I need to calculate this. The answer is 42.", "The answer is 42."]
     
     def test_self_consistency_with_empty_content_and_tool_calls(self):
-        """Test self-consistency when responses have tool calls but empty content."""
+        """Test self-consistency raises error when all responses have tool calls but tool_vote is not set."""
         class EmptyContentToolCallMock(SimpleMockLanguageModel):
             def __init__(self):
                 super().__init__([])
@@ -125,12 +125,10 @@ class TestToolCallHandling:
             return text
         
         sc = SelfConsistency(identity_projection)
-        result = sc.infer(mock_lm, "Search for information", budget=3, return_response_only=False)
         
-        # All responses should be empty strings (content extracted from tool call responses)
-        assert all(response["content"] == "" for response in result.responses)
-        assert result.the_one["content"] == ""
-        assert len(result.responses) == 3
+        # Should raise ValueError when all responses have tool calls but tool_vote is not set
+        with pytest.raises(ValueError, match="No eligible responses found after filtering"):
+            sc.infer(mock_lm, "Search for information", budget=3, return_response_only=False)
 
 
 class TestToolCallVotingBackwardCompatibility:
