@@ -14,7 +14,18 @@ from its_hub.base import (
 )
 from its_hub.types import ChatMessage, ChatMessages
 
+def _default_projection_func(response: str) -> str:
+    """Default projection function that uses exact content matching.
+    This function strips whitespace and returns the content as-is for voting.
+    Responses with identical content (after stripping) will be considered equivalent.
+    Args:
+        response: The response content string to project.
+    Returns:
+        The stripped response content.
+    """
 
+
+    return response.strip()
 @dataclass
 class SelfConsistencyResult(AbstractScalingResult):
     responses: list[dict]  # Keep original message format with tool calls
@@ -24,7 +35,6 @@ class SelfConsistencyResult(AbstractScalingResult):
     @property
     def the_one(self) -> dict:
         return self.responses[self.selected_index]
-
 
 def _select_most_common_or_random(
     list_to_select_from: list[str],
@@ -111,7 +121,7 @@ def _select_hierarchical_most_common_or_random(
 class SelfConsistency(AbstractScalingAlgorithm):
     def __init__(
         self,
-        consistency_space_projection_func: Callable,
+        consistency_space_projection_func: Callable | None = None,
         tool_vote: str | None = None,
         exclude_args: list[str] | None = None,
     ):
@@ -142,8 +152,13 @@ class SelfConsistency(AbstractScalingAlgorithm):
             raise ValueError(
                 f"tool_vote must be one of {valid_tool_vote_options}, got: {tool_vote}"
             )
-
-        self.consistency_space_projection_func = consistency_space_projection_func
+        # Set default projection function if provided None
+        self.consistency_space_projection_func = (
+            consistency_space_projection_func or _default_projection_func
+        )
+        logging.info(
+            f"Initializing with projection function: {self.consistency_space_projection_func}"
+        )
         self.tool_vote = tool_vote
         self.exclude_args = exclude_args or []
 
