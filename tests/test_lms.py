@@ -385,15 +385,15 @@ class TestStepGeneration:
 
     def test_tokens_per_step_passed_to_lm(self):
         """Test that tokens_per_step is passed as max_tokens to language model."""
-        from unittest.mock import Mock
+        from unittest.mock import AsyncMock, Mock
 
         mock_lm = Mock()
-        mock_lm.generate.return_value = {"role": "assistant", "content": "test response"}
+        mock_lm.agenerate = AsyncMock(return_value={"role": "assistant", "content": "test response"})
 
         step_gen = StepGeneration(tokens_per_step=100, max_steps=3)
         step_gen.forward(mock_lm, "test prompt")
 
         # Verify that max_tokens=100 was passed to the language model
-        mock_lm.generate.assert_called_once()
-        call_args = mock_lm.generate.call_args
+        mock_lm.agenerate.assert_called_once()
+        call_args = mock_lm.agenerate.call_args
         assert call_args.kwargs['max_tokens'] == 100

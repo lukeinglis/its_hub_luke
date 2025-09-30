@@ -1,7 +1,7 @@
 import logging
+import math
 import random
 import re
-import math
 from collections import Counter
 from collections.abc import Callable
 
@@ -147,7 +147,7 @@ class SelfConsistency(AbstractScalingAlgorithm):
         self.tool_vote = tool_vote
         self.exclude_args = exclude_args or []
 
-    def infer(
+    async def ainfer(
         self,
         lm: AbstractLanguageModel,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
@@ -156,11 +156,11 @@ class SelfConsistency(AbstractScalingAlgorithm):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | SelfConsistencyResult:
-        # Convert to uniform ChatMessages format
+        """run inference asynchronously with self-consistency"""
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
 
         # generate responses
-        responses = lm.generate(
+        responses = await lm.agenerate(
             chat_messages.to_batch(budget), tools=tools, tool_choice=tool_choice
         )
 
@@ -204,6 +204,21 @@ class SelfConsistency(AbstractScalingAlgorithm):
             selected_index=selected_index,
         )
         return result.the_one if return_response_only else result
+
+    def infer(
+        self,
+        lm: AbstractLanguageModel,
+        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
+        budget: int,
+        return_response_only: bool = True,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | SelfConsistencyResult:
+        """run inference synchronously with self-consistency"""
+        import asyncio
+        return asyncio.run(
+            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
+        )
 
     def _extract_tool_call_features(self, message_obj: dict):
         """Extract tool call features for voting based on tool_vote type."""

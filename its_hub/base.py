@@ -7,34 +7,31 @@ class AbstractLanguageModel(ABC):
     """abstract base class for (autoregressive) language models"""
 
     @abstractmethod
+    async def agenerate(
+        self,
+        messages: list[ChatMessage] | list[list[ChatMessage]],
+        stop: str | None = None,
+    ) -> str | list[str]:
+        """generate a response from the model asynchronously"""
+        pass
+
+    @abstractmethod
     def generate(
         self,
         messages: list[ChatMessage] | list[list[ChatMessage]],
         stop: str | None = None,
     ) -> str | list[str]:
-        """
-        generate a response from the model
+        """generate a response from the model synchronously"""
+        pass
 
-        Args:
-            messages: the input messages
-
-        Returns:
-            the generated output string
-        """
+    @abstractmethod
+    async def aevaluate(self, prompt: str, generation: str) -> list[float]:
+        """evaluate the likelihoods of the generation asynchronously"""
         pass
 
     @abstractmethod
     def evaluate(self, prompt: str, generation: str) -> list[float]:
-        """
-        evaluate the likelihoods of the generation given the prompt
-
-        Args:
-            prompt: the input prompt
-            generation: the generated output string
-
-        Returns:
-            the likelihoods of the generation per token
-        """
+        """evaluate the likelihoods of the generation synchronously"""
         pass
 
 
@@ -52,6 +49,19 @@ class AbstractScalingAlgorithm(ABC):
     """abstract base class for inference-time scaling algorithms"""
 
     @abstractmethod
+    async def ainfer(
+        self,
+        lm: AbstractLanguageModel,
+        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
+        budget: int,
+        return_response_only: bool = True,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> str | AbstractScalingResult:
+        """run inference asynchronously with the given language model and prompt"""
+        pass
+
+    @abstractmethod
     def infer(
         self,
         lm: AbstractLanguageModel,
@@ -61,20 +71,7 @@ class AbstractScalingAlgorithm(ABC):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> str | AbstractScalingResult:
-        """
-        run inference with the given language model and prompt under the specified budget
-
-        Args:
-            lm: a language model that takes a prompt and returns a response
-            prompt_or_messages: the input prompt (string) or conversation history (list of ChatMessage) or ChatMessages object
-            budget: the computational budget for inference
-            return_response_only: whether to return only the selected response
-            tools: available tools for the model to call
-            tool_choice: tool choice strategy ('auto', 'none', or specific tool)
-
-        Returns:
-            the generated output string or the complete scaling result
-        """
+        """run inference synchronously with the given language model and prompt"""
         pass
 
 
@@ -82,10 +79,17 @@ class AbstractOutcomeRewardModel(ABC):
     """abstract base class for outcome reward models"""
 
     @abstractmethod
+    async def ascore(
+        self, prompt_or_messages: str | list[ChatMessage] | ChatMessages, response: str
+    ) -> float:
+        """score a response asynchronously"""
+        pass
+
+    @abstractmethod
     def score(
         self, prompt_or_messages: str | list[ChatMessage] | ChatMessages, response: str
     ) -> float:
-        """the score for a given conversation context and response"""
+        """score a response synchronously"""
         pass
 
 
@@ -94,10 +98,19 @@ class AbstractProcessRewardModel(ABC):
     """abstract base class for process reward models"""
 
     @abstractmethod
+    async def ascore(
+        self,
+        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
+        steps: list[str],
+    ) -> list[float]:
+        """score steps asynchronously"""
+        pass
+
+    @abstractmethod
     def score(
         self,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
         steps: list[str],
     ) -> list[float]:
-        """the score for a given conversation context and steps"""
+        """score steps synchronously"""
         pass

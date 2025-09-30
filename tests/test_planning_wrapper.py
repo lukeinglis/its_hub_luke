@@ -38,6 +38,9 @@ class MockLanguageModel(AbstractLanguageModel):
         self.planning_response = "APPROACH 1: Direct algebraic approach using standard techniques\nAPPROACH 2: Alternative method using different mathematical properties\nAPPROACH 3: Geometric or graphical interpretation approach"
         self.call_count = 0
 
+    async def agenerate(self, messages, **kwargs):
+        return self.generate(messages, **kwargs)
+
     def generate(self, messages, stop=None, max_tokens=None, include_stop_str_in_output=False, temperature=None, **kwargs):
         # Handle both single and batch generation
         if isinstance(messages, list) and len(messages) > 0 and isinstance(messages[0], list):
@@ -54,6 +57,9 @@ class MockLanguageModel(AbstractLanguageModel):
             # Single generation (for planning)
             return {"role": "assistant", "content": self.planning_response}
 
+    async def aevaluate(self, prompt: str, generation: str) -> list[float]:
+        return self.evaluate(prompt, generation)
+
     def evaluate(self, prompt: str, generation: str) -> list[float]:
         """Return dummy evaluation scores."""
         return [0.5] * len(generation.split())
@@ -65,6 +71,9 @@ class MockProcessRewardModel(AbstractProcessRewardModel):
     def __init__(self, scores: list[float] | None = None):
         self.scores = scores or [0.1, 0.5, 0.9]
         self.call_count = 0
+
+    async def ascore(self, prompt: str, response: str | list[str]) -> float | list[float]:
+        return self.score(prompt, response)
 
     def score(self, prompt: str, response: str | list[str]) -> float | list[float]:
         import random
@@ -79,6 +88,9 @@ class ProcessToOutcomeRewardModel(AbstractOutcomeRewardModel):
 
     def __init__(self, process_rm: AbstractProcessRewardModel):
         self.process_rm = process_rm
+
+    async def ascore(self, prompt: str, responses: str | list[str]) -> float | list[float]:
+        return self.score(prompt, responses)
 
     def score(self, prompt: str, responses: str | list[str]) -> float | list[float]:
         """Convert process reward to outcome reward by aggregating scores."""

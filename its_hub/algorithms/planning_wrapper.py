@@ -128,7 +128,7 @@ class PlanningWrapper(AbstractScalingAlgorithm):
         self.base_algorithm = base_algorithm
         self.plan_parser = PlanParser()
 
-    def infer(
+    async def ainfer(
         self,
         lm: AbstractLanguageModel,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
@@ -137,7 +137,7 @@ class PlanningWrapper(AbstractScalingAlgorithm):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | PlanningWrappedResult:
-        # Convert to uniform ChatMessages format
+        """run planning-enhanced inference asynchronously"""
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
         """Run Planning-Enhanced version of the base algorithm.
 
@@ -155,7 +155,7 @@ class PlanningWrapper(AbstractScalingAlgorithm):
         planning_prompt = PlanningPromptTemplate.create_planning_prompt(
             chat_messages.to_prompt()
         )
-        plan_response = lm.generate([ChatMessage(role="user", content=planning_prompt)])
+        plan_response = await lm.agenerate([ChatMessage(role="user", content=planning_prompt)])
         plan = extract_content_from_lm_response(plan_response)
 
         # Step 2: Parse approaches from plan
@@ -192,7 +192,7 @@ class PlanningWrapper(AbstractScalingAlgorithm):
             )
 
             # Run base algorithm for this approach
-            approach_result = self.base_algorithm.infer(
+            approach_result = await self.base_algorithm.ainfer(
                 lm,
                 approach_prompt,
                 approach_budget,
@@ -234,6 +234,21 @@ class PlanningWrapper(AbstractScalingAlgorithm):
         )
 
         return result.the_one if return_response_only else result
+
+    def infer(
+        self,
+        lm: AbstractLanguageModel,
+        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
+        budget: int,
+        return_response_only: bool = True,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | PlanningWrappedResult:
+        """run planning-enhanced inference synchronously"""
+        import asyncio
+        return asyncio.run(
+            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
+        )
 
     def _select_best_approach(
         self, approach_results: dict[str, AbstractScalingResult]

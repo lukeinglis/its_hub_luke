@@ -25,7 +25,7 @@ class BestOfN(AbstractScalingAlgorithm):
     def __init__(self, orm: AbstractOutcomeRewardModel):
         self.orm = orm
 
-    def infer(
+    async def ainfer(
         self,
         lm: AbstractLanguageModel,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
@@ -34,11 +34,11 @@ class BestOfN(AbstractScalingAlgorithm):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | BestOfNResult:
-        # Convert to uniform ChatMessages format
+        """run inference asynchronously with best-of-n"""
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
 
         # generate responses
-        responses = lm.generate(
+        responses = await lm.agenerate(
             chat_messages.to_batch(budget), tools=tools, tool_choice=tool_choice
         )
 
@@ -50,11 +50,11 @@ class BestOfN(AbstractScalingAlgorithm):
         # Currently hardcoded to True, will be addressed in future PR
         batched = True
         if batched:
-            scores = self.orm.score(chat_messages, response_contents)
+            scores = await self.orm.ascore(chat_messages, response_contents)
         else:
             scores = []
             for r in response_contents:
-                scores.append(self.orm.score(chat_messages, r))
+                scores.append(await self.orm.ascore(chat_messages, r))
 
         # select the best response
         selected_index = scores.index(max(scores))
@@ -66,3 +66,18 @@ class BestOfN(AbstractScalingAlgorithm):
             selected_index=selected_index,
         )
         return result.the_one if return_response_only else result
+
+    def infer(
+        self,
+        lm: AbstractLanguageModel,
+        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
+        budget: int,
+        return_response_only: bool = True,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | BestOfNResult:
+        """run inference synchronously with best-of-n"""
+        import asyncio
+        return asyncio.run(
+            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
+        )

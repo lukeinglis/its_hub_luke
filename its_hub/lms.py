@@ -116,7 +116,7 @@ class StepGeneration:
                     for messages in messages_or_messages_lst
                 ]
 
-    def forward(
+    async def aforward(
         self,
         lm: AbstractLanguageModel,
         prompt_or_prompts: str | list[str],
@@ -124,6 +124,7 @@ class StepGeneration:
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> tuple[str, bool] | list[tuple[str, bool]]:
+        """generate next step(s) asynchronously"""
         if steps_so_far is None:
             steps_so_far = []
         is_single_prompt = isinstance(prompt_or_prompts, str)
@@ -141,7 +142,7 @@ class StepGeneration:
                         role="assistant", content=self._post_process(steps_so_far)
                     )
                 )
-            next_step_response = lm.generate(
+            next_step_response = await lm.agenerate(
                 messages,
                 stop=self.step_token,
                 max_tokens=self.tokens_per_step,
@@ -178,7 +179,7 @@ class StepGeneration:
                         )
                     )
                 messages_lst.append(messages)
-            next_steps_responses = lm.generate(
+            next_steps_responses = await lm.agenerate(
                 messages_lst,
                 stop=self.step_token,
                 max_tokens=self.tokens_per_step,
@@ -200,6 +201,19 @@ class StepGeneration:
                     for is_stopped_per_prompt, next_step in zip(is_stopped, next_steps)
                 ]
             return list(zip(next_steps, is_stopped))
+
+    def forward(
+        self,
+        lm: AbstractLanguageModel,
+        prompt_or_prompts: str | list[str],
+        steps_so_far: list[str] | list[list[str]] | None = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> tuple[str, bool] | list[tuple[str, bool]]:
+        """generate next step(s) synchronously"""
+        return asyncio.run(
+            self.aforward(lm, prompt_or_prompts, steps_so_far, tools, tool_choice)
+        )
 
 
 class OpenAICompatibleLanguageModel(AbstractLanguageModel):
@@ -322,7 +336,7 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
 
         return request_data
 
-    async def _generate(
+    async def _agenerate(
         self,
         messages_lst: list[list[ChatMessage]],
         stop: str | None = None,
@@ -410,6 +424,32 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
                 )
             )
 
+    async def agenerate(
+        self,
+        messages_or_messages_lst: list[ChatMessage] | list[list[ChatMessage]],
+        stop: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | list[float] | None = None,
+        include_stop_str_in_output: bool | None = None,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | list[dict]:
+        """generate response(s) asynchronously"""
+        is_single = not isinstance(messages_or_messages_lst[0], list)
+        messages_lst = (
+            [messages_or_messages_lst] if is_single else messages_or_messages_lst
+        )
+        response_or_responses = await self._agenerate(
+            messages_lst,
+            stop,
+            max_tokens,
+            temperature,
+            include_stop_str_in_output,
+            tools,
+            tool_choice,
+        )
+        return response_or_responses[0] if is_single else response_or_responses
+
     def generate(
         self,
         messages_or_messages_lst: list[ChatMessage] | list[list[ChatMessage]],
@@ -420,17 +460,14 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | list[dict]:
-        # Check if we have a single list of messages or a list of message lists
-        # Single list: [{"role": "user", "content": "..."}] or [Message(...)]
-        # Multiple lists: [[{"role": "user", "content": "..."}], [{"role": "user", "content": "..."}]]
+        """generate response(s) synchronously"""
         is_single = not isinstance(messages_or_messages_lst[0], list)
         messages_lst = (
             [messages_or_messages_lst] if is_single else messages_or_messages_lst
         )
         if self.is_async:
-            loop = asyncio.get_event_loop()
-            response_or_responses = loop.run_until_complete(
-                self._generate(
+            response_or_responses = asyncio.run(
+                self._agenerate(
                     messages_lst,
                     stop,
                     max_tokens,
@@ -510,8 +547,12 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
             ]
         return response_or_responses[0] if is_single else response_or_responses
 
-    # TODO implement evaluation
+    async def aevaluate(self, prompt: str, generation: str) -> list[float]:
+        """evaluate the likelihoods asynchronously"""
+        raise NotImplementedError("evaluate method not implemented")
+
     def evaluate(self, prompt: str, generation: str) -> list[float]:
+        """evaluate the likelihoods synchronously"""
         raise NotImplementedError("evaluate method not implemented")
 
 

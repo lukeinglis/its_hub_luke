@@ -51,32 +51,15 @@ class BeamSearch(AbstractScalingAlgorithm):
         self.prm = prm
         self.beam_width = beam_width
 
-    def _search_one_level(
+    async def _asearch_one_level(
         self,
         lm: AbstractLanguageModel,
         candidates: list[Path],
         prompt: str,
-        batched: bool = False,
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> list[Path]:
-        if not batched:
-            for c in candidates:
-                if c.is_stopped:
-                    continue
-
-                next_step, is_stopped = self.sg.forward(
-                    lm, prompt, c.steps, tools=tools, tool_choice=tool_choice
-                )
-                c.steps.append(next_step)
-                c.is_stopped = is_stopped
-                score = self.prm.score(
-                    prompt, self.sg._post_process(c.steps, stopped=True)
-                )
-                c.score = score
-
-            return candidates
-
+        """search one level asynchronously (batched)"""
         is_stopped_in_the_beginning = [c.is_stopped for c in candidates]
 
         # collect batch inputs
@@ -84,12 +67,11 @@ class BeamSearch(AbstractScalingAlgorithm):
         for c, is_stopped in zip(candidates, is_stopped_in_the_beginning):
             if is_stopped:
                 continue
-
             prompts.append(prompt)
             steps_so_far.append(c.steps)
 
         # collect batch outputs
-        sg_forward_results = self.sg.forward(
+        sg_forward_results = await self.sg.aforward(
             lm, prompts, steps_so_far, tools=tools, tool_choice=tool_choice
         )
 
@@ -98,7 +80,6 @@ class BeamSearch(AbstractScalingAlgorithm):
         for c, is_stopped in zip(candidates, is_stopped_in_the_beginning):
             if is_stopped:
                 continue
-
             next_step, is_stopped = sg_forward_results[i]
             c.steps.append(next_step)
             c.is_stopped = is_stopped
@@ -109,11 +90,10 @@ class BeamSearch(AbstractScalingAlgorithm):
         for c, is_stopped in zip(candidates, is_stopped_in_the_beginning):
             if is_stopped:
                 continue
-
             steps_so_far.append(c.steps)
 
         # collect batch outputs for scoring
-        scores = self.prm.score(
+        scores = await self.prm.ascore(
             prompt,
             [
                 self.sg._post_process(steps_so_far_per_prompt, stopped=True)
@@ -126,13 +106,27 @@ class BeamSearch(AbstractScalingAlgorithm):
         for c, is_stopped in zip(candidates, is_stopped_in_the_beginning):
             if is_stopped:
                 continue
-
             c.score = scores[i]
             i += 1
 
         return candidates
 
-    def infer(
+    def _search_one_level(
+        self,
+        lm: AbstractLanguageModel,
+        candidates: list[Path],
+        prompt: str,
+        batched: bool = False,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> list[Path]:
+        """search one level synchronously"""
+        import asyncio
+        return asyncio.run(
+            self._asearch_one_level(lm, candidates, prompt, tools, tool_choice)
+        )
+
+    async def ainfer(
         self,
         lm: AbstractLanguageModel,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
@@ -141,7 +135,7 @@ class BeamSearch(AbstractScalingAlgorithm):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | BeamSearchResult:
-        # Convert to uniform ChatMessages format
+        """run inference asynchronously with beam search"""
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
         assert budget % self.beam_width == 0, "budget must be divisible by beam_width"
         assert budget >= self.beam_width, (
@@ -155,12 +149,11 @@ class BeamSearch(AbstractScalingAlgorithm):
         ]
 
         while not all(c.is_stopped for c in candidates):
-            # TODO: Update _search_one_level to support native ChatMessages format instead of string conversion
-            candidates = self._search_one_level(
+            # TODO: Update _asearch_one_level to support native ChatMessages format instead of string conversion
+            candidates = await self._asearch_one_level(
                 lm,
                 candidates,
                 chat_messages.to_prompt(),
-                batched=True,
                 tools=tools,
                 tool_choice=tool_choice,
             )
@@ -191,3 +184,18 @@ class BeamSearch(AbstractScalingAlgorithm):
             steps_used=steps_used,
         )
         return result.the_one if return_response_only else result
+
+    def infer(
+        self,
+        lm: AbstractLanguageModel,
+        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
+        budget: int,
+        return_response_only: bool = True,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | BeamSearchResult:
+        """run inference synchronously with beam search"""
+        import asyncio
+        return asyncio.run(
+            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
+        )

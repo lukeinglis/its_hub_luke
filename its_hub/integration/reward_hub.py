@@ -13,12 +13,13 @@ class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
         self.model = VllmProcessRewardModel(model_name=model_name, device=device)
         self.aggregation_method = aggregation_method
 
-    def score(
+    async def ascore(
         self,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
         response_or_responses: str | list[str],
-    ) -> float:
-        # Convert to uniform ChatMessages format
+    ) -> float | list[float]:
+        """score response(s) asynchronously"""
+        import asyncio
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
 
         is_single_response = isinstance(response_or_responses, str)
@@ -26,7 +27,7 @@ class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
             [response_or_responses] if is_single_response else response_or_responses
         )
 
-        # Build conversation messages with responses (convert system to user for reward model compatibility)
+        # Build conversation messages with responses
         base_msgs = [
             ChatMessage(role="user", content=f"System: {msg.content}")
             if msg.role == "system"
@@ -40,9 +41,21 @@ class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
             ]
             for response in responses
         ]
-        res = self.model.score(
+
+        # Run in thread to avoid blocking event loop
+        res = await asyncio.to_thread(
+            self.model.score,
             messages=messages,
             aggregation_method=self.aggregation_method,
             return_full_prm_result=False,
         )
         return res[0] if is_single_response else res
+
+    def score(
+        self,
+        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
+        response_or_responses: str | list[str],
+    ) -> float | list[float]:
+        """score response(s) synchronously"""
+        import asyncio
+        return asyncio.run(self.ascore(prompt_or_messages, response_or_responses))
