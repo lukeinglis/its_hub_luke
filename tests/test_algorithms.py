@@ -281,6 +281,45 @@ class TestSelfConsistency:
         assert extracted[0] == "algebra"  # Should be algebra approach
         assert extracted[1] in ["42", "24"]  # Should be one of the algebra answers
 
+    def test_default_projection_function(self):
+        """Test the default projection function behavior."""
+        from its_hub.algorithms.self_consistency import _default_projection_func
+
+        # Test basic stripping
+        assert _default_projection_func("  hello world  ") == "hello world"
+        assert _default_projection_func("test") == "test"
+        assert _default_projection_func("") == ""
+
+        # Test with various whitespace
+        assert _default_projection_func("\n\ttest\n\t") == "test"
+        assert _default_projection_func("   ") == ""
+
+        # Test that it preserves internal whitespace
+        assert _default_projection_func("  hello world  ") == "hello world"
+        assert _default_projection_func("\nhello\nworld\n") == "hello\nworld"
+
+    def test_default_projection_function_with_self_consistency(self):
+        """Test that default projection function works correctly with SelfConsistency."""
+        responses = [
+            "  answer: 42  ",  # Leading/trailing whitespace
+            "answer: 42",     # No whitespace
+            "  answer: 42  ", # Duplicate with whitespace
+            "answer: 24"      # Different answer
+        ]
+        mock_lm = StepMockLanguageModel(responses)
+
+        # Test with default projection function (None should use _default_projection_func)
+        sc = SelfConsistency(consistency_space_projection_func=None)
+        result = sc.infer(mock_lm, "test prompt", budget=4, return_response_only=False)
+
+        assert isinstance(result, SelfConsistencyResult)
+        # "answer: 42" should be most common after stripping whitespace
+        assert result.the_one["content"].strip() == "answer: 42"
+
+        # Verify the counts - "answer: 42" should appear 3 times after projection
+        assert result.response_counts["answer: 42"] == 3
+        assert result.response_counts["answer: 24"] == 1
+
 
 class TestDataStructures:
     """Test core data structures used by algorithms."""
