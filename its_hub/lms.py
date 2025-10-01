@@ -1,9 +1,10 @@
 import asyncio
 import logging
+import ssl
 
 import aiohttp
 import backoff
-import requests
+import certifi
 
 from .base import AbstractLanguageModel
 from .error_handling import (
@@ -223,7 +224,7 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         api_key: str,
         model_name: str,
         system_prompt: str | None = None,
-        is_async: bool = False,
+        is_async: bool = False,  # Deprecated: parameter is ignored (always async internally)
         # default runtime parameters
         stop: str | None = None,
         max_tokens: int | None = None,
@@ -236,10 +237,22 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
             "max_concurrency must be -1 (unlimited concurrency) or a positive integer"
         )
 
+        # Warn about deprecated is_async parameter
+        if is_async is not False:
+            import warnings
+            warnings.warn(
+                "The 'is_async' parameter is deprecated and will be removed in a future version. "
+                "The implementation now always uses async internally. "
+                "Sync methods (generate, evaluate) automatically wrap async calls with asyncio.run().",
+                DeprecationWarning,
+                stacklevel=2
+            )
+
         self.endpoint = endpoint
         self.api_key = api_key
         self.model_name = model_name
         self.system_prompt = system_prompt
+        # Keep is_async for backward compatibility but it's no longer used
         self.is_async = is_async
         self.max_tries = max_tries
         self.max_concurrency = max_concurrency
@@ -351,8 +364,13 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
             len(messages_lst) if self.max_concurrency == -1 else self.max_concurrency
         )
 
+        # create SSL context with certifi certificates (same as requests library)
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+
         # create a single session for all requests in this call
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(ssl=ssl_context)
+        ) as session:
 
             @backoff.on_exception(
                 backoff.expo,
@@ -460,91 +478,28 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | list[dict]:
-        """generate response(s) synchronously"""
+        """Generate response(s) synchronously.
+
+        Note: This is a sync wrapper around the async implementation.
+        Cannot be called from within an async function - use agenerate() instead.
+        """
         is_single = not isinstance(messages_or_messages_lst[0], list)
         messages_lst = (
             [messages_or_messages_lst] if is_single else messages_or_messages_lst
         )
-        if self.is_async:
-            response_or_responses = asyncio.run(
-                self._agenerate(
-                    messages_lst,
-                    stop,
-                    max_tokens,
-                    temperature,
-                    include_stop_str_in_output,
-                    tools,
-                    tool_choice,
-                )
+
+        # Always use async implementation via asyncio.run()
+        response_or_responses = asyncio.run(
+            self._agenerate(
+                messages_lst,
+                stop,
+                max_tokens,
+                temperature,
+                include_stop_str_in_output,
+                tools,
+                tool_choice,
             )
-        else:
-
-            @backoff.on_exception(
-                backoff.expo,
-                RETRYABLE_ERRORS,
-                max_tries=self.max_tries,
-                on_backoff=enhanced_on_backoff,
-                giveup=lambda e: not should_retry(e),
-            )
-            def fetch_single_response(
-                messages: list[ChatMessage], _temperature: float | None
-            ) -> dict:
-                request_data = self._prepare_request_data(
-                    messages,
-                    stop,
-                    max_tokens,
-                    _temperature,
-                    include_stop_str_in_output,
-                    tools,
-                    tool_choice,
-                )
-
-                response = requests.post(
-                    self._chat_completion_endpoint,
-                    headers=self.headers,
-                    json=request_data,
-                )
-
-                if response.status_code != 200:
-                    api_error = parse_api_error(response.status_code, response.text)
-                    if not should_retry(api_error):
-                        logging.error(format_non_retryable_error(api_error))
-                    raise api_error
-
-                response_json = response.json()
-                # Return the full message object to preserve tool calls
-                return response_json["choices"][0]["message"]
-
-            def safe_fetch_single_response(
-                messages: list[ChatMessage], _temperature: float | None
-            ) -> dict:
-                if self.replace_error_with_message is not None:
-                    try:
-                        return fetch_single_response(messages, _temperature)
-                    except requests.RequestException as e:
-                        logging.error(f"Network error during sync generation: {e}")
-                        return {
-                            "role": "assistant",
-                            "content": self.replace_error_with_message,
-                        }
-                    except APIError as e:
-                        logging.error(f"API error during sync generation: {e}")
-                        return {
-                            "role": "assistant",
-                            "content": self.replace_error_with_message,
-                        }
-                else:
-                    return fetch_single_response(messages, _temperature)
-
-            temperature_lst = (
-                temperature
-                if isinstance(temperature, list)
-                else [temperature] * len(messages_lst)
-            )
-            response_or_responses = [
-                safe_fetch_single_response(messages, _temperature)
-                for messages, _temperature in zip(messages_lst, temperature_lst)
-            ]
+        )
         return response_or_responses[0] if is_single else response_or_responses
 
     async def aevaluate(self, prompt: str, generation: str) -> list[float]:
