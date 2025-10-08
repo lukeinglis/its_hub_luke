@@ -14,7 +14,7 @@ class TestLocalVllmProcessRewardModelIntegration:
     @pytest.fixture
     def mock_vllm_model(self):
         """Create a mock VllmProcessRewardModel."""
-        with patch('reward_hub.vllm.reward.VllmProcessRewardModel') as mock_class:
+        with patch("reward_hub.vllm.reward.VllmProcessRewardModel") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
             yield mock_instance
@@ -28,7 +28,7 @@ class TestLocalVllmProcessRewardModelIntegration:
         model = LocalVllmProcessRewardModel(
             model_name="test-model",
             device="cpu",
-            aggregation_method=AggregationMethod.PRODUCT
+            aggregation_method=AggregationMethod.PRODUCT,
         )
 
         # Score a single response
@@ -44,7 +44,7 @@ class TestLocalVllmProcessRewardModelIntegration:
         call_args = mock_vllm_model.score.call_args
 
         # Check that messages are in dict format, not ChatMessage objects
-        messages = call_args[1]['messages']
+        messages = call_args[1]["messages"]
         assert len(messages) == 1  # Single conversation
         assert len(messages[0]) == 2  # User + assistant messages
 
@@ -58,8 +58,8 @@ class TestLocalVllmProcessRewardModelIntegration:
         assert assistant_msg == {"role": "assistant", "content": response}
 
         # Verify other parameters
-        assert call_args[1]['aggregation_method'] == AggregationMethod.PRODUCT
-        assert call_args[1]['return_full_prm_result'] is False
+        assert call_args[1]["aggregation_method"] == AggregationMethod.PRODUCT
+        assert call_args[1]["return_full_prm_result"] is False
 
     def test_multiple_responses_scoring(self, mock_vllm_model):
         """Test scoring multiple responses with proper message format."""
@@ -70,7 +70,7 @@ class TestLocalVllmProcessRewardModelIntegration:
         model = LocalVllmProcessRewardModel(
             model_name="test-model",
             device="cuda:0",
-            aggregation_method=AggregationMethod.MIN
+            aggregation_method=AggregationMethod.MIN,
         )
 
         # Score multiple responses
@@ -78,7 +78,7 @@ class TestLocalVllmProcessRewardModelIntegration:
         responses = [
             "3x + 5 = 14\n3x = 9\nx = 3",
             "Let me solve step by step:\n3x = 14 - 5 = 9\nx = 3",
-            "x = (14-5)/3 = 3"
+            "x = (14-5)/3 = 3",
         ]
         scores = model.score(prompt, responses)
 
@@ -90,7 +90,7 @@ class TestLocalVllmProcessRewardModelIntegration:
         call_args = mock_vllm_model.score.call_args
 
         # Check that messages are in dict format for all responses
-        messages = call_args[1]['messages']
+        messages = call_args[1]["messages"]
         assert len(messages) == 3  # Three conversations
 
         for i, conversation in enumerate(messages):
@@ -106,25 +106,27 @@ class TestLocalVllmProcessRewardModelIntegration:
             assert assistant_msg == {"role": "assistant", "content": responses[i]}
 
         # Verify other parameters
-        assert call_args[1]['aggregation_method'] == AggregationMethod.MIN
-        assert call_args[1]['return_full_prm_result'] is False
+        assert call_args[1]["aggregation_method"] == AggregationMethod.MIN
+        assert call_args[1]["return_full_prm_result"] is False
 
     def test_different_aggregation_methods(self, mock_vllm_model):
         """Test that different aggregation methods are passed correctly."""
         mock_vllm_model.score.return_value = [0.5]
 
-        for agg_method in [AggregationMethod.PRODUCT, AggregationMethod.MIN, AggregationMethod.LAST]:
+        for agg_method in [
+            AggregationMethod.PRODUCT,
+            AggregationMethod.MIN,
+            AggregationMethod.LAST,
+        ]:
             model = LocalVllmProcessRewardModel(
-                model_name="test-model",
-                device="cpu",
-                aggregation_method=agg_method
+                model_name="test-model", device="cpu", aggregation_method=agg_method
             )
 
             model.score("test prompt", "test response")
 
             # Check that the aggregation method was passed correctly
             call_args = mock_vllm_model.score.call_args
-            assert call_args[1]['aggregation_method'] == agg_method
+            assert call_args[1]["aggregation_method"] == agg_method
 
     def test_message_format_compatibility(self, mock_vllm_model):
         """Test that the message format is compatible with reward_hub expectations.
@@ -137,7 +139,7 @@ class TestLocalVllmProcessRewardModelIntegration:
         model = LocalVllmProcessRewardModel(
             model_name="test-model",
             device="cpu",
-            aggregation_method=AggregationMethod.PRODUCT
+            aggregation_method=AggregationMethod.PRODUCT,
         )
 
         # Score a response
@@ -145,26 +147,26 @@ class TestLocalVllmProcessRewardModelIntegration:
 
         # Get the messages that were passed to the reward_hub model
         call_args = mock_vllm_model.score.call_args
-        messages = call_args[1]['messages']
+        messages = call_args[1]["messages"]
 
         # Verify that each message is a plain dict (not a ChatMessage object)
         for conversation in messages:
             for message in conversation:
                 # Should be a dict with 'role' and 'content' keys
                 assert isinstance(message, dict)
-                assert 'role' in message
-                assert 'content' in message
+                assert "role" in message
+                assert "content" in message
                 assert len(message) == 2  # Only 'role' and 'content'
 
                 # Should not have any class-specific attributes
-                assert not hasattr(message, '__class__') or message.__class__ is dict
+                assert not hasattr(message, "__class__") or message.__class__ is dict
 
                 # Role should be string
-                assert isinstance(message['role'], str)
-                assert message['role'] in ['user', 'assistant']
+                assert isinstance(message["role"], str)
+                assert message["role"] in ["user", "assistant"]
 
                 # Content should be string
-                assert isinstance(message['content'], str)
+                assert isinstance(message["content"], str)
 
     def test_error_handling(self, mock_vllm_model):
         """Test that errors from reward_hub are properly propagated."""
@@ -174,7 +176,7 @@ class TestLocalVllmProcessRewardModelIntegration:
         model = LocalVllmProcessRewardModel(
             model_name="test-model",
             device="cpu",
-            aggregation_method=AggregationMethod.PRODUCT
+            aggregation_method=AggregationMethod.PRODUCT,
         )
 
         # Verify that the exception is propagated
@@ -184,11 +186,11 @@ class TestLocalVllmProcessRewardModelIntegration:
     @pytest.mark.parametrize("device", ["cpu", "cuda:0", "cuda:1"])
     def test_device_parameter_passing(self, mock_vllm_model, device):
         """Test that device parameter is passed correctly to VllmProcessRewardModel."""
-        with patch('reward_hub.vllm.reward.VllmProcessRewardModel') as mock_class:
+        with patch("reward_hub.vllm.reward.VllmProcessRewardModel") as mock_class:
             LocalVllmProcessRewardModel(
                 model_name="test-model",
                 device=device,
-                aggregation_method=AggregationMethod.PRODUCT
+                aggregation_method=AggregationMethod.PRODUCT,
             )
 
             # Verify VllmProcessRewardModel was initialized with correct device
@@ -199,15 +201,15 @@ class TestLocalVllmProcessRewardModelIntegration:
         test_model_names = [
             "microsoft/DialoGPT-medium",
             "meta-llama/Llama-2-7b-chat-hf",
-            "custom-model-name"
+            "custom-model-name",
         ]
 
         for model_name in test_model_names:
-            with patch('reward_hub.vllm.reward.VllmProcessRewardModel') as mock_class:
+            with patch("reward_hub.vllm.reward.VllmProcessRewardModel") as mock_class:
                 LocalVllmProcessRewardModel(
                     model_name=model_name,
                     device="cpu",
-                    aggregation_method=AggregationMethod.PRODUCT
+                    aggregation_method=AggregationMethod.PRODUCT,
                 )
 
                 # Verify VllmProcessRewardModel was initialized with correct model name
@@ -219,6 +221,7 @@ class TestLocalVllmProcessRewardModelIntegration:
         This test simulates what would happen if ChatMessage objects were used
         instead of dict format, which was the bug fixed in PR #73.
         """
+
         # Setup mock to be strict about message format
         def strict_score_check(messages, **kwargs):
             # This simulates reward_hub expecting dict format
@@ -230,15 +233,21 @@ class TestLocalVllmProcessRewardModelIntegration:
                         raise TypeError(f"Expected dict, got {type(message)}")
 
                     # Check that it only has the expected keys
-                    expected_keys = {'role', 'content'}
+                    expected_keys = {"role", "content"}
                     if set(message.keys()) != expected_keys:
-                        raise ValueError(f"Message has unexpected keys: {set(message.keys())}")
+                        raise ValueError(
+                            f"Message has unexpected keys: {set(message.keys())}"
+                        )
 
                     # Check that values are strings
-                    if not isinstance(message['role'], str):
-                        raise TypeError(f"Role should be string, got {type(message['role'])}")
-                    if not isinstance(message['content'], str):
-                        raise TypeError(f"Content should be string, got {type(message['content'])}")
+                    if not isinstance(message["role"], str):
+                        raise TypeError(
+                            f"Role should be string, got {type(message['role'])}"
+                        )
+                    if not isinstance(message["content"], str):
+                        raise TypeError(
+                            f"Content should be string, got {type(message['content'])}"
+                        )
 
             return [0.5]
 
@@ -247,7 +256,7 @@ class TestLocalVllmProcessRewardModelIntegration:
         model = LocalVllmProcessRewardModel(
             model_name="test-model",
             device="cpu",
-            aggregation_method=AggregationMethod.PRODUCT
+            aggregation_method=AggregationMethod.PRODUCT,
         )
 
         # This should work fine with the current implementation
@@ -287,7 +296,7 @@ class TestLocalVllmProcessRewardModelIntegration:
                 for message in conversation:
                     if not isinstance(message, dict):
                         raise TypeError(f"Expected dict, got {type(message)}")
-                    if 'role' not in message or 'content' not in message:
+                    if "role" not in message or "content" not in message:
                         raise ValueError("Message missing required keys")
 
         # This would fail with the old implementation
@@ -295,9 +304,12 @@ class TestLocalVllmProcessRewardModelIntegration:
             check_dict_format(broken_messages)
 
         # But this works with the current implementation (dict format)
-        correct_messages = [[{"role": "user", "content": "What is 2+2?"},
-                            {"role": "assistant", "content": "2+2 = 4"}]]
+        correct_messages = [
+            [
+                {"role": "user", "content": "What is 2+2?"},
+                {"role": "assistant", "content": "2+2 = 4"},
+            ]
+        ]
 
         # This should pass
         check_dict_format(correct_messages)  # No exception should be raised
-

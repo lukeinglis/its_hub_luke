@@ -16,7 +16,7 @@ from its_hub.integration.iaas import app
 def find_free_port() -> int:
     """Find a free port to use for test servers."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))
+        s.bind(("", 0))
         return s.getsockname()[1]
 
 
@@ -26,30 +26,30 @@ class DummyVLLMHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         """Handle POST requests to the /v1/chat/completions endpoint."""
         if self.path == "/v1/chat/completions":
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers["Content-Length"])
             post_data = self.rfile.read(content_length)
-            request_data = json.loads(post_data.decode('utf-8'))
+            request_data = json.loads(post_data.decode("utf-8"))
 
             # Simulate some processing time
             time.sleep(0.01)
 
             # Extract the user message
             messages = request_data.get("messages", [])
-            user_content = messages[-1]['content'] if messages else "unknown"
+            user_content = messages[-1]["content"] if messages else "unknown"
 
             # Check for error triggers
             if "error" in user_content.lower():
                 self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
+                self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 error_response = {
                     "error": {
                         "message": "Simulated vLLM error",
                         "type": "server_error",
-                        "code": 500
+                        "code": 500,
                     }
                 }
-                self.wfile.write(json.dumps(error_response).encode('utf-8'))
+                self.wfile.write(json.dumps(error_response).encode("utf-8"))
                 return
 
             # Create a response that includes the request content for testing
@@ -71,24 +71,21 @@ class DummyVLLMHandler(BaseHTTPRequestHandler):
                 "choices": [
                     {
                         "index": 0,
-                        "message": {
-                            "role": "assistant",
-                            "content": response_content
-                        },
-                        "finish_reason": "stop"
+                        "message": {"role": "assistant", "content": response_content},
+                        "finish_reason": "stop",
                     }
                 ],
                 "usage": {
                     "prompt_tokens": 10,
                     "completion_tokens": 15,
-                    "total_tokens": 25
-                }
+                    "total_tokens": 25,
+                },
             }
 
             self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps(response).encode('utf-8'))
+            self.wfile.write(json.dumps(response).encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()
@@ -117,34 +114,36 @@ class DummyOpenAIHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         """Handle POST requests to the /chat/completions endpoint."""
         if self.path == "/chat/completions":
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers["Content-Length"])
             post_data = self.rfile.read(content_length)
-            request_data = json.loads(post_data.decode('utf-8'))
+            request_data = json.loads(post_data.decode("utf-8"))
 
             # Track concurrent requests
             with self.__class__.request_lock:
                 self.__class__.active_requests += 1
                 self.__class__.max_concurrent_requests = max(
                     self.__class__.max_concurrent_requests,
-                    self.__class__.active_requests
+                    self.__class__.active_requests,
                 )
 
             # Simulate some processing time
             time.sleep(0.1)
 
             # Check if we should simulate an error
-            if "trigger_error" in request_data.get("messages", [{}])[-1].get("content", ""):
+            if "trigger_error" in request_data.get("messages", [{}])[-1].get(
+                "content", ""
+            ):
                 self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
+                self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 error_response = {
                     "error": {
                         "message": "Simulated API error",
                         "type": "server_error",
-                        "code": 500
+                        "code": 500,
                     }
                 }
-                self.wfile.write(json.dumps(error_response).encode('utf-8'))
+                self.wfile.write(json.dumps(error_response).encode("utf-8"))
 
                 # Decrement active requests
                 with self.__class__.request_lock:
@@ -174,20 +173,17 @@ class DummyOpenAIHandler(BaseHTTPRequestHandler):
                 "choices": [
                     {
                         "index": 0,
-                        "message": {
-                            "role": "assistant",
-                            "content": response_content
-                        },
-                        "finish_reason": "stop"
+                        "message": {"role": "assistant", "content": response_content},
+                        "finish_reason": "stop",
                     }
-                ]
+                ],
             }
 
             # Send the response
             self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
+            self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps(response).encode('utf-8'))
+            self.wfile.write(json.dumps(response).encode("utf-8"))
 
             # Decrement active requests
             with self.__class__.request_lock:
@@ -209,17 +205,27 @@ class MockLanguageModel(AbstractLanguageModel):
         self.responses = responses
         self.call_count = 0
 
-    def generate(self, messages, stop=None, temperature=None, include_stop_str_in_output=None):
-        if isinstance(messages, list) and len(messages) > 0 and isinstance(messages[0], list):
+    def generate(
+        self, messages, stop=None, temperature=None, include_stop_str_in_output=None
+    ):
+        if (
+            isinstance(messages, list)
+            and len(messages) > 0
+            and isinstance(messages[0], list)
+        ):
             # Batched generation - messages is List[List[ChatMessage]]
             num_requests = len(messages)
             if self.call_count + num_requests > len(self.responses):
                 # Cycle through responses if we run out
                 responses = []
                 for i in range(num_requests):
-                    responses.append(self.responses[(self.call_count + i) % len(self.responses)])
+                    responses.append(
+                        self.responses[(self.call_count + i) % len(self.responses)]
+                    )
             else:
-                responses = self.responses[self.call_count:self.call_count + num_requests]
+                responses = self.responses[
+                    self.call_count : self.call_count + num_requests
+                ]
             self.call_count += num_requests
             return responses
         else:
@@ -248,7 +254,7 @@ class MockOutcomeRewardModel(AbstractOutcomeRewardModel):
 
     def score(self, prompt: str, response) -> float:
         if isinstance(response, list):
-            scores = self.scores[self.call_count:self.call_count + len(response)]
+            scores = self.scores[self.call_count : self.call_count + len(response)]
             self.call_count += len(response)
             return scores
         else:
@@ -282,11 +288,12 @@ class MockProcessRewardModel:
 
 # Pytest fixtures
 
+
 @pytest.fixture(scope="session")
 def vllm_server():
     """Start a vLLM mock server for the test session."""
     port = find_free_port()
-    server = HTTPServer(('localhost', port), DummyVLLMHandler)
+    server = HTTPServer(("localhost", port), DummyVLLMHandler)
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
@@ -304,7 +311,7 @@ def vllm_server():
 def openai_server():
     """Start an OpenAI mock server for the test session."""
     port = find_free_port()
-    server = HTTPServer(('localhost', port), DummyOpenAIHandler)
+    server = HTTPServer(("localhost", port), DummyOpenAIHandler)
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
@@ -323,6 +330,7 @@ def iaas_client():
     """Create a test client for the IaaS API."""
     # Reset global state before each test
     import its_hub.integration.iaas as iaas_module
+
     iaas_module.LM_DICT.clear()
     iaas_module.SCALING_ALG = None
 

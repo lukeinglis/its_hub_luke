@@ -1,6 +1,5 @@
 """Mock language models for testing."""
 
-
 from its_hub.base import AbstractLanguageModel
 
 
@@ -17,9 +16,14 @@ class SimpleMockLanguageModel:
     def generate(self, messages, **kwargs):
         if isinstance(messages[0], list):
             # Multiple message lists
-            content_responses = self.responses[self.call_count:self.call_count + len(messages)]
+            content_responses = self.responses[
+                self.call_count : self.call_count + len(messages)
+            ]
             self.call_count += len(messages)
-            return [{"role": "assistant", "content": content} for content in content_responses]
+            return [
+                {"role": "assistant", "content": content}
+                for content in content_responses
+            ]
         else:
             # Single message list
             content = self.responses[self.call_count]
@@ -78,7 +82,11 @@ class ErrorMockLanguageModel(AbstractLanguageModel):
             self.call_count += 1
             raise Exception("Simulated LM error")
 
-        if isinstance(messages, list) and len(messages) > 0 and isinstance(messages[0], list):
+        if (
+            isinstance(messages, list)
+            and len(messages) > 0
+            and isinstance(messages[0], list)
+        ):
             # Batched generation
             num_requests = len(messages)
             responses = []
