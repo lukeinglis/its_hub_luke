@@ -85,6 +85,12 @@ class ResamplingMethod(Enum):
     MULTINOMIAL = "multinomial"
 
 
+class TemperatureMethod(Enum):
+    ESS = "ess"
+    ENTROPY = "entropy"
+    BASE = "base"
+
+
 class ParticleGibbs(AbstractScalingAlgorithm):
     """
     Particle-based Monte Carlo methods for inference time scaling.
@@ -103,13 +109,20 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         num_ref_particles: int = 1,
         does_ancestor_sampling: bool = False,
         does_entropic_annealing: bool = False,
-        does_lookahead: bool = False,
+        does_lookahead_modulation: bool = False,
         ess_threshold: float = 0.5,
         early_phase: float = 0.5,
         resampling_method: str | ResamplingMethod = ResamplingMethod.MULTINOMIAL,
+        temperature_method: str | TemperatureMethod = TemperatureMethod.ESS,
     ):
         if isinstance(selection_method, str):
             selection_method = SelectionMethod(selection_method)
+
+        if isinstance(resampling_method, str):
+            resampling_method = ResamplingMethod(resampling_method)
+
+        if isinstance(temperature_method, str):
+            temperature_method = TemperatureMethod(temperature_method)
 
         self.sg = sg
         self.prm = prm
@@ -118,11 +131,12 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         self.num_ref_particles = num_ref_particles
         self.does_ancestor_sampling = does_ancestor_sampling
         self.does_entropic_annealing = does_entropic_annealing
-        self.does_lookahead = does_lookahead
+        self.does_lookahead_modulation = does_lookahead_modulation
         self.ess_threshold = ess_threshold
         self.max_steps = self.sg.max_steps
         self.early_phase = early_phase
         self.resampling_method = resampling_method
+        self.temperature_method = temperature_method
 
     async def _apropagate(
         self,
@@ -184,40 +198,106 @@ class ParticleGibbs(AbstractScalingAlgorithm):
 
         return particles
 
-    def _effective_sample_size(self, p: list[float]) -> float:
-        # compute effective sample size at step t
+    def _entropy_n(self, probabilities: list[float]) -> float:
+        """Compute normalized entropy for particles at step t.
+
+        Required for entropic annealing with entropy-based temperature.
+
+        Args:
+            probabilities: list of weight probabilities at step t
+
+        Returns:
+            normalized entropy of the particles
+        """
+        # p should be a probability distribution (e.g., output of softmax)
+        p = np.asarray(probabilities)
+        # Avoid log(0) by clipping probabilities
+        p = np.clip(p, 1e-7, 1 - 1e-7)
+        entropy = -p * np.log(p)
+        entropy = np.sum(entropy)
+
+        # Make normalization robust to edge cases (e.g., len(p) <= 1)
+        if len(p) > 2 and np.log(len(p)) > 0:
+            entropy_normalized = entropy / np.log(len(p))
+        else:
+            entropy_normalized = entropy
+        return entropy_normalized
+
+    def _effective_sample_size(self, probabilities: list[float]) -> float:
+        """Compute effective sample size for particles at step t.
+
+        Required for entropic annealing with ESS-based temperature and activating entropic annealing.
+        ESS and ESS ratio are easier to interpret than entropy.
+
+        Args:
+            probabilities: list of weight probabilities at step t
+
+        Returns:
+            effective sample size of the particles at step t
+        """
+        p = np.asarray(probabilities)
         p = np.clip(p, 1e-7, 1 - 1e-7)
         effective_sample_size = 1 / np.sum(p**2)
         return effective_sample_size
 
-    def _temperature_ess(
-        self, ess_ratio: float, ess_threshold: float, progress: float
+    def _temperature_base(
+        self,
+        value_max: float,
+        progress: float,
     ) -> float:
+        value = value_max - progress
+        temperature = max(1.0, value)
+        return temperature
+
+    def _temperature_entropy(
+        self,
+        entropy_n: float,
+        progress: float,
+    ) -> float:
+        beta = entropy_n + (1 - entropy_n) * (progress)
+        value = 1 / beta
+        temperature = max(1.0, value)
+        return temperature
+
+    def _temperature_ess(self, ess_ratio: float, progress: float) -> float:
         """Compute temperature for entropic annealing based on effective sample size ratio.
 
         Args:
             ess_ratio: effective sample size ratio (ESS / num_particles)
-            ess_threshold: min threshold to activate entropic annealing
             progress: sampling progress (t/T_max)
 
         Returns:
             temperature for entropic annealing
         """
         value = 1.0 / ess_ratio * (1 - progress)
-        temperature = max(1.0, value) if ess_ratio < ess_threshold else 1.0
+        temperature = max(1.0, value)
         return temperature
 
-    def _entropic_annealing(
-        self, probabilities: list[float], current_step: int, num_particles: int
+    def _temperature_annealing(
+        self,
+        probabilities: list[float],
+        current_step: int,
+        num_particles: int,
+        value_max: float = 2.0,
     ) -> float:
         progress = current_step / self.max_steps
+
+        entropy_n = self._entropy_n(probabilities)
         ess = self._effective_sample_size(probabilities)
         ess_ratio = ess / num_particles if num_particles > 1 else 0
-        temperature = 1.0
+
+        temperature = 1.0  # use 1.0 as default temperature if ess_ratio is not less than ess_threshold
         if ess_ratio < self.ess_threshold:
-            temperature = self._temperature_ess(ess_ratio, self.ess_threshold, progress)
-            if progress > self.early_phase:
-                temperature = 1.0
+            if self.temperature_method == TemperatureMethod.ESS:
+                return self._temperature_ess(ess_ratio, progress)
+            elif self.temperature_method == TemperatureMethod.ENTROPY:
+                return self._temperature_entropy(entropy_n, progress)
+            elif self.temperature_method == TemperatureMethod.BASE:
+                return self._temperature_base(value_max, progress)
+            else:
+                raise ValueError(
+                    f"Invalid temperature method: {self.temperature_method}"
+                )
         return temperature
 
     def _resampling_systematic(
@@ -340,7 +420,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
 
                 # entropic annealing
                 if self.does_entropic_annealing:
-                    temperature = self._entropic_annealing(
+                    temperature = self._temperature_annealing(
                         probabilities, current_step, num_free_particles
                     )
                     # apply temperature annealing to the log weights
@@ -353,6 +433,9 @@ class ParticleGibbs(AbstractScalingAlgorithm):
 
                 if self.does_ancestor_sampling:
                     raise NotImplementedError("Ancestor sampling is not implemented")
+
+                if self.does_lookahead_modulation:
+                    raise NotImplementedError("Lookahead modulation is not implemented")
 
                 # duplicate the resampled particles
                 resampled_particles = [p.deepcopy() for p in resampled_particles]
@@ -430,6 +513,8 @@ class ParticleFiltering(ParticleGibbs):
             selection_method=selection_method,
             num_ref_particles=0,
             does_ancestor_sampling=False,
+            does_entropic_annealing=False,
+            does_lookahead_modulation=False,
         )
 
     async def ainfer(
@@ -466,15 +551,17 @@ class ParticleFiltering(ParticleGibbs):
 
 
 class EntropicParticleFiltering(ParticleGibbs):
-    """
-    Particle filtering being a special case of particle Gibbs with num_iterations=1
-    """
+    """Entropic particle filtering with Entropic Annealing"""
 
     def __init__(
         self,
         sg: StepGeneration,
         prm: AbstractProcessRewardModel,
         selection_method: str | SelectionMethod = SelectionMethod.ARGMAX,
+        resampling_method: str | ResamplingMethod = ResamplingMethod.MULTINOMIAL,
+        temperature_method: str | TemperatureMethod = TemperatureMethod.ESS,
+        ess_threshold: float = 0.5,
+        early_phase: float = 0.5,
     ):
         # initialize with num_iterations=1
         super().__init__(
@@ -485,9 +572,11 @@ class EntropicParticleFiltering(ParticleGibbs):
             num_ref_particles=0,
             does_ancestor_sampling=False,
             does_entropic_annealing=True,
-            does_lookahead=False,
-            ess_threshold=0.5,
-            early_phase=0.5,
+            does_lookahead_modulation=False,
+            ess_threshold=ess_threshold,
+            early_phase=early_phase,
+            resampling_method=resampling_method,
+            temperature_method=temperature_method,
         )
 
     def infer(
