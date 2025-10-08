@@ -14,6 +14,7 @@ The `budget` parameter controls computational resources allocated to each algori
 | Best-of-N | Number of candidate responses | `BestOfN(rm)` |
 | Beam Search | Total generations ÷ beam width | `BeamSearch(sg, prm, beam_width=4)` |
 | Particle Filtering | Number of particles | `ParticleFiltering(sg, prm)` |
+| Entropic Particle Filtering | Number of particles | `EntropicParticleFiltering(sg, prm)` |
 
 ## Self-Consistency
 
@@ -221,6 +222,41 @@ result = pf.infer(lm, prompt, budget=8)
 - When exploration vs exploitation balance is important
 - Mathematical problem solving with uncertainty
 
+
+## Entropic Particle Filtering
+
+Entropic Particle Filtering (ePF) is an advanced sampling algorithm that mitigates common failure modes in standard PF, like particle degeneracy and impoverishment. 
+By leveraging Entropic Annealing (EA) to control the variance of the resampling distribution, ePF ensures a more robust and thorough exploration in the early phase of sampling, especially for complex long sequences and multi-step tasks.
+
+```python
+from its_hub.algorithms import EntropicParticleFiltering
+from its_hub.lms import StepGeneration
+from its_hub.integration.reward_hub import LocalVllmProcessRewardModel
+
+# Initialize components
+sg = StepGeneration("\n\n", max_steps=32, stop_pattern=r"\boxed")
+prm = LocalVllmProcessRewardModel(
+    model_name="Qwen/Qwen2.5-Math-PRM-7B",
+    device="cuda:0",
+    aggregation_method="prod"
+)
+
+# Entropic particle filtering with 8 particles
+epf = ParticleFiltering(sg, prm)
+result = epf.infer(lm, prompt, budget=8)
+```
+
+**When to use:**
+- When Reward Models Are Hard to Calibrate: 
+    - If your Process Reward Model (PRM) tends to be *overconfident* early in the sampling process, ePF helps by keeping a wider range of options open for longer.
+
+- For Complex, Long Multi-Step Tasks: 
+    - When a problem requires many sequential steps to solve (> 20 steps), standard particle filters can lose diversity and generate greedy-like solutions. ePF is designed to handle these long-horizon tasks more effectively.
+
+- To Avoid Early Convergence: 
+    - If you notice that a standard filter is producing short, incomplete responses or underperforming, it is likely converging prematurely. ePF directly counteracts this by promoting particle diversity.
+
+
 ## Advanced Configuration
 
 ### Step Generation
@@ -271,5 +307,6 @@ class MathOutcomeRewardModel:
 2. **Use Best-of-N** when you have a good reward model
 3. **Try Beam Search** for step-by-step reasoning
 4. **Use Particle Filtering** for the most complex problems
-5. **Adjust budget** based on problem complexity and time constraints
-6. **Monitor GPU memory** when using large reward models
+5. **Use Entropic Particle Filtering** to mitigate early exploitation
+6. **Adjust budget** based on problem complexity and time constraints
+7. **Monitor GPU memory** when using large reward models

@@ -560,7 +560,7 @@ class EntropicParticleFiltering(ParticleGibbs):
         sg: StepGeneration,
         prm: AbstractProcessRewardModel,
         selection_method: str | SelectionMethod = SelectionMethod.ARGMAX,
-        resampling_method: str | ResamplingMethod = ResamplingMethod.MULTINOMIAL,
+        resampling_method: str | ResamplingMethod = ResamplingMethod.SYSTEMATIC,
         temperature_method: str | TemperatureMethod = TemperatureMethod.ESS,
         ess_threshold: float = 0.5,
         early_phase: float = 0.5,
