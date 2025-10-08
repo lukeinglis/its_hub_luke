@@ -286,8 +286,9 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         ess = self._effective_sample_size(probabilities)
         ess_ratio = ess / num_particles if num_particles > 1 else 0
 
-        temperature = 1.0  # use 1.0 as default temperature if ess_ratio is not less than ess_threshold
-        if ess_ratio < self.ess_threshold:
+        # use 1.0 as default temperature if ess_ratio is not less than ess_threshold
+        temperature = 1.0
+        if ess_ratio < self.ess_threshold and progress < self.early_phase:
             if self.temperature_method == TemperatureMethod.ESS:
                 return self._temperature_ess(ess_ratio, progress)
             elif self.temperature_method == TemperatureMethod.ENTROPY:
@@ -424,7 +425,8 @@ class ParticleGibbs(AbstractScalingAlgorithm):
                         probabilities, current_step, num_free_particles
                     )
                     # apply temperature annealing to the log weights
-                    probabilities = _softmax(np.array(log_weights) * (1 / temperature))
+                    log_weights = np.array(log_weights)
+                    probabilities = _softmax(log_weights * (1 / temperature))
 
                 # resampling (by default multinomial)
                 resampled_particles = self._resampling(
