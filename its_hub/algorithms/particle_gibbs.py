@@ -80,6 +80,11 @@ class SelectionMethod(Enum):
     ARGMAX = "argmax"
 
 
+class ResamplingMethod(Enum):
+    SYSTEMATIC = "systematic"
+    MULTINOMIAL = "multinomial"
+
+
 class ParticleGibbs(AbstractScalingAlgorithm):
     """
     Particle-based Monte Carlo methods for inference time scaling.
@@ -97,8 +102,11 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         selection_method: str | SelectionMethod = SelectionMethod.ARGMAX,
         num_ref_particles: int = 1,
         does_ancestor_sampling: bool = False,
+        does_entropic_annealing: bool = False,
+        does_lookahead: bool = False,
         ess_threshold: float = 0.5,
         early_phase: float = 0.5,
+        resampling_method: str | ResamplingMethod = ResamplingMethod.MULTINOMIAL,
     ):
         if isinstance(selection_method, str):
             selection_method = SelectionMethod(selection_method)
@@ -109,9 +117,12 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         self.selection_method = selection_method
         self.num_ref_particles = num_ref_particles
         self.does_ancestor_sampling = does_ancestor_sampling
+        self.does_entropic_annealing = does_entropic_annealing
+        self.does_lookahead = does_lookahead
         self.ess_threshold = ess_threshold
         self.max_steps = self.sg.max_steps
         self.early_phase = early_phase
+        self.resampling_method = resampling_method
 
     async def _apropagate(
         self,
@@ -173,18 +184,88 @@ class ParticleGibbs(AbstractScalingAlgorithm):
 
         return particles
 
-    def _compute_effective_sample_size(self, p: list[float]) -> float:
+    def _effective_sample_size(self, p: list[float]) -> float:
         # compute effective sample size at step t
         p = np.clip(p, 1e-7, 1 - 1e-7)
         effective_sample_size = 1 / np.sum(p**2)
         return effective_sample_size
 
-    def _get_temperature_ess(
+    def _temperature_ess(
         self, ess_ratio: float, ess_threshold: float, progress: float
     ) -> float:
+        """Compute temperature for entropic annealing based on effective sample size ratio.
+
+        Args:
+            ess_ratio: effective sample size ratio (ESS / num_particles)
+            ess_threshold: min threshold to activate entropic annealing
+            progress: sampling progress (t/T_max)
+
+        Returns:
+            temperature for entropic annealing
+        """
         value = 1.0 / ess_ratio * (1 - progress)
         temperature = max(1.0, value) if ess_ratio < ess_threshold else 1.0
         return temperature
+
+    def _entropic_annealing(
+        self, probabilities: list[float], current_step: int, num_particles: int
+    ) -> float:
+        progress = current_step / self.max_steps
+        ess = self._effective_sample_size(probabilities)
+        ess_ratio = ess / num_particles if num_particles > 1 else 0
+        temperature = 1.0
+        if ess_ratio < self.ess_threshold:
+            temperature = self._temperature_ess(ess_ratio, self.ess_threshold, progress)
+            if progress > self.early_phase:
+                temperature = 1.0
+        return temperature
+
+    def _resampling_systematic(
+        self, particles: list[Particle], probabilities: np.ndarray, num_particles: int
+    ) -> list[Particle]:
+        """Perform systematic resampling from the given normalized weights.
+
+        This is a way to sample particles with replacement and preserve diversity.
+        Any particle with a weights > 1/N should be resampled.
+
+        Args:
+            particles: list of particles
+            probabilities: array of particle weights (must sum to 1)
+            num_particles: number of particles to resample
+
+        Returns:
+            list of resampled particles
+        """
+        positions = (np.arange(num_particles) + np.random.uniform(0, 1)) / num_particles
+
+        indices = np.zeros(num_particles, dtype=int)
+        cumulative_sum = np.cumsum(probabilities)
+        i, j = 0, 0
+
+        while i < num_particles:
+            if positions[i] < cumulative_sum[j]:
+                indices[i] = j
+                i += 1
+            else:
+                j += 1
+
+        resampled_particles = [particles[i] for i in indices]
+        return resampled_particles
+
+    def _resampling_multinomial(
+        self, particles: list[Particle], probabilities: list[float], num_particles: int
+    ) -> list[Particle]:
+        return random.choices(particles, weights=probabilities, k=num_particles)
+
+    def _resampling(
+        self, particles: list[Particle], probabilities: list[float], num_particles: int
+    ) -> list[Particle]:
+        if self.resampling_method == ResamplingMethod.SYSTEMATIC:
+            return self._resampling_systematic(particles, probabilities, num_particles)
+        elif self.resampling_method == ResamplingMethod.MULTINOMIAL:
+            return self._resampling_multinomial(particles, probabilities, num_particles)
+        else:
+            raise ValueError(f"Invalid resampling method: {self.resampling_method}")
 
     def _propagate(
         self,
@@ -257,20 +338,17 @@ class ParticleGibbs(AbstractScalingAlgorithm):
 
                 probabilities = _softmax(log_weights)
 
-                progress = current_step / self.max_steps
-                ess = self._compute_effective_sample_size(probabilities)
-                ess_ratio = ess / num_particles if num_particles > 1 else 0
-
-                if ess_ratio < self.ess_threshold:
-                    temperature = self._get_temperature_ess(
-                        ess_ratio, self.ess_threshold, progress
+                # entropic annealing
+                if self.does_entropic_annealing:
+                    temperature = self._entropic_annealing(
+                        probabilities, current_step, num_free_particles
                     )
-                    if progress > self.early_phase:
-                        temperature = 1.0
-                    probabilities = _softmax(log_weights * (1 / temperature))
+                    # apply temperature annealing to the log weights
+                    probabilities = _softmax(np.array(log_weights) * (1 / temperature))
 
-                resampled_particles = random.choices(
-                    particles, weights=probabilities, k=num_free_particles
+                # resampling (by default multinomial)
+                resampled_particles = self._resampling(
+                    particles, probabilities, num_free_particles
                 )
 
                 if self.does_ancestor_sampling:
@@ -365,6 +443,63 @@ class ParticleFiltering(ParticleGibbs):
     ) -> dict | ParticleFilteringResult:
         """run inference asynchronously with particle filtering"""
         result = await super().ainfer(
+            lm,
+            prompt_or_messages,
+            budget,
+            return_response_only=False,
+            tools=tools,
+            tool_choice=tool_choice,
+        )
+
+        # Flatten the single-iteration result
+        flattened_result = ParticleFilteringResult(
+            responses=result.responses_lst[0],
+            log_weights_lst=result.log_weights_lst[0],
+            selected_index=result.selected_index,
+            steps_used_lst=result.steps_used_lst[0],
+        )
+
+        if return_response_only:
+            return flattened_result.the_one
+
+        return flattened_result
+
+
+class EntropicParticleFiltering(ParticleGibbs):
+    """
+    Particle filtering being a special case of particle Gibbs with num_iterations=1
+    """
+
+    def __init__(
+        self,
+        sg: StepGeneration,
+        prm: AbstractProcessRewardModel,
+        selection_method: str | SelectionMethod = SelectionMethod.ARGMAX,
+    ):
+        # initialize with num_iterations=1
+        super().__init__(
+            sg=sg,
+            prm=prm,
+            num_iterations=1,
+            selection_method=selection_method,
+            num_ref_particles=0,
+            does_ancestor_sampling=False,
+            does_entropic_annealing=True,
+            does_lookahead=False,
+            ess_threshold=0.5,
+            early_phase=0.5,
+        )
+
+    def infer(
+        self,
+        lm: AbstractLanguageModel,
+        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
+        budget: int,
+        return_response_only: bool = True,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> dict | ParticleFilteringResult:
+        result = super().infer(
             lm,
             prompt_or_messages,
             budget,
