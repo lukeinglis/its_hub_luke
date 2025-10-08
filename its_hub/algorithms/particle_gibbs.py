@@ -96,6 +96,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
     Particle-based Monte Carlo methods for inference time scaling.
     It supports the following variants:
     - Particle Filtering (PF): num_iterations = 1
+    - Entropic Particle Filtering (ePF): num_iterations = 1 and does_entropic_annealing = True
     - Particle Gibbs (PG): num_iterations > 1
     - PG with ancestor sampling (PGAS): num_iterations > 1 and does_ancestor_sampling = True
     """
@@ -290,11 +291,11 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         temperature = 1.0
         if ess_ratio < self.ess_threshold and progress < self.early_phase:
             if self.temperature_method == TemperatureMethod.ESS:
-                return self._temperature_ess(ess_ratio, progress)
+                temperature = self._temperature_ess(ess_ratio, progress)
             elif self.temperature_method == TemperatureMethod.ENTROPY:
-                return self._temperature_entropy(entropy_n, progress)
+                temperature = self._temperature_entropy(entropy_n, progress)
             elif self.temperature_method == TemperatureMethod.BASE:
-                return self._temperature_base(value_max, progress)
+                temperature = self._temperature_base(value_max, progress)
             else:
                 raise ValueError(
                     f"Invalid temperature method: {self.temperature_method}"
