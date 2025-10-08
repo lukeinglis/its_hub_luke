@@ -262,10 +262,6 @@ def main(
     does_eval: bool,
     eval_expected_pass_at_one: bool,
     display_only: bool,
-    temperature_method: TemperatureMethod,
-    resampling_method: ResamplingMethod,
-    ess_threshold: float,
-    early_phase: float,
     tokens_per_step: int,
 ):
     # print all arguments using click context
@@ -357,10 +353,6 @@ def main(
         rm_name,
         rm_device,
         rm_agg_method,
-        temperature_method,
-        resampling_method,
-        ess_threshold,
-        early_phase,
         tokens_per_step,
     )
 
