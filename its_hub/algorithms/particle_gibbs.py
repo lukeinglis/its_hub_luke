@@ -290,16 +290,13 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         # use 1.0 as default temperature if ess_ratio is not less than ess_threshold
         temperature = 1.0
         if ess_ratio < self.ess_threshold and progress < self.early_phase:
-            if self.temperature_method == TemperatureMethod.ESS:
-                temperature = self._temperature_ess(ess_ratio, progress)
-            elif self.temperature_method == TemperatureMethod.ENTROPY:
-                temperature = self._temperature_entropy(entropy_n, progress)
-            elif self.temperature_method == TemperatureMethod.BASE:
-                temperature = self._temperature_base(value_max, progress)
-            else:
-                raise ValueError(
-                    f"Invalid temperature method: {self.temperature_method}"
-                )
+            match self.temperature_method:
+                case TemperatureMethod.ESS:
+                    temperature = self._temperature_ess(ess_ratio, progress)
+                case TemperatureMethod.ENTROPY:
+                    temperature = self._temperature_entropy(entropy_n, progress)
+                case TemperatureMethod.BASE:
+                    temperature = self._temperature_base(value_max, progress)
         return temperature
 
     def _resampling_systematic(
@@ -507,6 +504,7 @@ class ParticleFiltering(ParticleGibbs):
         sg: StepGeneration,
         prm: AbstractProcessRewardModel,
         selection_method: str | SelectionMethod = SelectionMethod.ARGMAX,
+        resampling_method: str | ResamplingMethod = ResamplingMethod.MULTINOMIAL,
     ):
         # initialize with num_iterations=1
         super().__init__(

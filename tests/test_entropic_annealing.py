@@ -64,7 +64,7 @@ class MockProcessRewardModelForResampling(AbstractProcessRewardModel):
         # would have unfairly high scores if we don't use partial weights
         num_steps = response.count("step")
         # Return a score between 0.5 and 0.9 based on length
-        return min(0.5 + 0.1 * num_steps, 0.9)
+        return min(0.2 + 0.1 * num_steps, 0.9)
 
 
 class TestEntropicAnnealing:
