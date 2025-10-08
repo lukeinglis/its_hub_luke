@@ -11,9 +11,10 @@ from its_hub.lms import OpenAICompatibleLanguageModel, StepGeneration
 from its_hub.algorithms import ParticleFiltering
 from its_hub.integration.reward_hub import LocalVllmProcessRewardModel
 
+
 def main():
     # Get GPU ID from environment variable or default to 0
-    gpu_id = os.environ.get('CUDA_VISIBLE_DEVICES', '0')
+    gpu_id = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
 
     # Initialize the language model
     # Note: The endpoint port (8100) must match the port used when starting the vLLM server
@@ -29,7 +30,7 @@ def main():
         "What is 2+2? Show your steps.",
         "Solve the quadratic equation x^2 + 5x + 6 = 0. Show your steps.",
         "Find the derivative of f(x) = x^2 + 3x + 2. Show your steps.",
-        "Let a be a positive real number such that all the roots of x^3 + ax^2 + ax + 1 = 0 are real. Find the smallest possible value of a."
+        "Let a be a positive real number such that all the roots of x^3 + ax^2 + ax + 1 = 0 are real. Find the smallest possible value of a.",
     ]
 
     # Initialize step generation and reward model
@@ -37,7 +38,7 @@ def main():
     prm = LocalVllmProcessRewardModel(
         model_name="Qwen/Qwen2.5-Math-PRM-7B",
         device=f"cuda:{gpu_id}",  # Use the same GPU as the vLLM server
-        aggregation_method="prod"
+        aggregation_method="prod",
     )
     scaling_alg = ParticleFiltering(sg, prm)
 
@@ -49,5 +50,6 @@ def main():
         print(f"\nTesting: {prompt}")
         print("Response:", scaling_alg.infer(lm, prompt, budget=8))
 
+
 if __name__ == "__main__":
-    main() 
+    main()
