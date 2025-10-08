@@ -97,6 +97,8 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         selection_method: str | SelectionMethod = SelectionMethod.ARGMAX,
         num_ref_particles: int = 1,
         does_ancestor_sampling: bool = False,
+        ess_threshold: float = 0.5,
+        early_phase: float = 0.5,
     ):
         if isinstance(selection_method, str):
             selection_method = SelectionMethod(selection_method)
@@ -107,6 +109,9 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         self.selection_method = selection_method
         self.num_ref_particles = num_ref_particles
         self.does_ancestor_sampling = does_ancestor_sampling
+        self.ess_threshold = ess_threshold
+        self.max_steps = self.sg.max_steps
+        self.early_phase = early_phase
 
     async def _apropagate(
         self,
@@ -167,6 +172,19 @@ class ParticleGibbs(AbstractScalingAlgorithm):
             i += 1
 
         return particles
+
+    def _compute_effective_sample_size(self, p: list[float]) -> float:
+        # compute effective sample size at step t
+        p = np.clip(p, 1e-7, 1 - 1e-7)
+        effective_sample_size = 1 / np.sum(p**2)
+        return effective_sample_size
+
+    def _get_temperature_ess(
+        self, ess_ratio: float, ess_threshold: float, progress: float
+    ) -> float:
+        value = 1.0 / ess_ratio * (1 - progress)
+        temperature = max(1.0, value) if ess_ratio < ess_threshold else 1.0
+        return temperature
 
     def _propagate(
         self,
@@ -238,6 +256,19 @@ class ParticleGibbs(AbstractScalingAlgorithm):
                         log_weights.append(p.partial_log_weights[current_step - 1])
 
                 probabilities = _softmax(log_weights)
+
+                progress = current_step / self.max_steps
+                ess = self._compute_effective_sample_size(probabilities)
+                ess_ratio = ess / num_particles if num_particles > 1 else 0
+
+                if ess_ratio < self.ess_threshold:
+                    temperature = self._get_temperature_ess(
+                        ess_ratio, self.ess_threshold, progress
+                    )
+                    if progress > self.early_phase:
+                        temperature = 1.0
+                    probabilities = _softmax(log_weights * (1 / temperature))
+
                 resampled_particles = random.choices(
                     particles, weights=probabilities, k=num_free_particles
                 )
