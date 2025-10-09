@@ -270,6 +270,8 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         Returns:
             temperature for entropic annealing
         """
+        if ess_ratio <= 0:
+            return 1.0
         value = 1.0 / ess_ratio * (1 - progress)
         temperature = max(1.0, value)
         return temperature
