@@ -242,7 +242,7 @@ prm = LocalVllmProcessRewardModel(
 )
 
 # Entropic particle filtering with 8 particles
-epf = ParticleFiltering(sg, prm)
+epf = EntropicParticleFiltering(sg, prm)
 result = epf.infer(lm, prompt, budget=8)
 ```
 

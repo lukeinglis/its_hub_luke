@@ -281,11 +281,14 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         num_particles: int,
         value_max: float = 2.0,
     ) -> float:
+        if num_particles <= 1:
+            return 1.0
+
         progress = current_step / self.max_steps
 
         entropy_n = self._entropy_n(probabilities)
         ess = self._effective_sample_size(probabilities)
-        ess_ratio = ess / num_particles if num_particles > 1 else 0
+        ess_ratio = ess / num_particles
 
         # use 1.0 as default temperature if ess_ratio is not less than ess_threshold
         temperature = 1.0

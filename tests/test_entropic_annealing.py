@@ -70,7 +70,7 @@ class MockProcessRewardModelForResampling(AbstractProcessRewardModel):
 class TestEntropicAnnealing:
     """Test the entropic annealing."""
 
-    def effective_sample_size(self, probabilities):
+    def test_effective_sample_size(self):
         # Create mock models
         mock_prm = MockProcessRewardModelForResampling()
 
@@ -92,7 +92,7 @@ class TestEntropicAnnealing:
         assert isinstance(ess, float)
         assert ess == 1.0 / (0.1**2 + 0.2**2 + 0.3**2 + 0.4**2 + 0.5**2)
 
-    def resampling(self, probabilities):
+    def test_resampling(self):
         # Create mock models
         mock_prm = MockProcessRewardModelForResampling()
 
@@ -109,14 +109,26 @@ class TestEntropicAnnealing:
             ess_threshold=0.5,
             early_phase=0.5,
         )
-        probabilities = [0.1, 0.2, 0.3, 0.4, 0.5]
-        idx = epf._resampling_multinomial(probabilities)
-        assert isinstance(idx, list)
-        assert len(idx) == len(probabilities)
+        particles = [
+            Particle(steps=["p1"], is_stopped=False, partial_log_weights=[0.0]),
+            Particle(steps=["p2"], is_stopped=False, partial_log_weights=[0.0]),
+            Particle(steps=["p3"], is_stopped=False, partial_log_weights=[0.0]),
+            Particle(steps=["p4"], is_stopped=False, partial_log_weights=[0.0]),
+            Particle(steps=["p5"], is_stopped=False, partial_log_weights=[0.0]),
+        ]
 
-        idx = epf._resampling_systematic(probabilities)
-        assert isinstance(idx, list)
-        assert len(idx) == len(probabilities)
+        probabilities = [0.1, 0.2, 0.3, 0.4, 0.5]
+        resampled_particles = epf._resampling_multinomial(
+            particles, probabilities, len(probabilities)
+        )
+        assert isinstance(resampled_particles, list)
+        assert len(resampled_particles) == len(probabilities)
+
+        resampled_particles = epf._resampling_systematic(
+            particles, probabilities, len(probabilities)
+        )
+        assert isinstance(resampled_particles, list)
+        assert len(resampled_particles) == len(probabilities)
 
     def test_temperature_functions(self):
         """Test the temperature functions."""
