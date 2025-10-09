@@ -70,6 +70,104 @@ class MockProcessRewardModelForResampling(AbstractProcessRewardModel):
 class TestEntropicAnnealing:
     """Test the entropic annealing."""
 
+    def effective_sample_size(self, probabilities):
+        # Create mock models
+        mock_prm = MockProcessRewardModelForResampling()
+
+        # Create step generation with 3 max steps
+        sg = StepGeneration(step_token="\n", max_steps=3)
+
+        # Create EntropicParticleFiltering
+        epf = EntropicParticleFiltering(
+            sg=sg,
+            prm=mock_prm,
+            selection_method=SelectionMethod.ARGMAX,
+            resampling_method=ResamplingMethod.MULTINOMIAL,
+            temperature_method=TemperatureMethod.ESS,
+            ess_threshold=0.5,
+            early_phase=0.5,
+        )
+        probabilities = [0.1, 0.2, 0.3, 0.4, 0.5]
+        ess = epf._effective_sample_size(probabilities)
+        assert isinstance(ess, float)
+        assert ess == 1.0 / (0.1**2 + 0.2**2 + 0.3**2 + 0.4**2 + 0.5**2)
+
+    def resampling(self, probabilities):
+        # Create mock models
+        mock_prm = MockProcessRewardModelForResampling()
+
+        # Create step generation with 3 max steps
+        sg = StepGeneration(step_token="\n", max_steps=3)
+
+        # Create EntropicParticleFiltering
+        epf = EntropicParticleFiltering(
+            sg=sg,
+            prm=mock_prm,
+            selection_method=SelectionMethod.ARGMAX,
+            resampling_method=ResamplingMethod.MULTINOMIAL,
+            temperature_method=TemperatureMethod.ESS,
+            ess_threshold=0.5,
+            early_phase=0.5,
+        )
+        probabilities = [0.1, 0.2, 0.3, 0.4, 0.5]
+        idx = epf._resampling_multinomial(probabilities)
+        assert isinstance(idx, list)
+        assert len(idx) == len(probabilities)
+
+        idx = epf._resampling_systematic(probabilities)
+        assert isinstance(idx, list)
+        assert len(idx) == len(probabilities)
+
+    def test_temperature_functions(self):
+        """Test the temperature functions."""
+        # Create mock models
+        mock_prm = MockProcessRewardModelForResampling()
+
+        # Create step generation with 3 max steps
+        sg = StepGeneration(step_token="\n", max_steps=3)
+
+        # Create EntropicParticleFiltering
+        epf = EntropicParticleFiltering(
+            sg=sg,
+            prm=mock_prm,
+            selection_method=SelectionMethod.ARGMAX,
+            resampling_method=ResamplingMethod.MULTINOMIAL,
+            temperature_method=TemperatureMethod.ESS,
+            ess_threshold=0.5,
+            early_phase=0.5,
+        )
+
+        # Test ESS temperature early phase
+        t = epf._temperature_ess(ess_ratio=0.2, progress=0.2)
+        assert isinstance(t, float)
+        assert t == 4.0
+
+        # Test ESS temperature late phase
+        t = epf._temperature_ess(ess_ratio=0.5, progress=0.8)
+        assert isinstance(t, float)
+        assert t == 1.0
+
+        # Test entropy temperature
+        t = epf._temperature_entropy(entropy_n=0.5, progress=0.3)
+        v = 1.0 / (0.5 + (1 - 0.5) * 0.3)
+        assert isinstance(t, float)
+        assert t == v
+
+        # Test entropy temperature edge case
+        t = epf._temperature_entropy(entropy_n=1.0, progress=0.2)
+        assert isinstance(t, float)
+        assert t == 1.0
+
+        # Test base temperature
+        t = epf._temperature_base(value_max=2.0, progress=0.5)
+        assert isinstance(t, float)
+        assert t == 1.50
+
+        # Test base temperature edge case
+        t = epf._temperature_base(value_max=0.8, progress=0.5)
+        assert isinstance(t, float)
+        assert t == 1.0
+
     def test_entropic_annealing_with_ess_temperature_multinomial(self):
         """Test that reference trajectories use partial weights during resampling."""
         # Create mock models
