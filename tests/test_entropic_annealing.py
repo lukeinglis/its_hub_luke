@@ -1,16 +1,12 @@
 """Test for the particle Gibbs resampling weight calculation fix (issue #54)."""
 
-import random
-
-import numpy as np
-
 from its_hub.algorithms.particle_gibbs import (
-    Particle,
     EntropicParticleFiltering,
+    Particle,
     ParticleFilteringResult,
+    ResamplingMethod,
     SelectionMethod,
     TemperatureMethod,
-    ResamplingMethod,
 )
 from its_hub.base import AbstractLanguageModel, AbstractProcessRewardModel
 from its_hub.lms import StepGeneration
