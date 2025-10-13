@@ -178,9 +178,8 @@ class ParticleGibbs(AbstractScalingAlgorithm):
     ) -> list[Particle]:
         """propagate particles synchronously"""
         import asyncio
-        return asyncio.run(
-            self._apropagate(lm, particles, prompt, tools, tool_choice)
-        )
+
+        return asyncio.run(self._apropagate(lm, particles, prompt, tools, tool_choice))
 
     async def ainfer(
         self,
@@ -313,8 +312,11 @@ class ParticleGibbs(AbstractScalingAlgorithm):
     ) -> dict | ParticleGibbsResult:
         """run inference synchronously with particle gibbs"""
         import asyncio
+
         return asyncio.run(
-            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
+            self.ainfer(
+                lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
+            )
         )
 
 
@@ -382,6 +384,9 @@ class ParticleFiltering(ParticleGibbs):
     ) -> dict | ParticleFilteringResult:
         """run inference synchronously with particle filtering"""
         import asyncio
+
         return asyncio.run(
-            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
+            self.ainfer(
+                lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
+            )
         )

@@ -78,6 +78,9 @@ class BestOfN(AbstractScalingAlgorithm):
     ) -> dict | BestOfNResult:
         """run inference synchronously with best-of-n"""
         import asyncio
+
         return asyncio.run(
-            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
+            self.ainfer(
+                lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
+            )
         )

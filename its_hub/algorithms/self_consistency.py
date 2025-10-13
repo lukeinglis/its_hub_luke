@@ -25,8 +25,9 @@ def _default_projection_func(response: str) -> str:
         The stripped response content.
     """
 
-
     return response.strip()
+
+
 @dataclass
 class SelfConsistencyResult(AbstractScalingResult):
     responses: list[dict]  # Keep original message format with tool calls
@@ -36,6 +37,7 @@ class SelfConsistencyResult(AbstractScalingResult):
     @property
     def the_one(self) -> dict:
         return self.responses[self.selected_index]
+
 
 def _select_most_common_or_random(
     list_to_select_from: list[str],
@@ -252,8 +254,11 @@ class SelfConsistency(AbstractScalingAlgorithm):
     ) -> dict | SelfConsistencyResult:
         """run inference synchronously with self-consistency"""
         import asyncio
+
         return asyncio.run(
-            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
+            self.ainfer(
+                lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
+            )
         )
 
     def _extract_tool_call_features(self, message_obj: dict):

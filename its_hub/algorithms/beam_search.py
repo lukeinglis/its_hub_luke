@@ -121,6 +121,7 @@ class BeamSearch(AbstractScalingAlgorithm):
     ) -> list[Path]:
         """search one level synchronously"""
         import asyncio
+
         return asyncio.run(
             self._asearch_one_level(lm, candidates, prompt, tools, tool_choice)
         )
@@ -195,6 +196,9 @@ class BeamSearch(AbstractScalingAlgorithm):
     ) -> dict | BeamSearchResult:
         """run inference synchronously with beam search"""
         import asyncio
+
         return asyncio.run(
-            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
+            self.ainfer(
+                lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
+            )
         )

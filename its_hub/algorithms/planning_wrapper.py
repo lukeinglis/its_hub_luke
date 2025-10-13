@@ -155,7 +155,9 @@ class PlanningWrapper(AbstractScalingAlgorithm):
         planning_prompt = PlanningPromptTemplate.create_planning_prompt(
             chat_messages.to_prompt()
         )
-        plan_response = await lm.agenerate([ChatMessage(role="user", content=planning_prompt)])
+        plan_response = await lm.agenerate(
+            [ChatMessage(role="user", content=planning_prompt)]
+        )
         plan = extract_content_from_lm_response(plan_response)
 
         # Step 2: Parse approaches from plan
@@ -246,8 +248,11 @@ class PlanningWrapper(AbstractScalingAlgorithm):
     ) -> dict | PlanningWrappedResult:
         """run planning-enhanced inference synchronously"""
         import asyncio
+
         return asyncio.run(
-            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
+            self.ainfer(
+                lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
+            )
         )
 
     def _select_best_approach(
