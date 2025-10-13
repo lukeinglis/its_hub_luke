@@ -108,33 +108,15 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         self.num_ref_particles = num_ref_particles
         self.does_ancestor_sampling = does_ancestor_sampling
 
-    def _propagate(
+    async def _apropagate(
         self,
         lm: AbstractLanguageModel,
         particles: list[Particle],
         prompt: str,
-        batched: bool = False,
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> list[Particle]:
-        if not batched:
-            # forward each particle
-            for p in particles:
-                if p.is_stopped:
-                    continue
-
-                next_step, is_stopped = self.sg.forward(
-                    lm, prompt, p.steps, tools=tools, tool_choice=tool_choice
-                )
-                p.steps.append(next_step)
-                p.is_stopped = is_stopped
-                score = self.prm.score(
-                    prompt, self.sg._post_process(p.steps, stopped=True)
-                )
-                p.partial_log_weights.append(_inv_sigmoid(score))
-
-            return particles
-
+        """propagate particles asynchronously (batched)"""
         is_stopped_in_the_beginning = [p.is_stopped for p in particles]
 
         # collect batch inputs
@@ -142,12 +124,11 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         for p, is_stopped in zip(particles, is_stopped_in_the_beginning):
             if is_stopped:
                 continue
-
             prompts.append(prompt)
             steps_so_far.append(p.steps)
 
         # collect batch outputs
-        sg_forward_results = self.sg.forward(
+        sg_forward_results = await self.sg.aforward(
             lm, prompts, steps_so_far, tools=tools, tool_choice=tool_choice
         )
 
@@ -156,7 +137,6 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         for p, is_stopped in zip(particles, is_stopped_in_the_beginning):
             if is_stopped:
                 continue
-
             next_step, is_stopped = sg_forward_results[i]
             p.steps.append(next_step)
             p.is_stopped = is_stopped
@@ -167,11 +147,10 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         for p, is_stopped in zip(particles, is_stopped_in_the_beginning):
             if is_stopped:
                 continue
-
             steps_so_far.append(p.steps)
 
         # collect batch outputs for scoring
-        scores = self.prm.score(
+        scores = await self.prm.ascore(
             prompt,
             [
                 self.sg._post_process(steps_so_far_per_prompt, stopped=True)
@@ -184,13 +163,25 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         for p, is_stopped in zip(particles, is_stopped_in_the_beginning):
             if is_stopped:
                 continue
-
             p.partial_log_weights.append(_inv_sigmoid(scores[i]))
             i += 1
 
         return particles
 
-    def infer(
+    def _propagate(
+        self,
+        lm: AbstractLanguageModel,
+        particles: list[Particle],
+        prompt: str,
+        tools: list[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> list[Particle]:
+        """propagate particles synchronously"""
+        import asyncio
+
+        return asyncio.run(self._apropagate(lm, particles, prompt, tools, tool_choice))
+
+    async def ainfer(
         self,
         lm: AbstractLanguageModel,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
@@ -199,7 +190,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | ParticleGibbsResult:
-        # Convert to uniform ChatMessages format
+        """run inference asynchronously with particle gibbs"""
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
         assert budget % self.num_iterations == 0, (
             "budget must be divisible by num_iterations"
@@ -221,15 +212,14 @@ class ParticleGibbs(AbstractScalingAlgorithm):
                 for _ in range(num_free_particles)
             ] + ref_particles
 
-            current_step = 0  # Track current step outside the loop
+            current_step = 0
 
             while not all(p.is_stopped for p in particles):
-                # TODO: Update _propagate to support native ChatMessages format instead of string conversion
-                particles = self._propagate(
+                # TODO: Update _apropagate to support native ChatMessages format instead of string conversion
+                particles = await self._apropagate(
                     lm,
                     particles,
                     chat_messages.to_prompt(),
-                    batched=True,
                     tools=tools,
                     tool_choice=tool_choice,
                 )
@@ -333,7 +323,7 @@ class ParticleFiltering(ParticleGibbs):
             does_ancestor_sampling=False,
         )
 
-    def infer(
+    async def ainfer(
         self,
         lm: AbstractLanguageModel,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
@@ -342,7 +332,8 @@ class ParticleFiltering(ParticleGibbs):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | ParticleFilteringResult:
-        result = super().infer(
+        """run inference asynchronously with particle filtering"""
+        result = await super().ainfer(
             lm,
             prompt_or_messages,
             budget,

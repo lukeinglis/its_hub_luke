@@ -1,7 +1,7 @@
 import logging
+import math
 import random
 import re
-import math
 from collections import Counter
 from collections.abc import Callable
 
@@ -14,6 +14,7 @@ from its_hub.base import (
 )
 from its_hub.types import ChatMessage, ChatMessages
 
+
 def _default_projection_func(response: str) -> str:
     """Default projection function that uses exact content matching.
     This function strips whitespace and returns the content as-is for voting.
@@ -24,8 +25,9 @@ def _default_projection_func(response: str) -> str:
         The stripped response content.
     """
 
-
     return response.strip()
+
+
 @dataclass
 class SelfConsistencyResult(AbstractScalingResult):
     responses: list[dict]  # Keep original message format with tool calls
@@ -35,6 +37,7 @@ class SelfConsistencyResult(AbstractScalingResult):
     @property
     def the_one(self) -> dict:
         return self.responses[self.selected_index]
+
 
 def _select_most_common_or_random(
     list_to_select_from: list[str],
@@ -162,7 +165,7 @@ class SelfConsistency(AbstractScalingAlgorithm):
         self.tool_vote = tool_vote
         self.exclude_args = exclude_args or []
 
-    def infer(
+    async def ainfer(
         self,
         lm: AbstractLanguageModel,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
@@ -171,11 +174,11 @@ class SelfConsistency(AbstractScalingAlgorithm):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | SelfConsistencyResult:
-        # Convert to uniform ChatMessages format
+        """run inference asynchronously with self-consistency"""
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
 
         # generate responses
-        responses = lm.generate(
+        responses = await lm.agenerate(
             chat_messages.to_batch(budget), tools=tools, tool_choice=tool_choice
         )
 

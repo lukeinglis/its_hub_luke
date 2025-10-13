@@ -14,6 +14,9 @@ class MockOutcomeRewardModel(AbstractOutcomeRewardModel):
             self.scores = scores
         self.call_count = 0
 
+    async def ascore(self, prompt: str, response: str | list[str]) -> float | list[float]:
+        return self.score(prompt, response)
+
     def score(self, prompt: str, response: str | list[str]) -> float | list[float]:
         if isinstance(response, list):
             scores = []
@@ -39,6 +42,9 @@ class MockProcessRewardModel:
             self.scores = scores
         self.call_count = 0
 
+    async def ascore(self, prompt: str, response: str | list[str]) -> float | list[float]:
+        return self.score(prompt, response)
+
     def score(self, prompt: str, response: str | list[str]) -> float | list[float]:
         if isinstance(response, list):
             scores = []
@@ -59,6 +65,9 @@ class HighVarianceRewardModel:
     def __init__(self):
         self.scores = [0.0, 1.0, 0.5, 0.1, 0.9, 0.3, 0.7, 0.2, 0.8, 0.4]
         self.call_count = 0
+
+    async def ascore(self, prompt: str, response: str | list[str]) -> float | list[float]:
+        return self.score(prompt, response)
 
     def score(self, prompt: str, response: str | list[str]) -> float | list[float]:
         if isinstance(response, list):
@@ -81,6 +90,9 @@ class ErrorRewardModel:
         self.scores = scores
         self.error_on_calls = error_on_calls or []
         self.call_count = 0
+
+    async def ascore(self, prompt: str, response: str | list[str]) -> float | list[float]:
+        return self.score(prompt, response)
 
     def score(self, prompt: str, response: str | list[str]) -> float | list[float]:
         if self.call_count in self.error_on_calls:

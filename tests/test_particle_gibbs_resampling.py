@@ -20,6 +20,9 @@ class MockLanguageModelForResampling(AbstractLanguageModel):
     def __init__(self):
         self.step_counter = 0
 
+    async def agenerate(self, messages, **kwargs):
+        return self.generate(messages, **kwargs)
+
     def generate(self, messages, max_tokens=100, **kwargs):
         # Handle both single and batch calls like OpenAICompatibleLanguageModel
         if isinstance(messages, list) and len(messages) > 0 and isinstance(messages[0], list):
@@ -36,6 +39,9 @@ class MockLanguageModelForResampling(AbstractLanguageModel):
             self.step_counter += 1
             return {"role": "assistant", "content": step}
 
+    async def aevaluate(self, prompt, response):
+        return self.evaluate(prompt, response)
+
     def evaluate(self, prompt, response):
         # Not used in these tests
         return 0.5
@@ -43,6 +49,9 @@ class MockLanguageModelForResampling(AbstractLanguageModel):
 
 class MockProcessRewardModelForResampling(AbstractProcessRewardModel):
     """Mock PRM that gives higher scores to longer sequences."""
+
+    async def ascore(self, prompt, response):
+        return self.score(prompt, response)
 
     def score(self, prompt, response):
         if isinstance(response, list):
@@ -136,7 +145,7 @@ class TestParticleGibbsResampling:
 
         # Propagate one step
         particles = [new_particle, ref_particle]
-        propagated = pg._propagate(mock_lm, particles, "Test prompt", batched=False)
+        propagated = pg._propagate(mock_lm, particles, "Test prompt")
 
         # After propagation, only non-stopped particles get extended
         assert len(propagated[0].partial_log_weights) == 2  # new particle now has 2 steps
