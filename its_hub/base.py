@@ -72,11 +72,12 @@ class AbstractScalingAlgorithm(ABC):
     ) -> str | AbstractScalingResult:
         """run inference synchronously with the given language model and prompt"""
         import asyncio
+
         return asyncio.run(
             self.ainfer(
                 lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
-                )
             )
+        )
 
 
 class AbstractOutcomeRewardModel(ABC):

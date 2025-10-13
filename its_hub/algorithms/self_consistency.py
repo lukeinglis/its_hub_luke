@@ -243,7 +243,6 @@ class SelfConsistency(AbstractScalingAlgorithm):
         )
         return result.the_one if return_response_only else result
 
-
     def _extract_tool_call_features(self, message_obj: dict):
         """Extract tool call features for voting based on tool_vote type."""
         tool_calls = message_obj.get("tool_calls", [])

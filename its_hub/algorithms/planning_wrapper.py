@@ -237,7 +237,6 @@ class PlanningWrapper(AbstractScalingAlgorithm):
 
         return result.the_one if return_response_only else result
 
-
     def _select_best_approach(
         self, approach_results: dict[str, AbstractScalingResult]
     ) -> tuple[str, AbstractScalingResult]:
