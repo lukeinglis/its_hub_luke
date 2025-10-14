@@ -320,6 +320,77 @@ class TestSelfConsistency:
         assert result.response_counts["answer: 42"] == 3
         assert result.response_counts["answer: 24"] == 1
 
+    @pytest.mark.asyncio
+    async def test_self_consistency_ainfer_flat_projection(self):
+        """Test SelfConsistency async ainfer with flat (string) projection function."""
+        mock_lm = StepMockLanguageModel(["answer1", "answer2", "answer1", "answer3"])
+
+        def flat_projection(response: str) -> str:
+            return response[-1]  # Last character
+
+        sc = SelfConsistency(flat_projection)
+        result = await sc.ainfer(mock_lm, "test prompt", budget=4, return_response_only=False)
+
+        assert isinstance(result, SelfConsistencyResult)
+        assert len(result.responses) == 4
+        assert isinstance(result.response_counts, Counter)
+        # "1" appears twice (from "answer1"), should be selected
+        assert result.the_one["content"] in ["answer1", "answer1"]
+        assert result.the_one["role"] == "assistant"
+
+    @pytest.mark.asyncio
+    async def test_self_consistency_ainfer_hierarchical_projection(self):
+        """Test SelfConsistency async ainfer with hierarchical (tuple) projection function."""
+        mock_lm = StepMockLanguageModel(["a1", "a2", "b1", "c1"])
+
+        def hierarchical_projection(response: str) -> tuple:
+            return (response[0], response[1])  # First char, second char as tuple
+
+        sc = SelfConsistency(hierarchical_projection)
+        result = await sc.ainfer(mock_lm, "test prompt", budget=4, return_response_only=False)
+
+        assert isinstance(result, SelfConsistencyResult)
+        assert len(result.responses) == 4
+        assert isinstance(result.response_counts, Counter)
+        # "a" is most common at level 0, so should select either "a1" or "a2"
+        assert result.the_one["content"] in ["a1", "a2"]
+        assert result.the_one["role"] == "assistant"
+
+    @pytest.mark.asyncio
+    async def test_self_consistency_ainfer_return_response_only(self):
+        """Test SelfConsistency async ainfer with return_response_only=True."""
+        mock_lm = StepMockLanguageModel(["a1", "a2", "b1", "c1"])
+
+        def hierarchical_projection(response: str) -> tuple:
+            return (response[0], response[1])
+
+        sc = SelfConsistency(hierarchical_projection)
+        result = await sc.ainfer(mock_lm, "test prompt", budget=4, return_response_only=True)
+
+        assert isinstance(result, dict)
+        assert result["content"] in ["a1", "a2"]  # Should be one of the "a" responses
+        assert result["role"] == "assistant"
+
+    @pytest.mark.asyncio
+    async def test_self_consistency_ainfer_with_chat_messages_class(self):
+        """Test SelfConsistency async ainfer with ChatMessages class input."""
+        mock_lm = StepMockLanguageModel(["answer1", "answer2", "answer1", "answer3"])
+
+        def flat_projection(response: str) -> str:
+            return response[-1]  # Last character
+
+        sc = SelfConsistency(flat_projection)
+
+        # Test with ChatMessages wrapping a string
+        chat_messages = ChatMessages("test prompt")
+        result = await sc.ainfer(mock_lm, chat_messages, budget=4, return_response_only=False)
+
+        assert isinstance(result, SelfConsistencyResult)
+        assert len(result.responses) == 4
+        # "1" appears twice (from "answer1"), should be selected
+        assert result.the_one["content"] in ["answer1", "answer1"]
+        assert result.the_one["role"] == "assistant"
+
 
 class TestDataStructures:
     """Test core data structures used by algorithms."""
@@ -452,6 +523,86 @@ class TestBestOfN:
 
         assert result["content"] == "response2"
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("responses,scores,expected_index,expected_response", [
+        (["response1", "response2", "response3"], [0.5, 0.8, 0.3], 1, "response2"),
+        (["response1", "response2", "response3"], [0.8, 0.5, 0.8], 0, "response1"),  # Tie - first wins
+        (["response1"], [0.7], 0, "response1"),  # Single response
+    ])
+    async def test_ainfer_selection_logic(self, responses, scores, expected_index, expected_response):
+        """Test Best-of-N async ainfer selection logic with various score scenarios."""
+        mock_lm = StepMockLanguageModel(responses)
+        mock_orm = MockOutcomeRewardModel(scores)
+
+        bon = BestOfN(mock_orm)
+        result = await bon.ainfer(mock_lm, "test prompt", budget=len(responses), return_response_only=False)
+
+        assert result.selected_index == expected_index
+        assert result.the_one["content"] == expected_response
+
+    @pytest.mark.asyncio
+    async def test_ainfer_return_response_only(self):
+        """Test async ainfer return_response_only parameter."""
+        mock_lm = StepMockLanguageModel(["response1", "response2", "response3"])
+        mock_orm = MockOutcomeRewardModel([0.5, 0.8, 0.3])
+
+        bon = BestOfN(mock_orm)
+        result = await bon.ainfer(mock_lm, "test prompt", budget=3, return_response_only=True)
+
+        assert result["content"] == "response2"
+
+    @pytest.mark.asyncio
+    async def test_ainfer_with_chat_messages_string(self):
+        """Test async ainfer BestOfN with ChatMessages wrapping a string."""
+        mock_lm = StepMockLanguageModel(["response1", "response2", "response3"])
+        mock_orm = MockOutcomeRewardModel([0.5, 0.8, 0.3])
+
+        bon = BestOfN(mock_orm)
+        chat_messages = ChatMessages("test prompt")
+        result = await bon.ainfer(mock_lm, chat_messages, budget=3, return_response_only=False)
+
+        assert isinstance(result, BestOfNResult)
+        assert result.the_one["content"] == "response2"
+        assert len(result.responses) == 3
+
+    @pytest.mark.asyncio
+    async def test_ainfer_with_chat_messages_conversation(self):
+        """Test async ainfer BestOfN with ChatMessages containing conversation history."""
+        mock_lm = StepMockLanguageModel(["response1", "response2", "response3"])
+        mock_orm = MockOutcomeRewardModel([0.5, 0.8, 0.3])
+
+        # Create conversation history
+        messages = [
+            ChatMessage(role="system", content="You are a helpful assistant"),
+            ChatMessage(role="user", content="What is 2+2?"),
+            ChatMessage(role="assistant", content="2+2=4"),
+            ChatMessage(role="user", content="What about 3+3?")
+        ]
+        chat_messages = ChatMessages(messages)
+
+        bon = BestOfN(mock_orm)
+        result = await bon.ainfer(mock_lm, chat_messages, budget=3, return_response_only=False)
+
+        assert isinstance(result, BestOfNResult)
+        assert result.the_one["content"] == "response2"
+        # Verify the reward model received the ChatMessages object
+        assert len(result.responses) == 3
+
+    @pytest.mark.asyncio
+    async def test_ainfer_with_list_chat_messages(self):
+        """Test async ainfer BestOfN with list[ChatMessage] input."""
+        mock_lm = StepMockLanguageModel(["response1", "response2"])
+        mock_orm = MockOutcomeRewardModel([0.3, 0.7])
+
+        messages = [
+            ChatMessage(role="user", content="Solve this problem")
+        ]
+
+        bon = BestOfN(mock_orm)
+        result = await bon.ainfer(mock_lm, messages, budget=2, return_response_only=True)
+
+        assert result["content"] == "response2"
+
 
 class TestBeamSearch:
     """Test the Beam Search algorithm."""
@@ -540,6 +691,79 @@ class TestBeamSearch:
         sg = StepGeneration(step_token="\n", max_steps=1)
         beam_search = BeamSearch(sg, mock_prm, beam_width=2)
         result = beam_search.infer(mock_lm, chat_messages, budget=2, return_response_only=True)
+
+        assert isinstance(result, dict)
+
+    @pytest.mark.asyncio
+    async def test_ainfer_basic_functionality(self):
+        """Test basic async beam search functionality."""
+        mock_lm = StepMockLanguageModel(["step1", "step2", "stepA", "stepB"])
+        mock_prm = MockProcessRewardModel([0.7, 0.9])
+
+        sg = StepGeneration(step_token="\n", max_steps=2)
+        beam_search = BeamSearch(sg, mock_prm, beam_width=2)
+
+        result = await beam_search.ainfer(mock_lm, "Solve this problem:", budget=2, return_response_only=True)
+
+        assert isinstance(result, dict)
+
+    @pytest.mark.asyncio
+    async def test_ainfer_budget_validation(self):
+        """Test async budget validation constraints."""
+        mock_lm = StepMockLanguageModel(["step1"])
+        mock_prm = MockProcessRewardModel([0.5])
+
+        sg = StepGeneration(step_token="\n", max_steps=1)
+        beam_search = BeamSearch(sg, mock_prm, beam_width=2)
+
+        # Test budget not divisible by beam_width
+        with pytest.raises(AssertionError, match="budget must be divisible by beam_width"):
+            await beam_search.ainfer(mock_lm, "test prompt", budget=3)
+
+    @pytest.mark.asyncio
+    async def test_ainfer_path_selection(self):
+        """Test that async beam search selects the highest scoring path."""
+        mock_lm = StepMockLanguageModel(["good_step", "bad_step", "good_step", "bad_step"])
+        mock_prm = MockProcessRewardModel([0.9, 0.1, 0.8, 0.2])
+
+        sg = StepGeneration(step_token="\n", max_steps=1)
+        beam_search = BeamSearch(sg, mock_prm, beam_width=2)
+
+        result = await beam_search.ainfer(mock_lm, "Solve this:", budget=4, return_response_only=False)
+
+        assert isinstance(result, BeamSearchResult)
+        assert result.selected_index == result.scores.index(max(result.scores))
+
+    @pytest.mark.asyncio
+    async def test_ainfer_with_chat_messages_string(self):
+        """Test async BeamSearch with ChatMessages wrapping a string."""
+        mock_lm = StepMockLanguageModel(["step1", "step2"])
+        mock_prm = MockProcessRewardModel([0.7, 0.9])
+
+        sg = StepGeneration(step_token="\n", max_steps=1)
+        beam_search = BeamSearch(sg, mock_prm, beam_width=2)
+
+        chat_messages = ChatMessages("Solve this problem:")
+        result = await beam_search.ainfer(mock_lm, chat_messages, budget=2, return_response_only=False)
+
+        assert isinstance(result, BeamSearchResult)
+        assert isinstance(result.the_one, dict)
+
+    @pytest.mark.asyncio
+    async def test_ainfer_with_chat_messages_conversation(self):
+        """Test async BeamSearch with ChatMessages containing conversation history."""
+        mock_lm = StepMockLanguageModel(["step1", "step2"])
+        mock_prm = MockProcessRewardModel([0.8, 0.6])
+
+        messages = [
+            ChatMessage(role="system", content="You are a problem solver"),
+            ChatMessage(role="user", content="Solve step by step:")
+        ]
+        chat_messages = ChatMessages(messages)
+
+        sg = StepGeneration(step_token="\n", max_steps=1)
+        beam_search = BeamSearch(sg, mock_prm, beam_width=2)
+        result = await beam_search.ainfer(mock_lm, chat_messages, budget=2, return_response_only=True)
 
         assert isinstance(result, dict)
 
@@ -675,6 +899,102 @@ class TestParticleGibbs:
         sg = StepGeneration(step_token="\n", max_steps=1)
         particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX)
         result = particle_gibbs.infer(mock_lm, chat_messages, budget=2, return_response_only=True)
+
+        assert isinstance(result, dict)
+
+    @pytest.mark.asyncio
+    async def test_ainfer_basic_functionality(self):
+        """Test basic async particle Gibbs functionality."""
+        mock_lm = StepMockLanguageModel(["step1", "step2"])
+        mock_prm = MockProcessRewardModel([0.7, 0.6])
+
+        sg = StepGeneration(step_token="\n", max_steps=1)
+        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX)
+
+        result = await particle_gibbs.ainfer(mock_lm, "Solve this:", budget=2, return_response_only=True)
+
+        assert isinstance(result, dict)
+
+    @pytest.mark.asyncio
+    async def test_ainfer_budget_validation(self):
+        """Test async budget validation for particle Gibbs."""
+        mock_lm = StepMockLanguageModel(["step1"])
+        mock_prm = MockProcessRewardModel([0.5])
+
+        sg = StepGeneration(step_token="\n", max_steps=1)
+        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=3)
+
+        with pytest.raises(AssertionError, match="budget must be divisible by num_iterations"):
+            await particle_gibbs.ainfer(mock_lm, "test prompt", budget=4)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("selection_method,expected_type", [
+        (SelectionMethod.ARGMAX, dict),
+        (SelectionMethod.SAMPLE, dict),
+        ("argmax", dict),  # Test string conversion
+    ])
+    async def test_ainfer_selection_methods(self, selection_method, expected_type):
+        """Test async different selection methods."""
+        mock_lm = StepMockLanguageModel(["good_step", "bad_step"])
+        mock_prm = MockProcessRewardModel([0.9, 0.1])
+
+        sg = StepGeneration(step_token="\n", max_steps=1)
+        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, selection_method=selection_method)
+        result = await particle_gibbs.ainfer(mock_lm, "Solve this:", budget=2, return_response_only=True)
+
+        assert isinstance(result, expected_type)
+
+    @pytest.mark.asyncio
+    async def test_ainfer_multiple_iterations(self):
+        """Test async particle Gibbs with multiple iterations."""
+        mock_lm = StepMockLanguageModel(["step1", "step2", "step3", "step4"])
+        mock_prm = MockProcessRewardModel([0.7, 0.6, 0.8, 0.5])
+
+        sg = StepGeneration(step_token="\n", max_steps=1)
+        particle_gibbs = ParticleGibbs(
+            sg, mock_prm,
+            num_iterations=2,
+            selection_method=SelectionMethod.ARGMAX,
+            num_ref_particles=1
+        )
+
+        result = await particle_gibbs.ainfer(mock_lm, "Solve this:", budget=4, return_response_only=False)
+
+        assert isinstance(result, ParticleGibbsResult)
+        assert len(result.responses_lst) == 2  # num_iterations = 2
+        assert len(result.log_weights_lst) == 2
+        assert len(result.ref_indices_lst) == 2
+
+    @pytest.mark.asyncio
+    async def test_ainfer_with_chat_messages_string(self):
+        """Test async ParticleGibbs with ChatMessages wrapping a string."""
+        mock_lm = StepMockLanguageModel(["step1", "step2"])
+        mock_prm = MockProcessRewardModel([0.7, 0.6])
+
+        sg = StepGeneration(step_token="\n", max_steps=1)
+        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX)
+
+        chat_messages = ChatMessages("Solve this:")
+        result = await particle_gibbs.ainfer(mock_lm, chat_messages, budget=2, return_response_only=False)
+
+        assert isinstance(result, ParticleGibbsResult)
+        assert isinstance(result.the_one, dict)
+
+    @pytest.mark.asyncio
+    async def test_ainfer_with_chat_messages_conversation(self):
+        """Test async ParticleGibbs with ChatMessages containing conversation history."""
+        mock_lm = StepMockLanguageModel(["step1", "step2"])
+        mock_prm = MockProcessRewardModel([0.8, 0.5])
+
+        messages = [
+            ChatMessage(role="system", content="Solve step by step"),
+            ChatMessage(role="user", content="Problem:")
+        ]
+        chat_messages = ChatMessages(messages)
+
+        sg = StepGeneration(step_token="\n", max_steps=1)
+        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX)
+        result = await particle_gibbs.ainfer(mock_lm, chat_messages, budget=2, return_response_only=True)
 
         assert isinstance(result, dict)
 

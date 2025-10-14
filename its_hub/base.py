@@ -61,7 +61,6 @@ class AbstractScalingAlgorithm(ABC):
         """run inference asynchronously with the given language model and prompt"""
         pass
 
-    @abstractmethod
     def infer(
         self,
         lm: AbstractLanguageModel,
@@ -72,7 +71,13 @@ class AbstractScalingAlgorithm(ABC):
         tool_choice: str | dict | None = None,
     ) -> str | AbstractScalingResult:
         """run inference synchronously with the given language model and prompt"""
-        pass
+        import asyncio
+
+        return asyncio.run(
+            self.ainfer(
+                lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
+            )
+        )
 
 
 class AbstractOutcomeRewardModel(ABC):

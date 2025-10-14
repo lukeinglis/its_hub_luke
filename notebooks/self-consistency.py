@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.17.2
+#       jupytext_version: 1.17.3
 #   kernelspec:
 #     display_name: inference_time_scaling-dev
 #     language: python
@@ -33,19 +33,39 @@
 # %autoreload 2
 
 # %%
+import os
+from dotenv import load_dotenv
 from its_hub.utils import SAL_STEP_BY_STEP_SYSTEM_PROMPT
 from its_hub.lms import OpenAICompatibleLanguageModel
 
+# Load environment variables from .env file
+load_dotenv()
+
+# Main example: OpenAI API endpoint with gpt-4o-mini
 lm = OpenAICompatibleLanguageModel(
-    endpoint="http://localhost:1234/v1", 
-    api_key="NO_API_KEY", 
-    model_name="qwen2-math-1.5b-instruct:2", 
+    endpoint="https://api.openai.com/v1", 
+    api_key=os.getenv("OPENAI_API_KEY"),  # Load API key from environment
+    model_name="gpt-4o-mini", 
     system_prompt=SAL_STEP_BY_STEP_SYSTEM_PROMPT, 
+    is_async=False,
 )
+# %%
+# Alternative: vLLM local endpoint (commented out)
+# lm = OpenAICompatibleLanguageModel(
+#     endpoint="http://localhost:8000/v1", 
+#     api_key="NO_API_KEY", 
+#     model_name="qwen2-math-1.5b-instruct", 
+#     system_prompt=SAL_STEP_BY_STEP_SYSTEM_PROMPT, 
+# )
+
+# %%
 # Mathematical problem to solve
 prompt = r"Let $a$ be a positive real number such that all the roots of \[x^3 + ax^2 + ax + 1 = 0\]are real. Find the smallest possible value of $a.$"
 
-response = lm.generate(prompt)
+# Generate response using the proper format
+from its_hub.types import ChatMessages
+chat_messages = ChatMessages.from_prompt_or_messages(prompt)
+response = lm.generate(chat_messages.to_batch(1))[0]
 
 print(response)
 
@@ -58,7 +78,7 @@ def extract_boxed(s: str) -> str:
     # return the last match if any were found
     return boxed_matches[-1] if boxed_matches else ""
     
-extract_boxed(response)
+extract_boxed(response['content'])
 
 # %% [markdown]
 # ## Self-Consistency Algorithm
@@ -68,17 +88,19 @@ extract_boxed(response)
 from its_hub.algorithms import SelfConsistency
 
 # Set computational budget for scaling
-budget = 16
+budget = 4
 
 scaling_alg = SelfConsistency(extract_boxed)
 
 scaling_result = scaling_alg.infer(
-    lm, prompt, budget, show_progress=True, return_response_only=False
+    lm, prompt, budget, return_response_only=False
 )
 
+print("######## Self-Consistency Result ########")
 print(scaling_result.the_one)
 
 # %%
-scaling_result.response_counts
+print("######## Extracted Response Counts ########")
+print(scaling_result.response_counts)
 
 # %%

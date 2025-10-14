@@ -14,6 +14,7 @@ from its_hub.base import (
 )
 from its_hub.types import ChatMessage, ChatMessages
 
+
 def _default_projection_func(response: str) -> str:
     """Default projection function that uses exact content matching.
     This function strips whitespace and returns the content as-is for voting.
@@ -24,8 +25,9 @@ def _default_projection_func(response: str) -> str:
         The stripped response content.
     """
 
-
     return response.strip()
+
+
 @dataclass
 class SelfConsistencyResult(AbstractScalingResult):
     responses: list[dict]  # Keep original message format with tool calls
@@ -35,6 +37,7 @@ class SelfConsistencyResult(AbstractScalingResult):
     @property
     def the_one(self) -> dict:
         return self.responses[self.selected_index]
+
 
 def _select_most_common_or_random(
     list_to_select_from: list[str],
@@ -239,21 +242,6 @@ class SelfConsistency(AbstractScalingAlgorithm):
             selected_index=selected_index,  # Index into original responses
         )
         return result.the_one if return_response_only else result
-
-    def infer(
-        self,
-        lm: AbstractLanguageModel,
-        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
-        budget: int,
-        return_response_only: bool = True,
-        tools: list[dict] | None = None,
-        tool_choice: str | dict | None = None,
-    ) -> dict | SelfConsistencyResult:
-        """run inference synchronously with self-consistency"""
-        import asyncio
-        return asyncio.run(
-            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
-        )
 
     def _extract_tool_call_features(self, message_obj: dict):
         """Extract tool call features for voting based on tool_vote type."""

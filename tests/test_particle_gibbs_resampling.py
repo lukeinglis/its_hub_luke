@@ -145,7 +145,7 @@ class TestParticleGibbsResampling:
 
         # Propagate one step
         particles = [new_particle, ref_particle]
-        propagated = pg._propagate(mock_lm, particles, "Test prompt", batched=False)
+        propagated = pg._propagate(mock_lm, particles, "Test prompt")
 
         # After propagation, only non-stopped particles get extended
         assert len(propagated[0].partial_log_weights) == 2  # new particle now has 2 steps
