@@ -15,6 +15,7 @@ from its_hub.base import (
 )
 from its_hub.types import ChatMessage, ChatMessages
 
+
 def _default_projection_func(response: str) -> str:
     """Default projection function that uses exact content matching.
     This function strips whitespace and returns the content as-is for voting.
@@ -24,23 +25,6 @@ def _default_projection_func(response: str) -> str:
     Returns:
         The stripped response content.
     """
-
-
-def setup_logging():
-    """Setup logging for the self_consistency module."""
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
-
-    # Add a file handler to log to a file
-    file_handler = logging.FileHandler('self_consistency.log')
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    logger.addHandler(file_handler)
-    return logger
-
-
-logger = setup_logging()
-
 
 
 def _default_projection_func(response: str) -> str:
@@ -55,6 +39,8 @@ def _default_projection_func(response: str) -> str:
 
 
     return response.strip()
+
+
 @dataclass
 class SelfConsistencyResult(AbstractScalingResult):
     responses: list[dict]  # Keep original message format with tool calls
@@ -64,6 +50,7 @@ class SelfConsistencyResult(AbstractScalingResult):
     @property
     def the_one(self) -> dict:
         return self.responses[self.selected_index]
+
 
 def _select_most_common_or_random(
     list_to_select_from: list[str],
@@ -186,9 +173,6 @@ class SelfConsistency(AbstractScalingAlgorithm):
         self.consistency_space_projection_func = (
             consistency_space_projection_func or _default_projection_func
         )
-        logger.info(
-            f"Initializing with projection function: {self.consistency_space_projection_func}"
-        )
         self.tool_vote = tool_vote
         self.exclude_args = exclude_args or []
 
@@ -230,16 +214,12 @@ class SelfConsistency(AbstractScalingAlgorithm):
 
         # Determine eligible responses and create projections
         if has_majority_tool_calls and self.tool_vote:
-            logging.info("Tool voting is invoked")
             eligible_indices = [
                 i for i, r in enumerate(responses) if r.get("tool_calls")
             ]
             responses_projected = [
                 self._extract_tool_call_features(responses[i]) for i in eligible_indices
             ]
-            logger.info(
-                f"Responses projected: {responses_projected}"
-            )
         else:
             # Content voting - filter out tool call responses
             eligible_indices = [
@@ -278,21 +258,6 @@ class SelfConsistency(AbstractScalingAlgorithm):
             selected_index=selected_index,  # Index into original responses
         )
         return result.the_one if return_response_only else result
-
-    def infer(
-        self,
-        lm: AbstractLanguageModel,
-        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
-        budget: int,
-        return_response_only: bool = True,
-        tools: list[dict] | None = None,
-        tool_choice: str | dict | None = None,
-    ) -> dict | SelfConsistencyResult:
-        """run inference synchronously with self-consistency"""
-        import asyncio
-        return asyncio.run(
-            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
-        )
 
     def _extract_tool_call_features(self, message_obj: dict):
         """Extract tool call features for voting based on tool_vote type."""

@@ -377,3 +377,83 @@ class TestPlanningWrapper:
         assert "content" in result
         assert "APPROACH" in result["content"]
 
+    @pytest.mark.asyncio
+    async def test_planning_self_consistency_ainfer(self, mock_language_model, test_problem):
+        """Test that planning self-consistency async ainfer works."""
+        planning_sc = create_planning_self_consistency(extract_boxed)
+
+        # Test async inference
+        result = await planning_sc.ainfer(mock_language_model, test_problem, budget=4, return_response_only=False)
+
+        # Verify result structure
+        assert hasattr(result, 'the_one')
+        assert hasattr(result, 'approaches')
+        assert hasattr(result, 'best_approach')
+
+        # Verify response contains expected content
+        assert isinstance(result.the_one, dict)
+        assert "content" in result.the_one
+        assert len(result.approaches) > 0
+        assert result.best_approach is not None
+
+    @pytest.mark.asyncio
+    async def test_planning_best_of_n_ainfer(self, mock_language_model, mock_outcome_reward_model, test_problem):
+        """Test that planning best-of-n async ainfer works."""
+        planning_bon = create_planning_best_of_n(mock_outcome_reward_model)
+
+        # Test async inference
+        result = await planning_bon.ainfer(mock_language_model, test_problem, budget=4, return_response_only=False)
+
+        # Verify result structure
+        assert hasattr(result, 'the_one')
+        assert hasattr(result, 'approaches')
+        assert hasattr(result, 'best_approach')
+
+        # Verify response contains expected content
+        assert isinstance(result.the_one, dict)
+        assert "content" in result.the_one
+        assert len(result.approaches) > 0
+        assert result.best_approach is not None
+
+    @pytest.mark.asyncio
+    async def test_planning_particle_filtering_ainfer(self, mock_language_model, step_generation, mock_process_reward_model, test_problem):
+        """Test that planning particle filtering async ainfer works."""
+        planning_pf = create_planning_particle_filtering(step_generation, mock_process_reward_model)
+
+        # Test async inference
+        result = await planning_pf.ainfer(mock_language_model, test_problem, budget=4, return_response_only=False)
+
+        # Verify result structure
+        assert hasattr(result, 'the_one')
+        assert hasattr(result, 'approaches')
+        assert hasattr(result, 'best_approach')
+
+        # Verify response contains expected content
+        assert isinstance(result.the_one, dict)
+        assert "content" in result.the_one
+        assert len(result.approaches) > 0
+        assert result.best_approach is not None
+
+    @pytest.mark.asyncio
+    async def test_planning_wrapper_ainfer_return_response_only(self, mock_language_model, test_problem):
+        """Test async ainfer with return_response_only=True."""
+        planning_sc = create_planning_self_consistency(extract_boxed)
+
+        # Test with return_response_only=True
+        result = await planning_sc.ainfer(mock_language_model, test_problem, budget=4, return_response_only=True)
+
+        # Should return just the dict response
+        assert isinstance(result, dict)
+        assert "content" in result
+
+    @pytest.mark.asyncio
+    async def test_planning_wrapper_ainfer_with_different_budgets(self, mock_language_model, test_problem):
+        """Test async ainfer with different budget values."""
+        planning_sc = create_planning_self_consistency(extract_boxed)
+
+        # Test with different budgets
+        for budget in [2, 4, 6]:
+            result = await planning_sc.ainfer(mock_language_model, test_problem, budget=budget, return_response_only=False)
+            assert hasattr(result, 'the_one')
+            assert isinstance(result.the_one, dict)
+

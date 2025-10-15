@@ -59,7 +59,7 @@ class BeamSearch(AbstractScalingAlgorithm):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> list[Path]:
-        """search one level asynchronously (batched)"""
+        """search one level asynchronously"""
         is_stopped_in_the_beginning = [c.is_stopped for c in candidates]
 
         # collect batch inputs
@@ -116,12 +116,12 @@ class BeamSearch(AbstractScalingAlgorithm):
         lm: AbstractLanguageModel,
         candidates: list[Path],
         prompt: str,
-        batched: bool = False,
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> list[Path]:
         """search one level synchronously"""
         import asyncio
+
         return asyncio.run(
             self._asearch_one_level(lm, candidates, prompt, tools, tool_choice)
         )
@@ -184,18 +184,3 @@ class BeamSearch(AbstractScalingAlgorithm):
             steps_used=steps_used,
         )
         return result.the_one if return_response_only else result
-
-    def infer(
-        self,
-        lm: AbstractLanguageModel,
-        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
-        budget: int,
-        return_response_only: bool = True,
-        tools: list[dict] | None = None,
-        tool_choice: str | dict | None = None,
-    ) -> dict | BeamSearchResult:
-        """run inference synchronously with beam search"""
-        import asyncio
-        return asyncio.run(
-            self.ainfer(lm, prompt_or_messages, budget, return_response_only, tools, tool_choice)
-        )

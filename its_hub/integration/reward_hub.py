@@ -20,6 +20,7 @@ class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
     ) -> float | list[float]:
         """score response(s) asynchronously"""
         import asyncio
+
         chat_messages = ChatMessages.from_prompt_or_messages(prompt_or_messages)
 
         is_single_response = isinstance(response_or_responses, str)
@@ -58,6 +59,7 @@ class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
     ) -> float | list[float]:
         """score response(s) synchronously"""
         import asyncio
+
         return asyncio.run(self.ascore(prompt_or_messages, response_or_responses))
 
 

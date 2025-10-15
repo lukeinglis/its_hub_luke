@@ -251,12 +251,13 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         # Warn about deprecated is_async parameter
         if is_async is not False:
             import warnings
+
             warnings.warn(
                 "The 'is_async' parameter is deprecated and will be removed in a future version. "
                 "The implementation now always uses async internally. "
                 "Sync methods (generate, evaluate) automatically wrap async calls with asyncio.run().",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
 
         self.endpoint = endpoint
