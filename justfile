@@ -94,27 +94,27 @@ config-bon-collie:
     source .env
     curl -X POST http://localhost:8108/configure \
         -H "Content-Type: application/json" \
-        -d "{
-            \"provider\": \"litellm\",
-            \"endpoint\": \"auto\",
-            \"api_key\": null,
-            \"model\": \"bedrock/$BEDROCK_MODEL\",
-            \"alg\": \"best-of-n\",
-            \"use_llm_judge\": true,
-            \"judge_type\": \"groupwise\",
-            \"judge_model\": \"bedrock/$BEDROCK_MODEL\",
-            \"judge_criterion\": \"tool-judge\",
-            \"judge_api_key\": null,
-            \"judge_temperature\": 0.7,
-            \"judge_max_tokens\": 2048,
-            \"extra_args\": {
-                \"aws_access_key_id\": \"$AWS_ACCESS_KEY_ID\",
-                \"aws_secret_access_key\": \"$AWS_SECRET_ACCESS_KEY\",
-                \"aws_region_name\": \"$AWS_REGION\"
+        -d '{
+            "provider": "litellm",
+            "endpoint": "auto",
+            "api_key": null,
+            "model": "bedrock/'"$BEDROCK_MODEL"'",
+            "alg": "best-of-n",
+            "rm_name": "llm-judge",
+            "judge_model": "bedrock/'"$BEDROCK_MODEL"'",
+            "judge_base_url": "auto",
+            "judge_mode": "groupwise",
+            "judge_criterion": "multi_step_tool_judge",
+            "judge_api_key": null,
+            "judge_temperature": 0.7,
+            "judge_max_tokens": 2048,
+            "extra_args": {
+                "aws_access_key_id": "'"$AWS_ACCESS_KEY_ID"'",
+                "aws_secret_access_key": "'"$AWS_SECRET_ACCESS_KEY"'",
+                "aws_region_name": "'"$AWS_REGION"'"
             }
-        }" \
+        }' \
         -w "\nHTTP Status: %{http_code}\n" -v
-
 
 
 # Test simple conversation
