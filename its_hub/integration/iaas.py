@@ -359,7 +359,7 @@ class ChatCompletionUsage(BaseModel):
 def _extract_algorithm_metadata(algorithm_result: Any) -> dict[str, Any] | None:
     """Extract metadata from algorithm results for API response."""
     from its_hub.algorithms.self_consistency import SelfConsistencyResult
-
+    from its_hub.algorithms.bon import BestOfNResult
     if isinstance(algorithm_result, SelfConsistencyResult):
         return {
             "algorithm": "self-consistency",
@@ -367,7 +367,14 @@ def _extract_algorithm_metadata(algorithm_result: Any) -> dict[str, Any] | None:
             "response_counts": dict(algorithm_result.response_counts),
             "selected_index": algorithm_result.selected_index,
         }
-
+    
+    elif isinstance(algorithm_result, BestOfNResult):
+        return {
+            "algorithm": "best-of-n",
+            "responses": algorithm_result.responses,
+            "scores": algorithm_result.scores,
+            "selected_index": algorithm_result.selected_index,
+        }
     # TODO: Add metadata extraction for other algorithm result types
     # elif isinstance(algorithm_result, BestOfNResult):
     #     return {
