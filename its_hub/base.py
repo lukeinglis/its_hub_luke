@@ -24,15 +24,9 @@ class AbstractLanguageModel(ABC):
         """generate a response from the model synchronously"""
         pass
 
-    @abstractmethod
-    async def aevaluate(self, prompt: str, generation: str) -> list[float]:
-        """evaluate the likelihoods of the generation asynchronously"""
-        pass
-
-    @abstractmethod
     def evaluate(self, prompt: str, generation: str) -> list[float]:
         """evaluate the likelihoods of the generation synchronously"""
-        pass
+        raise NotImplementedError("evaluate method not implemented")
 
 
 class AbstractScalingResult(ABC):
@@ -58,7 +52,11 @@ class AbstractScalingAlgorithm(ABC):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> str | AbstractScalingResult:
-        """run inference asynchronously with the given language model and prompt"""
+        """
+        Run inference asynchronously with the given language model and prompt.
+
+        This is the primary method that subclasses must implement.
+        """
         pass
 
     def infer(
@@ -70,32 +68,16 @@ class AbstractScalingAlgorithm(ABC):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> str | AbstractScalingResult:
-        """run inference synchronously with the given language model and prompt"""
-        import asyncio
+        """
+        Run inference synchronously with the given language model and prompt.
 
+        Default implementation wraps ainfer() using asyncio.run().
+        """
+        import asyncio
         return asyncio.run(
             self.ainfer(
                 lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
             )
-        )
-
-    async def ainfer(
-        self,
-        lm: AbstractLanguageModel,
-        prompt_or_messages: str | list[ChatMessage] | ChatMessages,
-        budget: int,
-        return_response_only: bool = True,
-        tools: list[dict] | None = None,
-        tool_choice: str | dict | None = None,
-    ) -> str | AbstractScalingResult:
-        """
-        async version of infer - default implementation falls back to sync version
-
-        Subclasses should override this for true async performance
-        """
-        import asyncio
-        return await asyncio.to_thread(
-            self.infer, lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
         )
 
 
