@@ -47,7 +47,8 @@ class ConfigRequest(BaseModel):
     step_token: str | None = Field(None, description="Token to mark generation steps")
     stop_token: str | None = Field(None, description="Token to stop generation")
     rm_name: str | None = Field(
-        None, description="Reward model name or 'llm-judge' to use LLM-as-a-judge (not required for self-consistency)"
+        None,
+        description="Reward model name or 'llm-judge' to use LLM-as-a-judge (not required for self-consistency)",
     )
     rm_device: str | None = Field(
         None, description="Device for reward model (e.g., 'cuda:0')"
@@ -70,39 +71,32 @@ class ConfigRequest(BaseModel):
     # LLM Judge settings (only used when rm_name='llm-judge')
     judge_model: str | None = Field(
         None,
-        description="LiteLLM model name for judge (required when rm_name='llm-judge')"
+        description="LiteLLM model name for judge (required when rm_name='llm-judge')",
     )
     judge_base_url: str | None = Field(
         None,
-        description="Base URL for judge endpoint (required when rm_name='llm-judge')"
+        description="Base URL for judge endpoint (required when rm_name='llm-judge')",
     )
     judge_criterion: str | None = Field(
         "overall_quality",
-        description="Built-in criterion ('overall_quality', 'multi_step_tool_judge') OR custom evaluation description/prompt"
+        description="Built-in criterion ('overall_quality', 'multi_step_tool_judge') OR custom evaluation description/prompt",
     )
     judge_mode: str | None = Field(
         "groupwise",
-        description="'pointwise' (score each individually) or 'groupwise' (rank and select top-N)"
+        description="'pointwise' (score each individually) or 'groupwise' (rank and select top-N)",
     )
     judge_top_n: int | None = Field(
-        1,
-        description="For groupwise: number of top responses to select"
+        1, description="For groupwise: number of top responses to select"
     )
-    judge_api_key: str | None = Field(
-        None,
-        description="API key for judge model"
-    )
+    judge_api_key: str | None = Field(None, description="API key for judge model")
     judge_temperature: float | None = Field(
-        0.0,
-        description="Judge temperature (0.0 for deterministic)"
+        0.0, description="Judge temperature (0.0 for deterministic)"
     )
     judge_max_tokens: int | None = Field(
-        4096,
-        description="Maximum tokens for judge response"
+        4096, description="Maximum tokens for judge response"
     )
     enable_judge_logging: bool | None = Field(
-        True,
-        description="Log judge scores and reasoning"
+        True, description="Log judge scores and reasoning"
     )
 
     @field_validator("alg")
@@ -133,7 +127,9 @@ class ConfigRequest(BaseModel):
         alg = info.data.get("alg")
 
         if alg == "best-of-n" and not v:
-            raise ValueError("rm_name is required for best-of-n (use model name or 'llm-judge')")
+            raise ValueError(
+                "rm_name is required for best-of-n (use model name or 'llm-judge')"
+            )
         elif alg == "particle-filtering" and not v:
             raise ValueError("rm_name is required for particle-filtering")
         return v
@@ -210,7 +206,10 @@ async def config_service(request: ConfigRequest) -> dict[str, str]:
                 # Use LLM Judge adapter from its_hub integration
                 try:
                     from its_hub.integration.reward_hub import LLMJudgeRewardModel
-                    from reward_hub.llm_judge.prompts import Criterion, CriterionRegistry
+                    from reward_hub.llm_judge.prompts import (
+                        Criterion,
+                        CriterionRegistry,
+                    )
                 except ImportError as e:
                     logger.error(f"Failed to import LLM Judge: {e}")
                     raise HTTPException(
@@ -223,15 +222,13 @@ async def config_service(request: ConfigRequest) -> dict[str, str]:
 
                 if request.judge_criterion in built_in_criteria:
                     criterion_to_use = request.judge_criterion
-                    logger.info(
-                        f"Using built-in criterion: {request.judge_criterion}"
-                    )
+                    logger.info(f"Using built-in criterion: {request.judge_criterion}")
                 else:
                     # Custom criterion - register it with auto-generated name
-                    criterion_name = f"custom_{hash(request.judge_criterion) & 0xFFFFFFFF:08x}"
-                    logger.info(
-                        f"Registering custom criterion as: {criterion_name}"
+                    criterion_name = (
+                        f"custom_{hash(request.judge_criterion) & 0xFFFFFFFF:08x}"
                     )
+                    logger.info(f"Registering custom criterion as: {criterion_name}")
                     custom_criterion = Criterion(
                         name=criterion_name,
                         content=request.judge_criterion,
@@ -254,7 +251,9 @@ async def config_service(request: ConfigRequest) -> dict[str, str]:
                     base_url=request.judge_base_url,
                     temperature=request.judge_temperature,
                     max_tokens=request.judge_max_tokens,
-                    enable_judge_logging=request.enable_judge_logging if request.enable_judge_logging is not None else True,
+                    enable_judge_logging=request.enable_judge_logging
+                    if request.enable_judge_logging is not None
+                    else True,
                     top_n=request.judge_top_n or 1,
                 )
             else:
@@ -360,6 +359,7 @@ def _extract_algorithm_metadata(algorithm_result: Any) -> dict[str, Any] | None:
     """Extract metadata from algorithm results for API response."""
     from its_hub.algorithms.self_consistency import SelfConsistencyResult
     from its_hub.algorithms.bon import BestOfNResult
+
     if isinstance(algorithm_result, SelfConsistencyResult):
         return {
             "algorithm": "self-consistency",
@@ -367,7 +367,7 @@ def _extract_algorithm_metadata(algorithm_result: Any) -> dict[str, Any] | None:
             "response_counts": dict(algorithm_result.response_counts),
             "selected_index": algorithm_result.selected_index,
         }
-    
+
     elif isinstance(algorithm_result, BestOfNResult):
         return {
             "algorithm": "best-of-n",

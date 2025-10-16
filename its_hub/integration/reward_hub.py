@@ -5,9 +5,9 @@ from its_hub.base import AbstractProcessRewardModel, AbstractOutcomeRewardModel
 from its_hub.types import ChatMessage, ChatMessages
 from typing import Optional
 import logging
+import json
 
 logger = logging.getLogger(__name__)
-
 
 
 class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
@@ -67,7 +67,7 @@ class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
         import asyncio
 
         return asyncio.run(self.ascore(prompt_or_messages, response_or_responses))
-    
+
 
 class LLMJudgeRewardModel(AbstractOutcomeRewardModel):
     """
@@ -109,23 +109,40 @@ class LLMJudgeRewardModel(AbstractOutcomeRewardModel):
         """
 
         if judge_type == "pointwise":
-            self.judge = create_pointwise_judge(model=model, criterion=criterion, api_key=api_key, base_url=base_url, temperature=temperature, max_tokens=max_tokens, **litellm_kwargs)
+            self.judge = create_pointwise_judge(
+                model=model,
+                criterion=criterion,
+                api_key=api_key,
+                base_url=base_url,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **litellm_kwargs,
+            )
         elif judge_type == "groupwise":
-            self.judge = create_groupwise_judge(model=model, criterion=criterion, api_key=api_key, base_url=base_url, temperature=temperature, max_tokens=max_tokens, **litellm_kwargs)
+            self.judge = create_groupwise_judge(
+                model=model,
+                criterion=criterion,
+                api_key=api_key,
+                base_url=base_url,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **litellm_kwargs,
+            )
         else:
-            raise ValueError(f"Invalid judge type: {judge_type}. Must be 'pointwise' or 'groupwise'.")
+            raise ValueError(
+                f"Invalid judge type: {judge_type}. Must be 'pointwise' or 'groupwise'."
+            )
 
         self.judge_type = judge_type
         self.criterion = criterion
         self.model = model
         self.top_n = top_n
         self.enable_judge_logging = enable_judge_logging
-        
 
     def score(
         self,
         prompt_or_messages: str | list[ChatMessage] | ChatMessages,
-        response: str | list[str]
+        response: str | list[str],
     ) -> float | list[float]:
         """
         Score response(s) using the LLM judge.
@@ -146,6 +163,7 @@ class LLMJudgeRewardModel(AbstractOutcomeRewardModel):
         """
         # Use async version
         import asyncio
+
         return asyncio.run(self.ascore(prompt_or_messages, response))
 
     async def ascore(
@@ -193,57 +211,70 @@ class LLMJudgeRewardModel(AbstractOutcomeRewardModel):
         # Judge expects List[List[dict]] for multiple conversations
 
         if self.judge_type == "groupwise":
-            judge_result = await self.judge.ascore(conversations, return_judge_reasoning=self.enable_judge_logging, top_n=self.top_n)
+            judge_result = await self.judge.ascore(
+                conversations,
+                return_judge_reasoning=self.enable_judge_logging,
+                top_n=self.top_n,
+            )
         else:
-            judge_result = await self.judge.ascore(conversations, return_judge_reasoning=self.enable_judge_logging)
+            judge_result = await self.judge.ascore(
+                conversations, return_judge_reasoning=self.enable_judge_logging
+            )
 
         # Log judge results if enabled
         if self.enable_judge_logging and judge_result.reasonings:
             if self.judge_type == "pointwise":
                 # Pointwise: log each response's individual score and reasoning
-                for i, (score, reasoning, response) in enumerate(zip(judge_result.scores, judge_result.reasonings, responses)):
+                for i, (score, reasoning, response) in enumerate(
+                    zip(judge_result.scores, judge_result.reasonings, responses)
+                ):
+                    extra_data = {
+                        "judge_type": "pointwise",
+                        "response_index": i,
+                        "score": score,
+                        "reasoning": reasoning,
+                        "response_preview": response[:300] + "..."
+                        if len(response) > 300
+                        else response,
+                        "criterion": self.criterion,
+                        "model": self.model,
+                    }
                     logger.info(
-                        f"Pointwise Judge Result for response {i}",
-                        extra={
-                            "judge_type": "pointwise",
-                            "response_index": i,
-                            "score": score,
-                            "reasoning": reasoning,
-                            "response_preview": response[:300] + "..." if len(response) > 300 else response,
-                            "criterion": self.criterion,
-                            "model": self.model,
-                        }
+                        f"Pointwise Judge Result for response {i}:\n{json.dumps(extra_data, indent=2)}"
                     )
             else:
                 # Groupwise: log ranking reasoning and which responses were selected as top-N
                 # Binary scores: 1.0 for top-N, 0.0 for others
-                top_indices = [i for i, score in enumerate(judge_result.scores) if score == 1.0]
+                top_indices = [
+                    i for i, score in enumerate(judge_result.scores) if score == 1.0
+                ]
                 response_previews = [
                     {
                         "index": i,
                         "score": score,
-                        "preview": resp[:300] + "..." if len(resp) > 300 else resp
+                        "preview": resp[:300] + "..." if len(resp) > 300 else resp,
                     }
-                    for i, (score, resp) in enumerate(zip(judge_result.scores, responses))
+                    for i, (score, resp) in enumerate(
+                        zip(judge_result.scores, responses)
+                    )
                 ]
+                extra_data = {
+                    "judge_type": "groupwise",
+                    "top_n": self.top_n,
+                    "top_indices": top_indices,
+                    "scores": judge_result.scores,
+                    "response_previews": response_previews,
+                    "ranking_reasoning": judge_result.reasonings[0]
+                    if judge_result.reasonings
+                    else None,
+                    "criterion": self.criterion,
+                    "model": self.model,
+                }
                 logger.info(
-                    f"Groupwise Judge Result: selected {len(top_indices)} of {len(responses)} responses",
-                    extra={
-                        "judge_type": "groupwise",
-                        "top_n": self.top_n,
-                        "top_indices": top_indices,
-                        "scores": judge_result.scores,
-                        "response_previews": response_previews,
-                        "ranking_reasoning": judge_result.reasonings[0] if judge_result.reasonings else None,
-                        "criterion": self.criterion,
-                        "model": self.model,
-                    }
+                    f"Groupwise Judge Result: selected {len(top_indices)} of {len(responses)} responses\n{json.dumps(extra_data, indent=2, default=str)}"
                 )
 
         # Return only scores (single float if single response, list otherwise)
         if is_single_response:
             return judge_result.scores[0]
         return judge_result.scores
-    
-    
-    
