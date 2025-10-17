@@ -147,9 +147,11 @@ class ConfigRequest(BaseModel):
     @field_validator("judge_base_url")
     @classmethod
     def validate_judge_base_url(cls, v, info):
-        """Validate judge base URL is provided when using LLM judge."""
-        if info.data.get("rm_name") == "llm-judge" and not v:
-            raise ValueError("judge_base_url is required when rm_name='llm-judge'")
+        """Validate judge base URL - requires 'auto' or a valid URL when using LLM judge."""
+        if info.data.get("rm_name") == "llm-judge":
+            if not v:
+                raise ValueError("judge_base_url is required when rm_name='llm-judge' (use 'auto' for default endpoint)")
+            # Accept "auto" or any other string (assumed to be a valid URL)
         return v
 
     @field_validator("api_key")
@@ -266,12 +268,15 @@ async def config_service(request: ConfigRequest) -> dict[str, str]:
                 )
 
                 # Create LLM Judge using the adapter (handles ChatMessages conversion)
+                # Convert "auto" to None for LiteLLM auto-detection of default endpoint
+                judge_base_url = None if request.judge_base_url == "auto" else request.judge_base_url
+
                 reward_model = LLMJudgeRewardModel(
                     model=request.judge_model,
                     criterion=criterion_to_use,
                     judge_type=request.judge_mode or "groupwise",
                     api_key=request.judge_api_key,
-                    base_url=request.judge_base_url,
+                    base_url=judge_base_url,
                     temperature=request.judge_temperature,
                     max_tokens=request.judge_max_tokens,
                     enable_judge_logging=request.enable_judge_logging
