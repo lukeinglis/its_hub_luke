@@ -37,6 +37,8 @@ import os
 from dotenv import load_dotenv
 from its_hub.utils import SAL_STEP_BY_STEP_SYSTEM_PROMPT
 from its_hub.lms import OpenAICompatibleLanguageModel
+import nest_asyncio
+nest_asyncio.apply()
 
 # Load environment variables from .env file
 load_dotenv()
@@ -47,7 +49,7 @@ lm = OpenAICompatibleLanguageModel(
     api_key=os.getenv("OPENAI_API_KEY"),  # Load API key from environment
     model_name="gpt-4o-mini", 
     system_prompt=SAL_STEP_BY_STEP_SYSTEM_PROMPT, 
-    is_async=False,
+    is_async=True,
 )
 # %%
 # Alternative: vLLM local endpoint (commented out)
@@ -56,6 +58,7 @@ lm = OpenAICompatibleLanguageModel(
 #     api_key="NO_API_KEY", 
 #     model_name="qwen2-math-1.5b-instruct", 
 #     system_prompt=SAL_STEP_BY_STEP_SYSTEM_PROMPT, 
+#     is_async=True,
 # )
 
 # %%
@@ -78,7 +81,7 @@ def extract_boxed(s: str) -> str:
     # return the last match if any were found
     return boxed_matches[-1] if boxed_matches else ""
     
-extract_boxed(response['content'])
+print(extract_boxed(response['content']))
 
 # %% [markdown]
 # ## Self-Consistency Algorithm
@@ -104,3 +107,62 @@ print("######## Extracted Response Counts ########")
 print(scaling_result.response_counts)
 
 # %%
+
+
+# %% [markdown]
+# ## Self-Consistency Algorithm for Tool Calls
+# We have hierarchical tool-voting support in Self-Consistency algorithm
+# It first votes on tool names, and then on tool arguments.
+
+# %%
+from its_hub.types import ChatMessage, ChatMessages
+
+# Tool schema (OpenAI-style dicts)
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "calculator",
+            "description": "Perform arithmetic calculations",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "Mathematical expression to evaluate"
+                    }
+                },
+                "required": ["expression"]
+            }
+        }
+    }
+]
+
+# ChatMessages instance with system + user
+tool_call_messages = ChatMessages([
+    ChatMessage(
+        role="system",
+        content="You are a precise calculator. Always use the calculator tool for arithmetic and format your final answer as \\boxed{result}."
+    ),
+    ChatMessage(
+        role="user",
+        content="What is 847 * 293 + 156?"
+    ),
+])
+
+# %%
+# Use hierarchical tool voting
+scaling_alg_tool = SelfConsistency(tool_vote="tool_hierarchical")
+
+budget = 5
+scaling_result = scaling_alg_tool.infer(
+    lm, tool_call_messages, budget, return_response_only=False, tools=tools, tool_choice="auto"
+)
+
+# %%
+print("######## Self-Consistency Result ########")
+print(scaling_result.the_one)
+
+print("######## Tool Call Response Counts ########")
+print(scaling_result.response_counts)
+
