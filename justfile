@@ -28,26 +28,10 @@ iaas-health:
 # Algorithm Configuration
 # =============================================================================
 
-# Configure self-consistency (regex-based content voting)
-config-plan-reflection:
-    #!/bin/bash
-    source .env
-    echo '{"status":"success","message":"Initialized claude-3.7-sonnet with tool plan and reflection pattern"}'
-    echo "HTTP Status: 200"
-
-# Launch Collie UI at specified port
-launch-collie endpoint-port:
-    #!/bin/bash
-    echo "Starting collie..."
-    sleep 2
-    echo "Collie started at http://localhost:3000/"
 
 
-
-
-
-# Configure tool-vote for Collie
-config-self-consistency-collie:
+# Configure tool-vote
+config-self-consistency-bedrock:
     #!/bin/bash
     source .env
     curl -X POST http://localhost:8108/configure \
@@ -70,7 +54,7 @@ config-self-consistency-collie:
 
 
 
-config-openai-collie:
+config-self-consistency-openai:
     #!/bin/bash
     source .env
     curl -X POST http://localhost:8108/configure \
@@ -79,7 +63,7 @@ config-openai-collie:
             \"provider\": \"litellm\",
             \"endpoint\": \"auto\",
             \"api_key\": \"$OPENAI_API_KEY\",
-            \"model\": \"openai/gpt-4.1-mini\",
+            \"model\": \"gpt-4.1-mini\",
             \"alg\": \"self-consistency\",
             \"tool_vote\": \"tool_hierarchical\",
             \"exclude_args\": [\"timestamp\", \"request_id\", \"id\", \"type\", \"stepTitle\", \"stepDescription\", \"threadId\", \"domain_id\"]
@@ -88,8 +72,8 @@ config-openai-collie:
 
 
 
-# Configure best-of-n with LLM judge for Collie (bedrock models)
-config-bon-collie:
+# Configure best-of-n with LLM judge (bedrock models)
+config-bon-bedrock:
     #!/bin/bash
     source .env
     curl -X POST http://localhost:8108/configure \
@@ -116,6 +100,29 @@ config-bon-collie:
         }' \
         -w "\nHTTP Status: %{http_code}\n" -v
 
+# Configure best-of-n with LLM judge (openai models)
+config-bon-openai:
+    #!/bin/bash
+    source .env
+    curl -X POST http://localhost:8108/configure \
+        -H "Content-Type: application/json" \
+        -d '{
+            "provider": "litellm",
+            "endpoint": "auto",
+            "api_key": "'"$OPENAI_API_KEY"'",
+            "model": "gpt-4.1-mini",
+            "alg": "best-of-n",
+            "rm_name": "llm-judge",
+            "judge_model": "gpt-4.1-mini",
+            "judge_base_url": "auto",
+            "judge_mode": "groupwise",
+            "judge_criterion": "multi_step_tool_judge",
+            "judge_api_key": "'"$OPENAI_API_KEY"'",
+            "judge_temperature": 0.7,
+            "judge_max_tokens": 2048
+        }' \
+        -w "\nHTTP Status: %{http_code}\n" -v
+
 
 # Test simple conversation
 test-collie:
@@ -123,20 +130,6 @@ test-collie:
     curl -s -X POST http://localhost:8108/v1/chat/completions \
         -H "Content-Type: application/json" \
         -d '{"model": "bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0", "messages": [{"role": "user", "content": [{"type": "text", "text": "Explain quantum computing in one sentence."}]}], "budget": 2, "return_response_only": false}' | jq .
-
-# Test conversation with empty assistant response in history
-test-collie-empty-chat:
-    source .env
-    curl -s -X POST http://localhost:8108/v1/chat/completions \
-        -H "Content-Type: application/json" \
-        -d '{"model": "bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0", "messages": [{"role": "user", "content": "What is artificial intelligence?"}, {"role": "assistant", "content": ""}, {"role": "user", "content": "Can you explain it in simple terms?"}], "budget": 2, "return_response_only": false}' | jq .
-
-# Test multi-modal conversation (text + image content)
-collie-test-multimodal:
-    source .env
-    curl -s -X POST http://localhost:8108/v1/chat/completions \
-        -H "Content-Type: application/json" \
-        -d '{"model": "bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0", "messages": [{"role": "user", "content": "Explain quantum computing in one sentence."}], "budget": 3, "return_response_only": false}' | jq .
 
 
 
