@@ -20,8 +20,8 @@ def extract_content_from_lm_response(message: dict) -> str:
     # Extract text content (may be empty if message only has tool calls)
     content = message.get("content", "") or ""
 
-    # If there are tool calls but no text content, create a text representation
-    if message.get("tool_calls") and not content:
+    # If there are tool calls, add tool-calls to the content
+    if message.get("tool_calls"):
         tool_calls = message.get("tool_calls", [])
         tool_descriptions = []
         for tc in tool_calls:
@@ -29,6 +29,8 @@ def extract_content_from_lm_response(message: dict) -> str:
                 func = tc["function"]
                 func_name = func.get("name", "unknown")
                 tool_descriptions.append(f"[Tool call: {func_name}]")
-        content = " ".join(tool_descriptions) if tool_descriptions else ""
+            else:
+                raise ValueError(f"Invalid tool call: {tc}, expected a dict with a 'function' key")
+        content += " ".join(tool_descriptions)
 
     return content
