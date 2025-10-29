@@ -28,11 +28,11 @@ Inference-time scaling improves LLM performance by using computational resources
 
 | Algorithm | Budget Interpretation | Reward Model Needed | Validated Use Cases | Snippet |
 |-----------|----------------------|---------------------|---------------------|---------|
-| **Self-Consistency** | Number of parallel generations | No | Mathematical reasoning (MATH500, AIME-2024) | `SelfConsistency()` |
-| **Best-of-N** | Number of candidates to generate | Yes (Outcome) | Mathematical reasoning | `BestOfN(rm)` |
-| **Beam Search** | Total generations ÷ beam width | Yes (Process) | Mathematical reasoning (MATH500, AIME-2024) | `BeamSearch(sg, prm, beam_width=4)` |
-| **Particle Filtering** | Number of particles to maintain | Yes (Process) | Mathematical reasoning (MATH500, AIME-2024) | `ParticleFiltering(sg, prm)` |
-| **Planning Enhancement** | Enhances any algorithm with planning | Depends on base algorithm | Mathematical reasoning | `PlanningWrapper(base_algorithm)` |
+| **Self-Consistency** | Number of parallel generations | No | | `SelfConsistency()` |
+| **Best-of-N** | Number of candidates to generate | Yes (Outcome) | | `BestOfN(rm)` |
+| **Beam Search** | Total generations ÷ beam width | Yes (Process) | | `BeamSearch(sg, prm, beam_width=4)` |
+| **Particle Filtering** | Number of particles to maintain | Yes (Process) | | `ParticleFiltering(sg, prm)` |
+| **Planning Enhancement** | Enhances any algorithm with planning | Depends on base algorithm | | `PlanningWrapper(base_algorithm)` |
 
 ### Planning Enhancement
 
