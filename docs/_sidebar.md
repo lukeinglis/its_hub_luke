@@ -10,5 +10,6 @@
   - [Best-of-N](algorithms.md#best-of-n)
   - [Beam Search](algorithms.md#beam-search)
   - [Self-Consistency](algorithms.md#self-consistency)
+- [Budget & Scaling](budget.md)
 - [Benchmarking](benchmarking.md)
 - [Development](development.md)

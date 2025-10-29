@@ -1,6 +1,6 @@
 # its-hub
 
-[![Tests](https://github.com/Red-Hat-AI-Innovation-Team/its_hub/actions/workflows/tests.yml/badge.svg)](https://github.com/Red-Hat-AI-Innovation-Team/its_hub/actions/workflows/tests.yml)
+[![Tests](https://github.com/Red-Hat-AI-Innovation-Team/its_hub/actions/workflows/tests.yaml/badge.svg)](https://github.com/Red-Hat-AI-Innovation-Team/its_hub/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/gh/Red-Hat-AI-Innovation-Team/its_hub/graph/badge.svg?token=6WD8NB9YPN)](https://codecov.io/gh/Red-Hat-AI-Innovation-Team/its_hub)
 
 **its-hub** provides inference-time scaling for LLMs through multiple approaches:
@@ -18,7 +18,7 @@ Inference-time scaling improves LLM performance by using computational resources
 
 ## Key Features
 
-- 🔬 **Multiple Algorithms**: Particle Filtering, Best-of-N, Beam Search, Self-Consistency
+- 🔬 **Multiple Algorithms**: Self-Consistency, Best-of-N, Beam Search, Particle Filtering, Planning Enhancement
 - 🚀 **OpenAI-Compatible API**: Easy integration with existing applications
 - 🧮 **Math-Optimized**: Built for mathematical reasoning with specialized prompts and evaluation
 - 📊 **Benchmarking Tools**: Compare algorithms on standard datasets like MATH500 and AIME-2024
@@ -26,13 +26,13 @@ Inference-time scaling improves LLM performance by using computational resources
 
 ## Supported Algorithms
 
-| Algorithm | Budget Interpretation | Snippet |
-|-----------|----------------------|---------|
-| **Self-Consistency** | Number of parallel generations | `SelfConsistency()` |
-| **Best-of-N** | Number of candidates to generate | `BestOfN(rm)` |
-| **Beam Search** | Total generations ÷ beam width | `BeamSearch(sg, prm, beam_width=4)` |
-| **Particle Filtering** | Number of particles to maintain | `ParticleFiltering(sg, prm)` |
-| **Planning Enhancement** | Enhances any algorithm with planning | `PlanningWrapper(base_algorithm)` |
+| Algorithm | Budget Interpretation | Reward Model Needed | Validated Use Cases | Snippet |
+|-----------|----------------------|---------------------|---------------------|---------|
+| **Self-Consistency** | Number of parallel generations | No | Mathematical reasoning (MATH500, AIME-2024) | `SelfConsistency()` |
+| **Best-of-N** | Number of candidates to generate | Yes (Outcome) | Mathematical reasoning | `BestOfN(rm)` |
+| **Beam Search** | Total generations ÷ beam width | Yes (Process) | Mathematical reasoning (MATH500, AIME-2024) | `BeamSearch(sg, prm, beam_width=4)` |
+| **Particle Filtering** | Number of particles to maintain | Yes (Process) | Mathematical reasoning (MATH500, AIME-2024) | `ParticleFiltering(sg, prm)` |
+| **Planning Enhancement** | Enhances any algorithm with planning | Depends on base algorithm | Mathematical reasoning | `PlanningWrapper(base_algorithm)` |
 
 ### Planning Enhancement
 

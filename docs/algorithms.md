@@ -8,12 +8,13 @@ All algorithms follow the same interface: `infer(lm, prompt, budget, return_resp
 
 The `budget` parameter controls computational resources allocated to each algorithm, with different interpretations:
 
-| Algorithm | Budget Interpretation | Snippet |
-|-----------|----------------------|---------|
-| Self-Consistency | Number of parallel generations | `SelfConsistency()` |
-| Best-of-N | Number of candidate responses | `BestOfN(rm)` |
-| Beam Search | Total generations ÷ beam width | `BeamSearch(sg, prm, beam_width=4)` |
-| Particle Filtering | Number of particles | `ParticleFiltering(sg, prm)` |
+| Algorithm | Budget Interpretation | Reward Model Needed | Validated Use Cases | Snippet |
+|-----------|----------------------|---------------------|---------------------|---------|
+| **Self-Consistency** | Number of parallel generations | No | | `SelfConsistency()` |
+| **Best-of-N** | Number of candidates to generate | Yes (Outcome) | | `BestOfN(rm)` |
+| **Beam Search** | Total generations ÷ beam width | Yes (Process) | | `BeamSearch(sg, prm, beam_width=4)` |
+| **Particle Filtering** | Number of particles to maintain | Yes (Process) | | `ParticleFiltering(sg, prm)` |
+| **Planning Enhancement** | Enhances any algorithm with planning | Depends on base algorithm | | `PlanningWrapper(base_algorithm)` |
 
 ## Self-Consistency
 
@@ -118,6 +119,10 @@ result = pf.infer(lm, prompt, budget=8)
 - Complex reasoning tasks with multiple valid approaches
 - When exploration vs exploitation balance is important
 - Mathematical problem solving with uncertainty
+
+## Planning Enhancement
+
+More info coming soon. See [PLANNING_WRAPPER.md](PLANNING_WRAPPER.md) for detailed documentation.
 
 ## Advanced Configuration
 
