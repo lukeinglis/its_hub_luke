@@ -32,6 +32,7 @@ dependencies = [
     "fastapi>=0.115.5",
     "pydantic>=2.7.2",
     "numpy",
+    "uvicorn",
     "requests",
     "aiohttp>=3.9.0",
     "litellm>=1.70.0,<1.75.0"
