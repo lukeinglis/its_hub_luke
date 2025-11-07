@@ -4,54 +4,32 @@ This guide provides comprehensive instructions for setting up and running the it
 
 ## Overview
 
-The IaaS service provides an OpenAI-compatible API that applies inference-time scaling algorithms like Best-of-N and Particle Filtering to improve the quality of language model responses.
+The IaaS service provides an OpenAI-compatible API with inference-time scaling algorithms. **Optimized for tool-calling applications** including agents, function calling, and multi-step reasoning. Currently supports **Best-of-N** and **Self-Consistency** algorithms.
 
 ### Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Client App    │───►│   IaaS Service  │───►│   vLLM Server   │
-│ (Watson Orc.)   │    │   (GPU 1)       │    │   (GPU 0)       │
-│                 │    │ - Best-of-N     │    │ - Main Model    │
-│                 │    │ - Reward Model  │    │ - Generation    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌──────────────┐    ┌─────────────────┐    ┌──────────────────┐
+│  Client App  │───►│   IaaS Service  │───►│  LLM Provider    │
+│              │    │                 │    │                  │
+│              │    │ - Best-of-N     │    │  - OpenAI        │
+│              │    │ - Self-Consist. │    │  - AWS Bedrock   │
+│              │    │ - LLM Judge     │    │  - vLLM (local)  │
+└──────────────┘    └─────────────────┘    └──────────────────┘
 ```
 
 ## Prerequisites
 
-- **Hardware**: Multi-GPU setup (minimum 2 GPUs recommended)
-- **Software**: Python 3.11+, CUDA, vLLM, its_hub library
-- **Models**: Pre-downloaded language model and reward model
-- **Memory**: Sufficient GPU memory for both models
+- **Software**: Python 3.11+, its_hub library
+- **API Access**: OpenAI API key, AWS credentials, or local vLLM server
+- **GPU**: Optional (only if using local vLLM or local reward models)
 
-## Step-by-Step Setup
+## Quick Start
 
-### 1. Start vLLM Server (Main Model)
-
-The vLLM server hosts the main language model for generation.
+### Start IaaS Service
 
 ```bash
-# Start on GPU 0
-CUDA_VISIBLE_DEVICES=0 vllm serve Qwen/Qwen2.5-Math-1.5B-Instruct \
-  --dtype float16 \
-  --host 0.0.0.0 \
-  --port 8100
-```
-
-**Parameters:**
-- `--dtype float16`: Use half precision for memory efficiency
-- `--host 0.0.0.0`: Listen on all interfaces (enables external access)
-- `--port 8100`: Default port for vLLM service
-
-### 2. Start IaaS Service (Scaling Algorithms)
-
-The IaaS service applies inference-time scaling algorithms and hosts the reward model.
-
-```bash
-# Start on GPU 1
-CUDA_VISIBLE_DEVICES=1 uv run its-iaas \
-  --host 0.0.0.0 \
-  --port 8108
+uv run its-iaas --host 0.0.0.0 --port 8108
 ```
 
 **Parameters:**
@@ -61,64 +39,229 @@ CUDA_VISIBLE_DEVICES=1 uv run its-iaas \
 
 ### 3. Configure IaaS Service
 
-Configure the service to connect to vLLM and set up the scaling algorithm.
+The IaaS service supports different algorithm configurations based on your use case.
 
+## Algorithm Configurations
+
+### Self-Consistency with Tool Voting
+
+Best for: Tool-calling models where you want to vote on tool usage patterns.
+
+**With OpenAI:**
 ```bash
 curl -X POST http://localhost:8108/configure \
   -H "Content-Type: application/json" \
   -d '{
-    "endpoint": "http://localhost:8100/v1",
-    "api_key": "NO_API_KEY",
-    "model": "Qwen/Qwen2.5-Math-1.5B-Instruct",
-    "alg": "best-of-n",
-    "rm_name": "Qwen/Qwen2.5-Math-PRM-7B",
-    "rm_device": "cuda:1",
-    "rm_agg_method": "model"
+    "provider": "litellm",
+    "endpoint": "auto",
+    "api_key": "your-openai-api-key",
+    "model": "gpt-4o-mini",
+    "alg": "self-consistency",
+    "tool_vote": "tool_hierarchical",
+    "exclude_args": ["timestamp", "request_id", "id", "type"]
   }'
 ```
 
-**Configuration Parameters:**
-- `endpoint`: vLLM server URL
-- `api_key`: API key (use "NO_API_KEY" for local vLLM)
-- `model`: Model name (must match vLLM model)
-- `alg`: Algorithm (`"best-of-n"` or `"particle-filtering"`)
-- `rm_name`: Reward model name
-- `rm_device`: GPU device for reward model (`"cuda:0"`, `"cuda:1"`, etc.)
-- `rm_agg_method`: Reward aggregation method (`"model"` recommended)
+**With AWS Bedrock:**
+```bash
+curl -X POST http://localhost:8108/configure \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "litellm",
+    "endpoint": "auto",
+    "api_key": null,
+    "model": "bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+    "alg": "self-consistency",
+    "tool_vote": "tool_hierarchical",
+    "exclude_args": ["timestamp", "request_id", "id"],
+    "extra_args": {
+      "aws_access_key_id": "your-access-key",
+      "aws_secret_access_key": "your-secret-key",
+      "aws_region_name": "us-east-1"
+    }
+  }'
+```
+
+**Parameters:**
+- `tool_vote`: Voting strategy - `"tool_name"`, `"tool_args"`, or `"tool_hierarchical"` (recommended)
+- `exclude_args`: List of argument names to exclude from voting (e.g., timestamps, IDs)
+
+---
+
+### Best-of-N with LLM Judge
+
+Best for: Cloud APIs where you want LLM-based scoring without local reward models.
+
+**With OpenAI:**
+```bash
+curl -X POST http://localhost:8108/configure \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "litellm",
+    "endpoint": "auto",
+    "api_key": "your-openai-api-key",
+    "model": "gpt-4o-mini",
+    "alg": "best-of-n",
+    "rm_name": "llm-judge",
+    "judge_model": "gpt-4o-mini",
+    "judge_base_url": "auto",
+    "judge_mode": "groupwise",
+    "judge_criterion": "multi_step_tool_judge",
+    "judge_api_key": "your-openai-api-key",
+    "judge_temperature": 0.7,
+    "judge_max_tokens": 2048
+  }'
+```
+
+**With AWS Bedrock:**
+```bash
+curl -X POST http://localhost:8108/configure \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "litellm",
+    "endpoint": "auto",
+    "api_key": null,
+    "model": "bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+    "alg": "best-of-n",
+    "rm_name": "llm-judge",
+    "judge_model": "bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+    "judge_base_url": "auto",
+    "judge_mode": "groupwise",
+    "judge_criterion": "multi_step_tool_judge",
+    "judge_api_key": null,
+    "judge_temperature": 0.7,
+    "judge_max_tokens": 2048,
+    "extra_args": {
+      "aws_access_key_id": "your-access-key",
+      "aws_secret_access_key": "your-secret-key",
+      "aws_region_name": "us-east-1"
+    }
+  }'
+```
+
+**Parameters:**
+- `rm_name`: Set to `"llm-judge"` to use LLM-based scoring
+- `judge_model`: LiteLLM model name for the judge
+- `judge_mode`: `"pointwise"` or `"groupwise"` (groupwise recommended)
+- `judge_criterion`: Criterion for judging (e.g., `"overall_quality"`, `"multi_step_tool_judge"`)
+- `judge_temperature`: Temperature for judge generation (0.0-1.0)
+
+---
+
+### Common Parameters
+
+All configurations support:
+- `provider`: `"litellm"` for multi-cloud support
+- `endpoint`: API endpoint URL or `"auto"` for LiteLLM auto-detection
+- `api_key`: API key for the provider (use `null` for Bedrock with credentials in `extra_args`)
+- `model`: Model identifier (format depends on provider)
+- `alg`: Algorithm name - `"self-consistency"` or `"best-of-n"`
 
 ## Usage Examples
 
-### Basic Request
+### Tool Calling Example (Recommended)
+
+Tool calling is the primary use case for IaaS with Self-Consistency and Best-of-N algorithms.
 
 ```bash
 curl -X POST http://localhost:8108/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen/Qwen2.5-Math-1.5B-Instruct",
+    "model": "gpt-4o-mini",
     "messages": [
-      {"role": "user", "content": "What is 2+2?"}
+      {
+        "role": "system",
+        "content": "You are a precise calculator. Always use the calculator tool for arithmetic."
+      },
+      {
+        "role": "user",
+        "content": "What is 847 * 293 + 156?"
+      }
     ],
-    "budget": 4
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "calculator",
+          "description": "Perform arithmetic calculations",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "expression": {
+                "type": "string",
+                "description": "Mathematical expression to evaluate"
+              }
+            },
+            "required": ["expression"]
+          }
+        }
+      }
+    ],
+    "tool_choice": "auto",
+    "budget": 5
   }'
 ```
 
-### Python Client
+### Python Client with Tool Calling
 
 ```python
-import requests
+from openai import OpenAI
 
-url = "http://localhost:8108/v1/chat/completions"
-payload = {
-    "model": "Qwen/Qwen2.5-Math-1.5B-Instruct",
-    "messages": [
-        {"role": "user", "content": "Solve: x^2 + 5x + 6 = 0"}
+client = OpenAI(
+    base_url="http://localhost:8108/v1",
+    api_key="dummy-key"  # Not validated for local use
+)
+
+# Define tools
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "calculator",
+            "description": "Perform arithmetic calculations",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "Mathematical expression to evaluate"
+                    }
+                },
+                "required": ["expression"]
+            }
+        }
+    }
+]
+
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+        {"role": "system", "content": "You are a precise calculator. Always use the calculator tool for arithmetic."},
+        {"role": "user", "content": "What is 847 * 293 + 156?"}
     ],
-    "budget": 4  # Generate 4 responses, select best
-}
+    tools=tools,
+    tool_choice="auto",
+    extra_body={"budget": 5}  # IaaS-specific parameter
+)
 
-response = requests.post(url, json=payload)
-result = response.json()
-print(result['choices'][0]['message']['content'])
+# Access tool calls
+tool_calls = response.choices[0].message.tool_calls
+print(f"Tool: {tool_calls[0].function.name}")
+print(f"Arguments: {tool_calls[0].function.arguments}")
+```
+
+### Basic Text Request
+
+```bash
+curl -X POST http://localhost:8108/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [
+      {"role": "user", "content": "Explain quantum computing in one sentence"}
+    ],
+    "budget": 4
+  }'
 ```
 
 ### Budget Parameter

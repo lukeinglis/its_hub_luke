@@ -17,48 +17,150 @@ The `budget` parameter controls computational resources allocated to each algori
 
 ## Self-Consistency
 
-Generates multiple responses and selects the most common answer. Effective for tasks where multiple reasoning paths can lead to the same correct answer.
+Generates multiple responses and selects the most common answer through voting. **Especially powerful for tool-calling** where you want consistent tool usage patterns.
+
+### Tool Calling Example (Recommended)
 
 ```python
 from its_hub.algorithms import SelfConsistency
+from its_hub.types import ChatMessage, ChatMessages
+from its_hub.lms import OpenAICompatibleLanguageModel
 
-# Simple self-consistency without step generation
-sc = SelfConsistency()
-result = sc.infer(lm, prompt, budget=8)
+# Initialize language model
+lm = OpenAICompatibleLanguageModel(
+    endpoint="https://api.openai.com/v1",
+    api_key="your-api-key",
+    model_name="gpt-4o-mini"
+)
 
-# With step generation for better reasoning
-from its_hub.lms import StepGeneration
-sg = StepGeneration("\n\n", max_steps=32, stop_pattern=r"\boxed")
-sc = SelfConsistency(sg)
-result = sc.infer(lm, prompt, budget=8)
+# Define tools (OpenAI format)
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "calculator",
+            "description": "Perform arithmetic calculations",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "Mathematical expression to evaluate"
+                    }
+                },
+                "required": ["expression"]
+            }
+        }
+    }
+]
+
+# Create messages
+messages = ChatMessages([
+    ChatMessage(
+        role="system",
+        content="You are a precise calculator. Always use the calculator tool for arithmetic."
+    ),
+    ChatMessage(
+        role="user",
+        content="What is 847 * 293 + 156?"
+    )
+])
+
+# Use hierarchical tool voting
+sc = SelfConsistency(tool_vote="tool_hierarchical")
+result = sc.infer(
+    lm,
+    messages,
+    budget=5,
+    tools=tools,
+    tool_choice="auto"
+)
+print(result)
+```
+
+**Tool voting modes:**
+- `"tool_name"`: Vote on which tool to call
+- `"tool_args"`: Vote on tool arguments
+- `"tool_hierarchical"` (recommended): First vote on tool name, then on arguments
+- `exclude_args=["timestamp", "id"]`: Exclude non-semantic arguments from voting
+
+### Text-Based Example
+
+```python
+# For mathematical problems with regex extraction
+def extract_boxed(text):
+    import re
+    matches = re.findall(r'\\boxed\{([^{}]+)\}', text)
+    return matches[-1] if matches else ""
+
+sc = SelfConsistency(projection_function=extract_boxed)
+result = sc.infer(lm, "Solve x^2 + 5x + 6 = 0", budget=4)
 ```
 
 **When to use:**
+- Tool-calling applications (agents, function calling)
 - Mathematical problems with clear final answers
 - Tasks where multiple reasoning approaches are valid
 - When you need fast inference with improved accuracy
 
 ## Best-of-N
 
-Generates N candidate responses and selects the highest-scoring one using a reward model.
+Generates N candidate responses and selects the highest-scoring one using a reward model. **Works with both text and tool-calling responses.**
+
+### With LLM Judge (Cloud APIs)
 
 ```python
 from its_hub.algorithms import BestOfN
+from its_hub.integration.reward_hub import LLMJudgeRewardModel
+from its_hub.lms import OpenAICompatibleLanguageModel
+
+# Initialize language model
+lm = OpenAICompatibleLanguageModel(
+    endpoint="https://api.openai.com/v1",
+    api_key="your-api-key",
+    model_name="gpt-4o-mini"
+)
+
+# Set up LLM judge for scoring
+judge = LLMJudgeRewardModel(
+    model="gpt-4o-mini",
+    criterion="multi_step_tool_judge",  # For tool-calling tasks
+    judge_type="groupwise",
+    api_key="your-api-key"
+)
+
+# Best-of-N with LLM judge
+bon = BestOfN(judge)
+
+# Works with tool calls
+tools = [{"type": "function", "function": {...}}]
+result = bon.infer(
+    lm,
+    messages,
+    budget=4,
+    tools=tools,
+    tool_choice="auto"
+)
+```
+
+### With Local Process Reward Model
+
+```python
 from its_hub.integration.reward_hub import LocalVllmProcessRewardModel
 
-# Initialize reward model
+# Initialize reward model (requires GPU)
 prm = LocalVllmProcessRewardModel(
     model_name="Qwen/Qwen2.5-Math-PRM-7B",
     device="cuda:0",
     aggregation_method="prod"
 )
 
-# Best-of-N with reward model scoring
-bon = BestOfN(reward_model=prm)
+bon = BestOfN(prm)
 result = bon.infer(lm, prompt, budget=16)
 ```
 
 **When to use:**
+- Tool-calling applications where quality matters most
 - When you have a reliable reward model
 - Quality is more important than speed
 - Tasks where ranking responses is straightforward
