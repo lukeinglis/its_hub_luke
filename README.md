@@ -24,7 +24,7 @@ Choose the installation option based on which algorithms you need:
 pip install its_hub
 
 # Process Reward Model installation - adds:
-#   - Particle Filtering
+#   - Particle Filtering Algorithms
 #   - Beam Search
 #   - LocalVllmProcessRewardModel
 #   - Required for step-by-step reasoning with process reward models

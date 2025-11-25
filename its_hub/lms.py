@@ -5,14 +5,12 @@ import ssl
 import aiohttp
 import backoff
 import certifi
-import requests
 import litellm
 
-
 ## set litellm logging level to WARNING
-logging.getLogger('litellm').setLevel(logging.WARNING)
-logging.getLogger('litellm.proxy').setLevel(logging.WARNING)
-logging.getLogger('litellm.logging').setLevel(logging.WARNING)
+logging.getLogger("litellm").setLevel(logging.WARNING)
+logging.getLogger("litellm.proxy").setLevel(logging.WARNING)
+logging.getLogger("litellm.logging").setLevel(logging.WARNING)
 
 from .base import AbstractLanguageModel
 from .error_handling import (
@@ -385,7 +383,6 @@ class OpenAICompatibleLanguageModel(AbstractLanguageModel):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> list[dict]:
-
         # limit concurrency to max_concurrency using a semaphore
         semaphore = asyncio.Semaphore(
             len(messages_lst) if self.max_concurrency == -1 else self.max_concurrency
@@ -668,6 +665,7 @@ class LiteLLMLanguageModel(AbstractLanguageModel):
         tool_choice: str | dict | None = None,
     ) -> list[dict]:
         import time
+
         start_time = time.time()
 
         # limit concurrency to max_concurrency using a semaphore
@@ -738,7 +736,6 @@ class LiteLLMLanguageModel(AbstractLanguageModel):
         tools: list[dict] | None = None,
         tool_choice: str | dict | None = None,
     ) -> dict | list[dict]:
-
         # Check if we have a single list of messages or a list of message lists
         is_single = not isinstance(messages_or_messages_lst[0], list)
         messages_lst = (
@@ -750,18 +747,33 @@ class LiteLLMLanguageModel(AbstractLanguageModel):
                 asyncio.get_running_loop()
                 # Run async code in a new thread to avoid "event loop already running" error
                 import concurrent.futures
+
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     response_or_responses = executor.submit(
-                        lambda: asyncio.run(self._generate(
-                            messages_lst, stop, max_tokens, temperature,
-                            include_stop_str_in_output, tools, tool_choice
-                        ))
+                        lambda: asyncio.run(
+                            self._generate(
+                                messages_lst,
+                                stop,
+                                max_tokens,
+                                temperature,
+                                include_stop_str_in_output,
+                                tools,
+                                tool_choice,
+                            )
+                        )
                     ).result()
             except RuntimeError:
                 # No running loop, safe to use run_until_complete
                 response_or_responses = asyncio.get_event_loop().run_until_complete(
-                    self._generate(messages_lst, stop, max_tokens, temperature,
-                                 include_stop_str_in_output, tools, tool_choice)
+                    self._generate(
+                        messages_lst,
+                        stop,
+                        max_tokens,
+                        temperature,
+                        include_stop_str_in_output,
+                        tools,
+                        tool_choice,
+                    )
                 )
         else:
 
