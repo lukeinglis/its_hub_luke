@@ -18,7 +18,11 @@ from its_hub.algorithms.self_consistency import (
     SelfConsistency,
     create_regex_projection_function,
 )
-from its_hub.lms import OpenAICompatibleLanguageModel, LiteLLMLanguageModel, StepGeneration
+from its_hub.lms import (
+    LiteLLMLanguageModel,
+    OpenAICompatibleLanguageModel,
+    StepGeneration,
+)
 from its_hub.types import ChatMessage, ChatMessages
 
 # Configure logging
@@ -45,7 +49,9 @@ class ConfigRequest(BaseModel):
     api_key: str | None = Field(None, description="API key for the language model")
     model: str = Field(..., description="Model name identifier")
     alg: str = Field(..., description="Scaling algorithm to use")
-    extra_args: dict[str, Any] | None = Field(None, description="Additional provider-specific arguments")
+    extra_args: dict[str, Any] | None = Field(
+        None, description="Additional provider-specific arguments"
+    )
     step_token: str | None = Field(None, description="Token to mark generation steps")
     stop_token: str | None = Field(None, description="Token to stop generation")
     rm_name: str | None = Field(
@@ -150,7 +156,9 @@ class ConfigRequest(BaseModel):
         """Validate judge base URL - requires 'auto' or a valid URL when using LLM judge."""
         if info.data.get("rm_name") == "llm-judge":
             if not v:
-                raise ValueError("judge_base_url is required when rm_name='llm-judge' (use 'auto' for default endpoint)")
+                raise ValueError(
+                    "judge_base_url is required when rm_name='llm-judge' (use 'auto' for default endpoint)"
+                )
             # Accept "auto" or any other string (assumed to be a valid URL)
         return v
 
@@ -169,7 +177,6 @@ async def config_service(request: ConfigRequest) -> dict[str, str]:
     """Configure the IaaS service with language model and scaling algorithm."""
     # Only import reward_hub if needed (not required for self-consistency)
     if request.alg in {"particle-filtering", "best-of-n"}:
-        
         try:
             from its_hub.integration.reward_hub import (
                 AggregationMethod,
@@ -181,12 +188,19 @@ async def config_service(request: ConfigRequest) -> dict[str, str]:
                 detail="Reward hub integration not available",
             ) from e
 
-    if request.alg == "best-of-n" and request.rm_name != "llm-judge" or request.alg == "particle-filtering":
+    if (
+        request.alg == "best-of-n" and request.rm_name != "llm-judge"
+    ) or request.alg == "particle-filtering":
         try:
             from its_hub.integration.reward_hub import LocalVllmProcessRewardModel
         except ImportError as e:
-            logger.error(f"vLLM is required; install with `pip install its-hub[vllm]`: {e}")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="vLLM is required; install with `pip install its-hub[vllm]`") from e
+            logger.error(
+                f"vLLM is required; install with `pip install its-hub[vllm]`: {e}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="vLLM is required; install with `pip install its-hub[vllm]`",
+            ) from e
 
     global LM_DICT, SCALING_ALG
 
@@ -201,7 +215,7 @@ async def config_service(request: ConfigRequest) -> dict[str, str]:
                 api_key=request.api_key,
                 api_base=request.endpoint if request.endpoint != "auto" else None,
                 is_async=True,  # Enable async mode for better performance
-                **extra_kwargs
+                **extra_kwargs,
             )
         else:
             # Default to OpenAI compatible
@@ -237,11 +251,12 @@ async def config_service(request: ConfigRequest) -> dict[str, str]:
             if request.rm_name == "llm-judge":
                 # Use LLM Judge adapter from its_hub integration
                 try:
-                    from its_hub.integration.reward_hub import LLMJudgeRewardModel
                     from reward_hub.llm_judge.prompts import (
                         Criterion,
                         CriterionRegistry,
                     )
+
+                    from its_hub.integration.reward_hub import LLMJudgeRewardModel
                 except ImportError as e:
                     logger.error(f"Failed to import LLM Judge: {e}")
                     raise HTTPException(
@@ -276,7 +291,9 @@ async def config_service(request: ConfigRequest) -> dict[str, str]:
 
                 # Create LLM Judge using the adapter (handles ChatMessages conversion)
                 # Convert "auto" to None for LiteLLM auto-detection of default endpoint
-                judge_base_url = None if request.judge_base_url == "auto" else request.judge_base_url
+                judge_base_url = (
+                    None if request.judge_base_url == "auto" else request.judge_base_url
+                )
 
                 reward_model = LLMJudgeRewardModel(
                     model=request.judge_model,
@@ -392,8 +409,8 @@ class ChatCompletionUsage(BaseModel):
 
 def _extract_algorithm_metadata(algorithm_result: Any) -> dict[str, Any] | None:
     """Extract metadata from algorithm results for API response."""
-    from its_hub.algorithms.self_consistency import SelfConsistencyResult
     from its_hub.algorithms.bon import BestOfNResult
+    from its_hub.algorithms.self_consistency import SelfConsistencyResult
 
     if isinstance(algorithm_result, SelfConsistencyResult):
         return {
@@ -521,14 +538,26 @@ async def chat_completions(request: ChatCompletionRequest) -> ChatCompletionResp
         )
 
         # Log response with content info
-        content = response_message.get('content')
+        content = response_message.get("content")
         if isinstance(content, list):
-            has_image = any(item.get('type') == 'image_url' for item in content if isinstance(item, dict))
-            text_content = ' '.join(item.get('text', '') for item in content if isinstance(item, dict) and item.get('type') == 'text')
+            has_image = any(
+                item.get("type") == "image_url"
+                for item in content
+                if isinstance(item, dict)
+            )
+            text_content = " ".join(
+                item.get("text", "")
+                for item in content
+                if isinstance(item, dict) and item.get("type") == "text"
+            )
             img_note = " (with images)" if has_image else ""
-            logger.info(f"Successfully generated response (length: {len(text_content)}{img_note})")
+            logger.info(
+                f"Successfully generated response (length: {len(text_content)}{img_note})"
+            )
         else:
-            logger.info(f"Successfully generated response (content length: {len(content or '')})")
+            logger.info(
+                f"Successfully generated response (content length: {len(content or '')})"
+            )
         return response
 
     except Exception as e:

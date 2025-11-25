@@ -1,6 +1,7 @@
 """Tests for tool call handling in scaling algorithms."""
 
 import pytest
+
 from its_hub.algorithms.self_consistency import SelfConsistency, SelfConsistencyResult
 from tests.mocks.language_models import SimpleMockLanguageModel
 

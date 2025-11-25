@@ -18,6 +18,9 @@ class MockLanguageModelForResampling(AbstractLanguageModel):
     def __init__(self):
         self.step_counter = 0
 
+    async def agenerate(self, messages, **kwargs):
+        return self.generate(messages, **kwargs)
+
     def generate(self, messages, max_tokens=100, **kwargs):
         # Handle both single and batch calls like OpenAICompatibleLanguageModel
         if (
@@ -38,6 +41,9 @@ class MockLanguageModelForResampling(AbstractLanguageModel):
             self.step_counter += 1
             return {"role": "assistant", "content": step}
 
+    async def aevaluate(self, prompt, response):
+        return self.evaluate(prompt, response)
+
     def evaluate(self, prompt, response):
         # Not used in these tests
         return 0.5
@@ -45,6 +51,9 @@ class MockLanguageModelForResampling(AbstractLanguageModel):
 
 class MockProcessRewardModelForResampling(AbstractProcessRewardModel):
     """Mock PRM that gives higher scores to longer sequences."""
+
+    async def ascore(self, prompt, response):
+        return self.score(prompt, response)
 
     def score(self, prompt, response):
         if isinstance(response, list):
@@ -60,7 +69,8 @@ class MockProcessRewardModelForResampling(AbstractProcessRewardModel):
         # would have unfairly high scores if we don't use partial weights
         num_steps = response.count("step")
         # Return a score between 0.5 and 0.9 based on length
-        return min(0.2 + 0.1 * num_steps, 0.9)
+        return min(0.5 + 0.1 * num_steps, 0.9)
+
 
 
 class TestEntropicAnnealing:

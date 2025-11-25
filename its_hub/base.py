@@ -74,6 +74,7 @@ class AbstractScalingAlgorithm(ABC):
         Default implementation wraps ainfer() using asyncio.run().
         """
         import asyncio
+
         return asyncio.run(
             self.ainfer(
                 lm, prompt_or_messages, budget, return_response_only, tools, tool_choice
