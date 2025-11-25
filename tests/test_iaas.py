@@ -55,45 +55,57 @@ class TestConfiguration:
         """Test configuration request validation with missing fields."""
         invalid_config = {
             "endpoint": vllm_server,
-            "model": TEST_CONSTANTS["DEFAULT_MODEL_NAME"]
+            "model": TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             # Missing required fields
         }
 
         response = iaas_client.post("/configure", json=invalid_config)
         assert response.status_code == 422
 
-    @pytest.mark.parametrize("invalid_algorithm", [
-        "invalid-algorithm",
-        "beam-search",  # Not implemented in IaaS
-        "particle-gibbs",  # Not implemented in IaaS
-    ])
-    def test_configuration_invalid_algorithm(self, iaas_client, vllm_server, invalid_algorithm):
+    @pytest.mark.parametrize(
+        "invalid_algorithm",
+        [
+            "invalid-algorithm",
+            "beam-search",  # Not implemented in IaaS
+            "particle-gibbs",  # Not implemented in IaaS
+        ],
+    )
+    def test_configuration_invalid_algorithm(
+        self, iaas_client, vllm_server, invalid_algorithm
+    ):
         """Test configuration with invalid or unsupported algorithms."""
         invalid_config = TestDataFactory.create_config_request(
-            endpoint=vllm_server,
-            alg=invalid_algorithm
+            endpoint=vllm_server, alg=invalid_algorithm
         )
 
         response = iaas_client.post("/configure", json=invalid_config)
         assert response.status_code == 422
         assert "not supported" in str(response.json())
 
-    @pytest.mark.parametrize("algorithm,config_override", [
-        ("best-of-n", {}),
-        ("particle-filtering", {"step_token": "\n", "stop_token": "<end>"}),
-    ])
-    @patch('its_hub.integration.reward_hub.LocalVllmProcessRewardModel')
-    @patch('its_hub.integration.reward_hub.AggregationMethod')
-    def test_configuration_success(self, mock_agg_method, mock_reward_model,
-                                 iaas_client, vllm_server, algorithm, config_override):
+    @pytest.mark.parametrize(
+        "algorithm,config_override",
+        [
+            ("best-of-n", {}),
+            ("particle-filtering", {"step_token": "\n", "stop_token": "<end>"}),
+        ],
+    )
+    @patch("its_hub.integration.reward_hub.LocalVllmProcessRewardModel")
+    @patch("its_hub.integration.reward_hub.AggregationMethod")
+    def test_configuration_success(
+        self,
+        mock_agg_method,
+        mock_reward_model,
+        iaas_client,
+        vllm_server,
+        algorithm,
+        config_override,
+    ):
         """Test successful configuration with different algorithms."""
         mock_reward_model.return_value = MagicMock()
         mock_agg_method.return_value = MagicMock()
 
         config_data = TestDataFactory.create_config_request(
-            endpoint=vllm_server,
-            alg=algorithm,
-            **config_override
+            endpoint=vllm_server, alg=algorithm, **config_override
         )
 
         response = iaas_client.post("/configure", json=config_data)
@@ -103,10 +115,11 @@ class TestConfiguration:
         assert data["status"] == "success"
         assert algorithm in data["message"]
 
-    @patch('its_hub.integration.reward_hub.LocalVllmProcessRewardModel')
-    @patch('its_hub.integration.reward_hub.AggregationMethod')
-    def test_models_endpoint_after_configuration(self, mock_agg_method, mock_reward_model,
-                                                iaas_client, vllm_server):
+    @patch("its_hub.integration.reward_hub.LocalVllmProcessRewardModel")
+    @patch("its_hub.integration.reward_hub.AggregationMethod")
+    def test_models_endpoint_after_configuration(
+        self, mock_agg_method, mock_reward_model, iaas_client, vllm_server
+    ):
         """Test /v1/models endpoint after configuration."""
         mock_reward_model.return_value = MagicMock()
         mock_agg_method.return_value = MagicMock()
@@ -135,7 +148,7 @@ class TestSelfConsistencyToolVote:
             "api_key": TEST_CONSTANTS["DEFAULT_API_KEY"],
             "model": TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             "alg": "self-consistency",
-            "regex_patterns": [r"\\boxed{([^}]+)}"]
+            "regex_patterns": [r"\\boxed{([^}]+)}"],
         }
 
         response = iaas_client.post("/configure", json=config_data)
@@ -150,7 +163,7 @@ class TestSelfConsistencyToolVote:
             "model": TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             "alg": "self-consistency",
             "regex_patterns": [r"\\boxed{([^}]+)}"],
-            "tool_vote": "tool_name"
+            "tool_vote": "tool_name",
         }
 
         response = iaas_client.post("/configure", json=config_data)
@@ -165,7 +178,7 @@ class TestSelfConsistencyToolVote:
             "model": TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             "alg": "self-consistency",
             "regex_patterns": [r"\\boxed{([^}]+)}"],
-            "tool_vote": "tool_args"
+            "tool_vote": "tool_args",
         }
 
         response = iaas_client.post("/configure", json=config_data)
@@ -180,7 +193,7 @@ class TestSelfConsistencyToolVote:
             "model": TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             "alg": "self-consistency",
             "regex_patterns": [r"\\boxed{([^}]+)}"],
-            "tool_vote": "tool_hierarchical"
+            "tool_vote": "tool_hierarchical",
         }
 
         response = iaas_client.post("/configure", json=config_data)
@@ -203,7 +216,9 @@ class TestSelfConsistencyToolVote:
         assert response.status_code == 200
         assert "success" in response.json()["status"]
 
-    def test_self_consistency_with_all_tool_vote_options(self, iaas_client, vllm_server):
+    def test_self_consistency_with_all_tool_vote_options(
+        self, iaas_client, vllm_server
+    ):
         """Test self-consistency configuration with all tool-vote options."""
         config_data = {
             "endpoint": vllm_server,
@@ -227,7 +242,7 @@ class TestSelfConsistencyToolVote:
             "model": TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             "alg": "self-consistency",
             "regex_patterns": [r"\\boxed{([^}]+)}"],
-            "tool_vote": "invalid_option"
+            "tool_vote": "invalid_option",
         }
 
         response = iaas_client.post("/configure", json=config_data)
@@ -237,7 +252,7 @@ class TestSelfConsistencyToolVote:
     def test_tool_vote_algorithm_usage_verification(self, iaas_client, vllm_server):
         """Test that configured tool-vote parameters are passed to SelfConsistency."""
         # Mock the SelfConsistency constructor to verify parameters
-        with patch('its_hub.integration.iaas.SelfConsistency') as mock_sc:
+        with patch("its_hub.integration.iaas.SelfConsistency") as mock_sc:
             mock_sc.return_value = MagicMock()
 
             config_data = {
@@ -270,7 +285,7 @@ class TestSelfConsistencyToolVote:
             "model": TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             "alg": "self-consistency",
             "regex_patterns": [r"\\boxed{([^}]+)}"],
-            "tool_vote": "tool_name"
+            "tool_vote": "tool_name",
         }
 
         config_response = iaas_client.post("/configure", json=config_data)
@@ -278,14 +293,14 @@ class TestSelfConsistencyToolVote:
 
         # Mock the scaling algorithm
         import its_hub.integration.iaas as iaas_module
+
         mock_scaling_alg = MagicMock()
         mock_scaling_alg.ainfer = AsyncMock(return_value={"role": "assistant", "content": "Tool voting response"})
         iaas_module.SCALING_ALG = mock_scaling_alg
 
         # Make chat completion request
         request_data = TestDataFactory.create_chat_completion_request(
-            user_content="Use a calculator tool to solve 15 * 23",
-            budget=8
+            user_content="Use a calculator tool to solve 15 * 23", budget=8
         )
 
         response = iaas_client.post("/v1/chat/completions", json=request_data)
@@ -310,7 +325,7 @@ class TestSelfConsistencyToolVote:
             "model": TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             "alg": "self-consistency",
             "regex_patterns": [r"\\boxed{([^}]+)}"],
-            **tool_vote_config
+            **tool_vote_config,
         }
 
         response = iaas_client.post("/configure", json=config_data)
@@ -321,10 +336,17 @@ class TestSelfConsistencyToolVote:
 class TestChatCompletions:
     """Test the chat completions endpoint."""
 
-    @pytest.mark.parametrize("invalid_request", [
-        {"model": "test-model", "messages": [], "budget": 4},
-        {"model": "test-model", "messages": [{"role": "user", "content": "Test"}], "budget": 0},
-    ])
+    @pytest.mark.parametrize(
+        "invalid_request",
+        [
+            {"model": "test-model", "messages": [], "budget": 4},
+            {
+                "model": "test-model",
+                "messages": [{"role": "user", "content": "Test"}],
+                "budget": 0,
+            },
+        ],
+    )
     def test_chat_completions_validation(self, iaas_client, invalid_request):
         """Test chat completions request validation with various invalid inputs."""
         response = iaas_client.post("/v1/chat/completions", json=invalid_request)
@@ -344,7 +366,9 @@ class TestChatCompletions:
         """Test chat completions with non-existent model."""
         self._configure_service(iaas_client, vllm_server)
 
-        request_data = TestDataFactory.create_chat_completion_request(model="non-existent-model")
+        request_data = TestDataFactory.create_chat_completion_request(
+            model="non-existent-model"
+        )
 
         response = iaas_client.post("/v1/chat/completions", json=request_data)
         assert response.status_code == 404
@@ -356,6 +380,7 @@ class TestChatCompletions:
 
         # Mock the scaling algorithm
         import its_hub.integration.iaas as iaas_module
+
         mock_scaling_alg = MagicMock()
         mock_scaling_alg.ainfer = AsyncMock(return_value={"role": "assistant", "content": "Mocked scaling response"})
         iaas_module.SCALING_ALG = mock_scaling_alg
@@ -363,7 +388,7 @@ class TestChatCompletions:
         request_data = TestDataFactory.create_chat_completion_request(
             user_content="Solve 2+2",
             budget=8,
-            temperature=TEST_CONSTANTS["DEFAULT_TEMPERATURE"]
+            temperature=TEST_CONSTANTS["DEFAULT_TEMPERATURE"],
         )
 
         response = iaas_client.post("/v1/chat/completions", json=request_data)
@@ -385,8 +410,11 @@ class TestChatCompletions:
         # Check that ChatMessages object was passed with correct content
         chat_messages_arg = call_args[0][1]
         from its_hub.types import ChatMessages
+
         assert isinstance(chat_messages_arg, ChatMessages)
-        assert chat_messages_arg.to_prompt() == "user: Solve 2+2"  # ChatMessages string representation
+        assert (
+            chat_messages_arg.to_prompt() == "user: Solve 2+2"
+        )  # ChatMessages string representation
         assert call_args[0][2] == 8  # budget
 
     def test_chat_completions_with_system_message(self, iaas_client, vllm_server):
@@ -395,13 +423,14 @@ class TestChatCompletions:
 
         # Mock the scaling algorithm
         import its_hub.integration.iaas as iaas_module
+
         mock_scaling_alg = MagicMock()
         mock_scaling_alg.ainfer = AsyncMock(return_value={"role": "assistant", "content": "Response with system prompt"})
         iaas_module.SCALING_ALG = mock_scaling_alg
 
         request_data = TestDataFactory.create_chat_completion_request(
             user_content="Explain algebra",
-            system_content="You are a helpful math tutor"
+            system_content="You are a helpful math tutor",
         )
 
         response = iaas_client.post("/v1/chat/completions", json=request_data)
@@ -419,6 +448,7 @@ class TestChatCompletions:
 
         # Mock the scaling algorithm to raise an error
         import its_hub.integration.iaas as iaas_module
+
         mock_scaling_alg = MagicMock()
         mock_scaling_alg.ainfer = AsyncMock(side_effect=Exception("Algorithm failed"))
         iaas_module.SCALING_ALG = mock_scaling_alg
@@ -431,8 +461,12 @@ class TestChatCompletions:
 
     def _configure_service(self, iaas_client, vllm_server):
         """Helper method to configure the service for testing."""
-        with patch('its_hub.integration.reward_hub.LocalVllmProcessRewardModel') as mock_rm, \
-             patch('its_hub.integration.reward_hub.AggregationMethod') as mock_agg:
+        with (
+            patch(
+                "its_hub.integration.reward_hub.LocalVllmProcessRewardModel"
+            ) as mock_rm,
+            patch("its_hub.integration.reward_hub.AggregationMethod") as mock_agg,
+        ):
             mock_rm.return_value = MagicMock()
             mock_agg.return_value = MagicMock()
 
@@ -456,7 +490,7 @@ class TestPydanticModels:
             stop_token="END",
             rm_name="reward-model",
             rm_device="cuda:0",
-            rm_agg_method="model"
+            rm_agg_method="model",
         )
 
         assert config.endpoint == "http://localhost:8000"
@@ -472,7 +506,7 @@ class TestPydanticModels:
                 model=TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
                 alg="invalid-algorithm",
                 rm_name="reward-model",
-                rm_device="cuda:0"
+                rm_device="cuda:0",
             )
 
         assert "not supported" in str(exc_info.value)
@@ -483,10 +517,10 @@ class TestPydanticModels:
             model=TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             messages=[
                 ChatMessage(role="system", content="You are helpful"),
-                ChatMessage(role="user", content="Hello")
+                ChatMessage(role="user", content="Hello"),
             ],
             budget=8,
-            temperature=TEST_CONSTANTS["DEFAULT_TEMPERATURE"]
+            temperature=TEST_CONSTANTS["DEFAULT_TEMPERATURE"],
         )
 
         assert request.model == TEST_CONSTANTS["DEFAULT_MODEL_NAME"]
@@ -501,16 +535,14 @@ class TestPydanticModels:
             ChatCompletionRequest(
                 model=TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
                 messages=[ChatMessage(role="user", content="Test")],
-                budget=invalid_budget
+                budget=invalid_budget,
             )
 
     def test_message_validation_in_chat_request_empty_messages(self):
         """Test message validation in ChatCompletionRequest for empty messages."""
         with pytest.raises(ValueError) as exc_info:
             ChatCompletionRequest(
-                model=TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
-                messages=[],
-                budget=4
+                model=TEST_CONSTANTS["DEFAULT_MODEL_NAME"], messages=[], budget=4
             )
         assert "At least one message is required" in str(exc_info.value)
 
@@ -537,7 +569,7 @@ class TestPydanticModels:
             api_key=TEST_CONSTANTS["DEFAULT_API_KEY"],
             model=TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             alg="self-consistency",
-            regex_patterns=[r"\\boxed{([^}]+)}"]
+            regex_patterns=[r"\\boxed{([^}]+)}"],
         )
 
         assert config.tool_vote is None
@@ -549,7 +581,7 @@ class TestPydanticModels:
             model=TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             messages=[ChatMessage(role="user", content="Test")],
             budget=4,
-            return_response_only=False
+            return_response_only=False,
         )
 
         assert request.return_response_only is False
@@ -559,7 +591,7 @@ class TestPydanticModels:
         request = ChatCompletionRequest(
             model=TEST_CONSTANTS["DEFAULT_MODEL_NAME"],
             messages=[ChatMessage(role="user", content="Test")],
-            budget=4
+            budget=4,
         )
 
         assert request.return_response_only is True  # Default value

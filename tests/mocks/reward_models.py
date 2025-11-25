@@ -1,6 +1,5 @@
 """Mock reward models for testing."""
 
-
 from its_hub.base import AbstractOutcomeRewardModel
 
 

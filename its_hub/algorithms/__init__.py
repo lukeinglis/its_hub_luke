@@ -1,6 +1,12 @@
 from .beam_search import BeamSearch, BeamSearchResult
 from .bon import BestOfN, BestOfNResult
-from .particle_gibbs import ParticleFiltering, ParticleGibbs, ParticleGibbsResult
+from .particle_gibbs import (
+    EntropicParticleFiltering,
+    ParticleFiltering,
+    ParticleFilteringResult,
+    ParticleGibbs,
+    ParticleGibbsResult,
+)
 from .self_consistency import SelfConsistency, SelfConsistencyResult
 
 __all__ = [
@@ -8,9 +14,11 @@ __all__ = [
     "BeamSearchResult",
     "BestOfN",
     "BestOfNResult",
+    "EntropicParticleFiltering",
     "MetropolisHastings",
     "MetropolisHastingsResult",
     "ParticleFiltering",
+    "ParticleFilteringResult",
     "ParticleGibbs",
     "ParticleGibbsResult",
     "SelfConsistency",

@@ -21,7 +21,7 @@ from its_hub.lms import StepGeneration
 
 def extract_boxed(s: str) -> str:
     """Extract answer from boxed format."""
-    boxed_matches = re.findall(r'\\boxed\{([^{}]+(?:\{[^{}]*\}[^{}]*)*)\}', s)
+    boxed_matches = re.findall(r"\\boxed\{([^{}]+(?:\{[^{}]*\}[^{}]*)*)\}", s)
     return boxed_matches[-1] if boxed_matches else ""
 
 
@@ -33,7 +33,7 @@ class MockLanguageModel(AbstractLanguageModel):
             "Let me solve this step by step.\n\nFirst, I'll use algebraic methods.\n\nSolving: 2x + 3 = 7\n2x = 4\nx = 2\n\n\\boxed{2}",
             "I'll approach this differently.\n\nUsing substitution method:\nLet y = 2x + 3\ny = 7\n2x = 4\nx = 2\n\n\\boxed{2}",
             "Using geometric interpretation:\n\nThis represents a line equation.\nSolving: 2x + 3 = 7\n\n\\boxed{2}",
-            "Step 1: Set up equation\n\nStep 2: Simplify\n\nFinal answer: \\boxed{2}"
+            "Step 1: Set up equation\n\nStep 2: Simplify\n\nFinal answer: \\boxed{2}",
         ]
         self.planning_response = "APPROACH 1: Direct algebraic approach using standard techniques\nAPPROACH 2: Alternative method using different mathematical properties\nAPPROACH 3: Geometric or graphical interpretation approach"
         self.call_count = 0
@@ -43,7 +43,11 @@ class MockLanguageModel(AbstractLanguageModel):
 
     def generate(self, messages, stop=None, max_tokens=None, include_stop_str_in_output=False, temperature=None, **kwargs):
         # Handle both single and batch generation
-        if isinstance(messages, list) and len(messages) > 0 and isinstance(messages[0], list):
+        if (
+            isinstance(messages, list)
+            and len(messages) > 0
+            and isinstance(messages[0], list)
+        ):
             # Batch generation
             batch_size = len(messages)
             results = []
@@ -77,6 +81,7 @@ class MockProcessRewardModel(AbstractProcessRewardModel):
 
     def score(self, prompt: str, response: str | list[str]) -> float | list[float]:
         import random
+
         if isinstance(response, str):
             return random.uniform(0.1, 0.9)
         else:  # List of responses
@@ -150,19 +155,23 @@ class TestPlanningWrapper:
         """Test that planning self-consistency algorithm can be created."""
         planning_sc = create_planning_self_consistency(extract_boxed)
         assert isinstance(planning_sc, PlanningWrapper)
-        assert hasattr(planning_sc, 'infer')
+        assert hasattr(planning_sc, "infer")
 
     def test_planning_best_of_n_creation(self, mock_outcome_reward_model):
         """Test that planning best-of-n algorithm can be created."""
         planning_bon = create_planning_best_of_n(mock_outcome_reward_model)
         assert isinstance(planning_bon, PlanningWrapper)
-        assert hasattr(planning_bon, 'infer')
+        assert hasattr(planning_bon, "infer")
 
-    def test_planning_particle_filtering_creation(self, step_generation, mock_process_reward_model):
+    def test_planning_particle_filtering_creation(
+        self, step_generation, mock_process_reward_model
+    ):
         """Test that planning particle filtering algorithm can be created."""
-        planning_pf = create_planning_particle_filtering(step_generation, mock_process_reward_model)
+        planning_pf = create_planning_particle_filtering(
+            step_generation, mock_process_reward_model
+        )
         assert isinstance(planning_pf, PlanningWrapper)
-        assert hasattr(planning_pf, 'infer')
+        assert hasattr(planning_pf, "infer")
 
     def test_planning_wrapper_has_required_methods(self):
         """Test that PlanningWrapper has all required methods."""
@@ -170,21 +179,25 @@ class TestPlanningWrapper:
         base_algorithm = SelfConsistency(extract_boxed)
         planning_wrapper = PlanningWrapper(base_algorithm)
 
-        assert hasattr(planning_wrapper, 'infer')
-        assert hasattr(planning_wrapper, 'base_algorithm')
+        assert hasattr(planning_wrapper, "infer")
+        assert hasattr(planning_wrapper, "base_algorithm")
         assert planning_wrapper.base_algorithm == base_algorithm
 
-    def test_planning_self_consistency_inference(self, mock_language_model, test_problem):
+    def test_planning_self_consistency_inference(
+        self, mock_language_model, test_problem
+    ):
         """Test that planning self-consistency can perform inference."""
         planning_sc = create_planning_self_consistency(extract_boxed)
 
         # Test inference
-        result = planning_sc.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
+        result = planning_sc.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=False
+        )
 
         # Verify result structure
-        assert hasattr(result, 'the_one')
-        assert hasattr(result, 'approaches')
-        assert hasattr(result, 'best_approach')
+        assert hasattr(result, "the_one")
+        assert hasattr(result, "approaches")
+        assert hasattr(result, "best_approach")
 
         # Verify response contains expected content
         assert isinstance(result.the_one, dict)
@@ -192,17 +205,21 @@ class TestPlanningWrapper:
         assert len(result.approaches) > 0
         assert result.best_approach is not None
 
-    def test_planning_best_of_n_inference(self, mock_language_model, mock_outcome_reward_model, test_problem):
+    def test_planning_best_of_n_inference(
+        self, mock_language_model, mock_outcome_reward_model, test_problem
+    ):
         """Test that planning best-of-n can perform inference."""
         planning_bon = create_planning_best_of_n(mock_outcome_reward_model)
 
         # Test inference
-        result = planning_bon.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
+        result = planning_bon.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=False
+        )
 
         # Verify result structure
-        assert hasattr(result, 'the_one')
-        assert hasattr(result, 'approaches')
-        assert hasattr(result, 'best_approach')
+        assert hasattr(result, "the_one")
+        assert hasattr(result, "approaches")
+        assert hasattr(result, "best_approach")
 
         # Verify response contains expected content
         assert isinstance(result.the_one, dict)
@@ -210,17 +227,27 @@ class TestPlanningWrapper:
         assert len(result.approaches) > 0
         assert result.best_approach is not None
 
-    def test_planning_particle_filtering_inference(self, mock_language_model, step_generation, mock_process_reward_model, test_problem):
+    def test_planning_particle_filtering_inference(
+        self,
+        mock_language_model,
+        step_generation,
+        mock_process_reward_model,
+        test_problem,
+    ):
         """Test that planning particle filtering can perform inference."""
-        planning_pf = create_planning_particle_filtering(step_generation, mock_process_reward_model)
+        planning_pf = create_planning_particle_filtering(
+            step_generation, mock_process_reward_model
+        )
 
         # Test inference
-        result = planning_pf.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
+        result = planning_pf.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=False
+        )
 
         # Verify result structure
-        assert hasattr(result, 'the_one')
-        assert hasattr(result, 'approaches')
-        assert hasattr(result, 'best_approach')
+        assert hasattr(result, "the_one")
+        assert hasattr(result, "approaches")
+        assert hasattr(result, "best_approach")
 
         # Verify response contains expected content
         assert isinstance(result.the_one, dict)
@@ -228,15 +255,21 @@ class TestPlanningWrapper:
         assert len(result.approaches) > 0
         assert result.best_approach is not None
 
-    def test_planning_vs_vanilla_self_consistency(self, mock_language_model, test_problem):
+    def test_planning_vs_vanilla_self_consistency(
+        self, mock_language_model, test_problem
+    ):
         """Test that planning and vanilla self-consistency both work."""
         # Vanilla self-consistency
         vanilla_sc = SelfConsistency(extract_boxed)
-        vanilla_result = vanilla_sc.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
+        vanilla_result = vanilla_sc.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=False
+        )
 
         # Planning self-consistency
         planning_sc = create_planning_self_consistency(extract_boxed)
-        planning_result = planning_sc.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
+        planning_result = planning_sc.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=False
+        )
 
         # Both should produce results
         assert isinstance(vanilla_result.the_one, dict)
@@ -245,19 +278,25 @@ class TestPlanningWrapper:
         assert "content" in planning_result.the_one
 
         # Planning result should have additional attributes
-        assert hasattr(planning_result, 'approaches')
-        assert hasattr(planning_result, 'best_approach')
-        assert not hasattr(vanilla_result, 'approaches')
+        assert hasattr(planning_result, "approaches")
+        assert hasattr(planning_result, "best_approach")
+        assert not hasattr(vanilla_result, "approaches")
 
-    def test_planning_vs_vanilla_best_of_n(self, mock_language_model, mock_outcome_reward_model, test_problem):
+    def test_planning_vs_vanilla_best_of_n(
+        self, mock_language_model, mock_outcome_reward_model, test_problem
+    ):
         """Test that planning and vanilla best-of-n both work."""
         # Vanilla best-of-n
         vanilla_bon = BestOfN(mock_outcome_reward_model)
-        vanilla_result = vanilla_bon.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
+        vanilla_result = vanilla_bon.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=False
+        )
 
         # Planning best-of-n
         planning_bon = create_planning_best_of_n(mock_outcome_reward_model)
-        planning_result = planning_bon.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
+        planning_result = planning_bon.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=False
+        )
 
         # Both should produce results
         assert isinstance(vanilla_result.the_one, dict)
@@ -266,19 +305,31 @@ class TestPlanningWrapper:
         assert "content" in planning_result.the_one
 
         # Planning result should have additional attributes
-        assert hasattr(planning_result, 'approaches')
-        assert hasattr(planning_result, 'best_approach')
-        assert not hasattr(vanilla_result, 'approaches')
+        assert hasattr(planning_result, "approaches")
+        assert hasattr(planning_result, "best_approach")
+        assert not hasattr(vanilla_result, "approaches")
 
-    def test_planning_vs_vanilla_particle_filtering(self, mock_language_model, step_generation, mock_process_reward_model, test_problem):
+    def test_planning_vs_vanilla_particle_filtering(
+        self,
+        mock_language_model,
+        step_generation,
+        mock_process_reward_model,
+        test_problem,
+    ):
         """Test that planning and vanilla particle filtering both work."""
         # Vanilla particle filtering
         vanilla_pf = ParticleFiltering(step_generation, mock_process_reward_model)
-        vanilla_result = vanilla_pf.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
+        vanilla_result = vanilla_pf.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=False
+        )
 
         # Planning particle filtering
-        planning_pf = create_planning_particle_filtering(step_generation, mock_process_reward_model)
-        planning_result = planning_pf.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
+        planning_pf = create_planning_particle_filtering(
+            step_generation, mock_process_reward_model
+        )
+        planning_result = planning_pf.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=False
+        )
 
         # Both should produce results
         assert isinstance(vanilla_result.the_one, dict)
@@ -287,9 +338,9 @@ class TestPlanningWrapper:
         assert "content" in planning_result.the_one
 
         # Planning result should have additional attributes
-        assert hasattr(planning_result, 'approaches')
-        assert hasattr(planning_result, 'best_approach')
-        assert not hasattr(vanilla_result, 'approaches')
+        assert hasattr(planning_result, "approaches")
+        assert hasattr(planning_result, "best_approach")
+        assert not hasattr(vanilla_result, "approaches")
 
     def test_extract_boxed_function(self):
         """Test the extract_boxed utility function."""
@@ -309,7 +360,9 @@ class TestPlanningWrapper:
         text_with_multiple = "First \\boxed{1} then \\boxed{2}"
         assert extract_boxed(text_with_multiple) == "2"
 
-    def test_process_to_outcome_reward_model_conversion(self, mock_process_reward_model):
+    def test_process_to_outcome_reward_model_conversion(
+        self, mock_process_reward_model
+    ):
         """Test ProcessToOutcomeRewardModel conversion."""
         outcome_rm = ProcessToOutcomeRewardModel(mock_process_reward_model)
 
@@ -324,28 +377,41 @@ class TestPlanningWrapper:
         assert len(multiple_scores) == 2
         assert all(isinstance(score, float) for score in multiple_scores)
 
-    def test_planning_wrapper_return_response_only(self, mock_language_model, test_problem):
+    def test_planning_wrapper_return_response_only(
+        self, mock_language_model, test_problem
+    ):
         """Test that return_response_only parameter works correctly."""
         planning_sc = create_planning_self_consistency(extract_boxed)
 
         # Test with return_response_only=True
-        result_only = planning_sc.infer(mock_language_model, test_problem, budget=4, return_response_only=True)
+        result_only = planning_sc.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=True
+        )
         assert isinstance(result_only, dict)
         assert "content" in result_only
 
         # Test with return_response_only=False
-        result_full = planning_sc.infer(mock_language_model, test_problem, budget=4, return_response_only=False)
-        assert hasattr(result_full, 'the_one')
-        assert hasattr(result_full, 'approaches')
-        assert hasattr(result_full, 'best_approach')
+        result_full = planning_sc.infer(
+            mock_language_model, test_problem, budget=4, return_response_only=False
+        )
+        assert hasattr(result_full, "the_one")
+        assert hasattr(result_full, "approaches")
+        assert hasattr(result_full, "best_approach")
 
-    def test_planning_wrapper_with_different_budgets(self, mock_language_model, test_problem):
+    def test_planning_wrapper_with_different_budgets(
+        self, mock_language_model, test_problem
+    ):
         """Test planning wrapper with different budget values."""
         planning_sc = create_planning_self_consistency(extract_boxed)
 
         # Test with different budgets
         for budget in [2, 4, 8]:
-            result = planning_sc.infer(mock_language_model, test_problem, budget=budget, return_response_only=False)
+            result = planning_sc.infer(
+                mock_language_model,
+                test_problem,
+                budget=budget,
+                return_response_only=False,
+            )
             assert isinstance(result.the_one, dict)
             assert "content" in result.the_one
             assert len(result.approaches) > 0
@@ -358,13 +424,15 @@ class TestPlanningWrapper:
         batch_messages = [
             [{"role": "user", "content": "Problem 1"}],
             [{"role": "user", "content": "Problem 2"}],
-            [{"role": "user", "content": "Problem 3"}]
+            [{"role": "user", "content": "Problem 3"}],
         ]
 
         results = lm.generate(batch_messages)
         assert isinstance(results, list)
         assert len(results) == 3
-        assert all(isinstance(result, dict) and "content" in result for result in results)
+        assert all(
+            isinstance(result, dict) and "content" in result for result in results
+        )
 
     def test_mock_language_model_single_generation(self):
         """Test that mock language model handles single generation correctly."""

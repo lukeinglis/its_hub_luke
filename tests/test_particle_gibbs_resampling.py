@@ -25,7 +25,11 @@ class MockLanguageModelForResampling(AbstractLanguageModel):
 
     def generate(self, messages, max_tokens=100, **kwargs):
         # Handle both single and batch calls like OpenAICompatibleLanguageModel
-        if isinstance(messages, list) and len(messages) > 0 and isinstance(messages[0], list):
+        if (
+            isinstance(messages, list)
+            and len(messages) > 0
+            and isinstance(messages[0], list)
+        ):
             # Batch generation
             results = []
             for _ in messages:
@@ -88,7 +92,7 @@ class TestParticleGibbsResampling:
             prm=mock_prm,
             num_iterations=2,
             selection_method=SelectionMethod.ARGMAX,
-            num_ref_particles=1
+            num_ref_particles=1,
         )
 
         # Run inference with budget=4 (2 particles per iteration)
@@ -125,13 +129,11 @@ class TestParticleGibbsResampling:
         ref_particle = Particle(
             steps=["ref_step1", "ref_step2", "ref_step3"],
             is_stopped=True,
-            partial_log_weights=[0.6, 0.7, 0.8]
+            partial_log_weights=[0.6, 0.7, 0.8],
         )
 
         new_particle = Particle(
-            steps=["new_step1"],
-            is_stopped=False,
-            partial_log_weights=[0.65]
+            steps=["new_step1"], is_stopped=False, partial_log_weights=[0.65]
         )
 
         # Test the _propagate method
@@ -140,7 +142,7 @@ class TestParticleGibbsResampling:
             prm=mock_prm,
             num_iterations=1,
             selection_method=SelectionMethod.ARGMAX,
-            num_ref_particles=1
+            num_ref_particles=1,
         )
 
         # Propagate one step
@@ -148,8 +150,12 @@ class TestParticleGibbsResampling:
         propagated = pg._propagate(mock_lm, particles, "Test prompt")
 
         # After propagation, only non-stopped particles get extended
-        assert len(propagated[0].partial_log_weights) == 2  # new particle now has 2 steps
-        assert len(propagated[1].partial_log_weights) == 3  # ref particle stays at 3 steps (stopped)
+        assert (
+            len(propagated[0].partial_log_weights) == 2
+        )  # new particle now has 2 steps
+        assert (
+            len(propagated[1].partial_log_weights) == 3
+        )  # ref particle stays at 3 steps (stopped)
 
         # The key insight: during resampling in the main loop,
         # we should compare partial_log_weights[1] for both particles,
@@ -171,7 +177,7 @@ class TestParticleGibbsResampling:
             prm=mock_prm,
             num_iterations=2,
             selection_method=SelectionMethod.ARGMAX,
-            num_ref_particles=1
+            num_ref_particles=1,
         )
 
         result = pg.infer(mock_lm, "Test prompt", budget=6, return_response_only=False)
