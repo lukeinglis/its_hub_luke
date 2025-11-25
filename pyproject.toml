@@ -25,7 +25,7 @@ dependencies = [
     "openai>=1.68.2",
     "tqdm>=4.65.0",
     "typing-extensions>=4.12.2",
-    "reward-hub>=0.1.7",
+    "reward-hub>=0.1.8",
     "transformers>=4.53.2",
     "backoff>=2.2.0",
     "click>=8.1.0",
@@ -52,7 +52,7 @@ Homepage = "https://ai-innovation.team/its_hub"
 [project.optional-dependencies]
 
 vllm = [
-    "reward-hub[vllm]>=0.1.6",
+    "reward-hub[vllm]>=0.1.8",
 ]
 
 dev = [
@@ -62,11 +62,11 @@ dev = [
     "ruff>=0.10.0",
     "jupytext>=1.15.0",
     "jupyter>=1.0.0",
-    "reward-hub[vllm]>=0.1.6",
+    "reward-hub[vllm]>=0.1.8",
 ]
 
 prm = [
-    "reward-hub[prm]>=0.1.6"
+    "reward-hub[prm]>=0.1.8"
 ]
 
 research = [
