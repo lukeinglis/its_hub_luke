@@ -1,11 +1,11 @@
-from reward_hub.base import AggregationMethod
-from reward_hub.llm_judge import create_pointwise_judge, create_groupwise_judge
-
-from its_hub.base import AbstractProcessRewardModel, AbstractOutcomeRewardModel
-from its_hub.types import ChatMessage, ChatMessages
-from typing import Optional
-import logging
 import json
+import logging
+
+from reward_hub.base import AggregationMethod
+from reward_hub.llm_judge import create_groupwise_judge, create_pointwise_judge
+
+from its_hub.base import AbstractOutcomeRewardModel, AbstractProcessRewardModel
+from its_hub.types import ChatMessage, ChatMessages
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,10 @@ class LocalVllmProcessRewardModel(AbstractProcessRewardModel):
         ]
         messages = [
             [
-                *[{"role": msg.role, "content": msg.extract_text_content()} for msg in base_msgs],
+                *[
+                    {"role": msg.role, "content": msg.extract_text_content()}
+                    for msg in base_msgs
+                ],
                 {"role": "assistant", "content": response},
             ]
             for response in responses
@@ -193,7 +196,10 @@ class LLMJudgeRewardModel(AbstractOutcomeRewardModel):
 
         # Build base conversation in OpenAI format
         base_messages = [
-            {"role": msg.role, "content": msg.extract_text_content()} # Reward Hub expects content to be a string
+            {
+                "role": msg.role,
+                "content": msg.extract_text_content(),
+            }  # Reward Hub expects content to be a string
             for msg in chat_messages.to_chat_messages()
         ]
 

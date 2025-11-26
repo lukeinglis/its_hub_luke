@@ -62,7 +62,9 @@ class ChatMessage:
             elif content_type == "image_url":
                 has_image = True
             elif content_type:
-                raise ValueError(f"Unsupported content type '{content_type}' in messages content dict.")
+                raise ValueError(
+                    f"Unsupported content type '{content_type}' in messages content dict."
+                )
 
         if has_image:
             logging.warning(
@@ -102,8 +104,7 @@ class ChatMessages:
 
     def to_prompt(self) -> str:
         # TODO: chatMessage to string conversion will be deprecated in the future.
-        """Convert to prompt string representation.
-        """
+        """Convert to prompt string representation."""
         if self._is_string:
             return self._str_or_messages
 
@@ -122,7 +123,9 @@ class ChatMessages:
                         tool_call_strs.append(f"{tc.function.name}()")
                 tool_calls_text = ", ".join(tool_call_strs)
                 if text_content:
-                    lines.append(f"assistant: {text_content} [calls: {tool_calls_text}]")
+                    lines.append(
+                        f"assistant: {text_content} [calls: {tool_calls_text}]"
+                    )
                 else:
                     lines.append(f"assistant: [calls: {tool_calls_text}]")
             else:
