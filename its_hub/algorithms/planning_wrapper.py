@@ -316,11 +316,11 @@ def create_planning_self_consistency(extract_fn=None):
     return PlanningWrapper(base_alg)
 
 
-def create_planning_particle_filtering(sg, prm, selection_method="argmax"):
+def create_planning_particle_filtering(sg, prm, final_response_selection="argmax"):
     """Create Planning-Enhanced Particle Filtering algorithm."""
     from its_hub.algorithms import ParticleFiltering
 
-    base_alg = ParticleFiltering(sg, prm, selection_method)
+    base_alg = ParticleFiltering(sg, prm, final_response_selection)
     return PlanningWrapper(base_alg)
 
 

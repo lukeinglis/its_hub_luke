@@ -91,7 +91,7 @@ class TestParticleGibbsResampling:
             sg=sg,
             prm=mock_prm,
             num_iterations=2,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             num_ref_particles=1,
         )
 
@@ -141,7 +141,7 @@ class TestParticleGibbsResampling:
             sg=sg,
             prm=mock_prm,
             num_iterations=1,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             num_ref_particles=1,
         )
 
@@ -176,7 +176,7 @@ class TestParticleGibbsResampling:
             sg=sg,
             prm=mock_prm,
             num_iterations=2,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             num_ref_particles=1,
         )
 
