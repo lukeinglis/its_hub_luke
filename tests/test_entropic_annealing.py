@@ -87,7 +87,7 @@ class TestEntropicAnnealing:
         epf = EntropicParticleFiltering(
             sg=sg,
             prm=mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             resampling_method=ResamplingMethod.MULTINOMIAL,
             temperature_method=TemperatureMethod.ESS,
             ess_threshold=0.5,
@@ -109,7 +109,7 @@ class TestEntropicAnnealing:
         epf = EntropicParticleFiltering(
             sg=sg,
             prm=mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             resampling_method=ResamplingMethod.MULTINOMIAL,
             temperature_method=TemperatureMethod.ESS,
             ess_threshold=0.5,
@@ -148,7 +148,7 @@ class TestEntropicAnnealing:
         epf = EntropicParticleFiltering(
             sg=sg,
             prm=mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             resampling_method=ResamplingMethod.MULTINOMIAL,
             temperature_method=TemperatureMethod.ESS,
             ess_threshold=0.5,
@@ -199,7 +199,7 @@ class TestEntropicAnnealing:
         epf = EntropicParticleFiltering(
             sg=sg,
             prm=mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             resampling_method=ResamplingMethod.MULTINOMIAL,
             temperature_method=TemperatureMethod.ESS,
             ess_threshold=0.5,
@@ -228,7 +228,7 @@ class TestEntropicAnnealing:
         epf = EntropicParticleFiltering(
             sg=sg,
             prm=mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             resampling_method=ResamplingMethod.MULTINOMIAL,
             temperature_method=TemperatureMethod.ENTROPY,
             ess_threshold=0.5,
@@ -257,7 +257,7 @@ class TestEntropicAnnealing:
         epf = EntropicParticleFiltering(
             sg=sg,
             prm=mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             resampling_method=ResamplingMethod.MULTINOMIAL,
             temperature_method=TemperatureMethod.BASE,
             ess_threshold=0.5,
@@ -286,7 +286,7 @@ class TestEntropicAnnealing:
         epf = EntropicParticleFiltering(
             sg=sg,
             prm=mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             resampling_method=ResamplingMethod.SYSTEMATIC,
             temperature_method=TemperatureMethod.ESS,
             ess_threshold=0.5,
@@ -314,7 +314,7 @@ class TestEntropicAnnealing:
         epf = EntropicParticleFiltering(
             sg=sg,
             prm=mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             resampling_method=ResamplingMethod.SYSTEMATIC,
             temperature_method=TemperatureMethod.ENTROPY,
             ess_threshold=0.5,
@@ -343,7 +343,7 @@ class TestEntropicAnnealing:
         epf = EntropicParticleFiltering(
             sg=sg,
             prm=mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             resampling_method=ResamplingMethod.SYSTEMATIC,
             temperature_method=TemperatureMethod.BASE,
             ess_threshold=0.5,

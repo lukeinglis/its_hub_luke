@@ -1020,7 +1020,7 @@ class TestParticleGibbs:
 
         sg = StepGeneration(step_token="\n", max_steps=1)
         particle_gibbs = ParticleGibbs(
-            sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX
+            sg, mock_prm, num_iterations=1, final_response_selection=SelectionMethod.ARGMAX
         )
 
         result = particle_gibbs.infer(
@@ -1043,21 +1043,21 @@ class TestParticleGibbs:
             particle_gibbs.infer(mock_lm, "test prompt", budget=4)
 
     @pytest.mark.parametrize(
-        "selection_method,expected_type",
+        "final_response_selection,expected_type",
         [
             (SelectionMethod.ARGMAX, dict),
             (SelectionMethod.SAMPLE, dict),
             ("argmax", dict),  # Test string conversion
         ],
     )
-    def test_selection_methods(self, selection_method, expected_type):
+    def test_selection_methods(self, final_response_selection, expected_type):
         """Test different selection methods."""
         mock_lm = StepMockLanguageModel(["good_step", "bad_step"])
         mock_prm = MockProcessRewardModel([0.9, 0.1])
 
         sg = StepGeneration(step_token="\n", max_steps=1)
         particle_gibbs = ParticleGibbs(
-            sg, mock_prm, num_iterations=1, selection_method=selection_method
+            sg, mock_prm, num_iterations=1, final_response_selection=final_response_selection
         )
         result = particle_gibbs.infer(
             mock_lm, "Solve this:", budget=2, return_response_only=True
@@ -1075,7 +1075,7 @@ class TestParticleGibbs:
             sg,
             mock_prm,
             num_iterations=2,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             num_ref_particles=1,
         )
 
@@ -1110,7 +1110,7 @@ class TestParticleGibbs:
 
         sg = StepGeneration(step_token="\n", max_steps=1)
         particle_gibbs = ParticleGibbs(
-            sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX
+            sg, mock_prm, num_iterations=1, final_response_selection=SelectionMethod.ARGMAX
         )
 
         chat_messages = ChatMessages("Solve this:")
@@ -1134,7 +1134,7 @@ class TestParticleGibbs:
 
         sg = StepGeneration(step_token="\n", max_steps=1)
         particle_gibbs = ParticleGibbs(
-            sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX
+            sg, mock_prm, num_iterations=1, final_response_selection=SelectionMethod.ARGMAX
         )
         result = particle_gibbs.infer(
             mock_lm, chat_messages, budget=2, return_response_only=True
@@ -1149,7 +1149,7 @@ class TestParticleGibbs:
         mock_prm = MockProcessRewardModel([0.7, 0.6])
 
         sg = StepGeneration(step_token="\n", max_steps=1)
-        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX)
+        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, final_response_selection=SelectionMethod.ARGMAX)
 
         result = await particle_gibbs.ainfer(mock_lm, "Solve this:", budget=2, return_response_only=True)
 
@@ -1168,18 +1168,18 @@ class TestParticleGibbs:
             await particle_gibbs.ainfer(mock_lm, "test prompt", budget=4)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("selection_method,expected_type", [
+    @pytest.mark.parametrize("final_response_selection,expected_type", [
         (SelectionMethod.ARGMAX, dict),
         (SelectionMethod.SAMPLE, dict),
         ("argmax", dict),  # Test string conversion
     ])
-    async def test_ainfer_selection_methods(self, selection_method, expected_type):
+    async def test_ainfer_selection_methods(self, final_response_selection, expected_type):
         """Test async different selection methods."""
         mock_lm = StepMockLanguageModel(["good_step", "bad_step"])
         mock_prm = MockProcessRewardModel([0.9, 0.1])
 
         sg = StepGeneration(step_token="\n", max_steps=1)
-        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, selection_method=selection_method)
+        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, final_response_selection=final_response_selection)
         result = await particle_gibbs.ainfer(mock_lm, "Solve this:", budget=2, return_response_only=True)
 
         assert isinstance(result, expected_type)
@@ -1194,7 +1194,7 @@ class TestParticleGibbs:
         particle_gibbs = ParticleGibbs(
             sg, mock_prm,
             num_iterations=2,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             num_ref_particles=1
         )
 
@@ -1212,7 +1212,7 @@ class TestParticleGibbs:
         mock_prm = MockProcessRewardModel([0.7, 0.6])
 
         sg = StepGeneration(step_token="\n", max_steps=1)
-        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX)
+        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, final_response_selection=SelectionMethod.ARGMAX)
 
         chat_messages = ChatMessages("Solve this:")
         result = await particle_gibbs.ainfer(mock_lm, chat_messages, budget=2, return_response_only=False)
@@ -1233,7 +1233,7 @@ class TestParticleGibbs:
         chat_messages = ChatMessages(messages)
 
         sg = StepGeneration(step_token="\n", max_steps=1)
-        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, selection_method=SelectionMethod.ARGMAX)
+        particle_gibbs = ParticleGibbs(sg, mock_prm, num_iterations=1, final_response_selection=SelectionMethod.ARGMAX)
         result = await particle_gibbs.ainfer(mock_lm, chat_messages, budget=2, return_response_only=True)
 
         assert isinstance(result, dict)
@@ -1250,7 +1250,7 @@ class TestParticleFiltering:
         sg = StepGeneration(step_token="\n", max_steps=1)
 
         particle_filtering = ParticleFiltering(
-            sg, mock_prm, selection_method=SelectionMethod.ARGMAX
+            sg, mock_prm, final_response_selection=SelectionMethod.ARGMAX
         )
         result = particle_filtering.infer(
             mock_lm, "Solve this:", budget=2, return_response_only=False
@@ -1273,7 +1273,7 @@ class TestParticleFiltering:
         sg = StepGeneration(step_token="\n", max_steps=1)
 
         particle_filtering = ParticleFiltering(
-            sg, mock_prm, selection_method=SelectionMethod.ARGMAX
+            sg, mock_prm, final_response_selection=SelectionMethod.ARGMAX
         )
         result = particle_filtering.infer(
             mock_lm, "Solve this:", budget=2, return_response_only=True
@@ -1290,7 +1290,7 @@ class TestParticleFiltering:
 
         sg = StepGeneration(step_token="\n", max_steps=1)
         particle_filtering = ParticleFiltering(
-            sg, mock_prm, selection_method=SelectionMethod.ARGMAX
+            sg, mock_prm, final_response_selection=SelectionMethod.ARGMAX
         )
 
         chat_messages = ChatMessages("Solve this:")
@@ -1314,7 +1314,7 @@ class TestParticleFiltering:
 
         sg = StepGeneration(step_token="\n", max_steps=1)
         particle_filtering = ParticleFiltering(
-            sg, mock_prm, selection_method=SelectionMethod.ARGMAX
+            sg, mock_prm, final_response_selection=SelectionMethod.ARGMAX
         )
         result = particle_filtering.infer(
             mock_lm, chat_messages, budget=2, return_response_only=True
@@ -1336,7 +1336,7 @@ class TestEntropicParticleFiltering:
         particle_filtering = EntropicParticleFiltering(
             sg,
             mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             temperature_method=TemperatureMethod.ESS,
             resampling_method=ResamplingMethod.MULTINOMIAL,
         )
@@ -1357,7 +1357,7 @@ class TestEntropicParticleFiltering:
         particle_filtering = EntropicParticleFiltering(
             sg,
             mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             temperature_method=TemperatureMethod.ESS,
             resampling_method=ResamplingMethod.MULTINOMIAL,
         )
@@ -1385,7 +1385,7 @@ class TestEntropicParticleFiltering:
         particle_filtering = EntropicParticleFiltering(
             sg,
             mock_prm,
-            selection_method=SelectionMethod.ARGMAX,
+            final_response_selection=SelectionMethod.ARGMAX,
             temperature_method=TemperatureMethod.ESS,
             resampling_method=ResamplingMethod.MULTINOMIAL,
         )

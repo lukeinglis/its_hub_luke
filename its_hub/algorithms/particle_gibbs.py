@@ -106,7 +106,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         sg: StepGeneration,
         prm: AbstractProcessRewardModel,
         num_iterations: int = 1,
-        selection_method: str | SelectionMethod = SelectionMethod.ARGMAX,
+        final_response_selection: str | SelectionMethod = SelectionMethod.ARGMAX,
         num_ref_particles: int = 1,
         does_ancestor_sampling: bool = False,
         does_entropic_annealing: bool = False,
@@ -116,8 +116,8 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         resampling_method: str | ResamplingMethod = ResamplingMethod.MULTINOMIAL,
         temperature_method: str | TemperatureMethod = TemperatureMethod.ESS,
     ):
-        if isinstance(selection_method, str):
-            selection_method = SelectionMethod(selection_method)
+        if isinstance(final_response_selection, str):
+            final_response_selection = SelectionMethod(final_response_selection)
 
         if isinstance(resampling_method, str):
             resampling_method = ResamplingMethod(resampling_method)
@@ -128,7 +128,7 @@ class ParticleGibbs(AbstractScalingAlgorithm):
         self.sg = sg
         self.prm = prm
         self.num_iterations = num_iterations
-        self.selection_method = selection_method
+        self.final_response_selection = final_response_selection
         self.num_ref_particles = num_ref_particles
         self.does_ancestor_sampling = does_ancestor_sampling
         self.does_entropic_annealing = does_entropic_annealing
@@ -478,9 +478,9 @@ class ParticleGibbs(AbstractScalingAlgorithm):
             ref_indices_lst.append(ref_indices)
             steps_used_lst.append([len(p.steps) for p in particles])
 
-        # select the chosen particle based on selection method
+        # select the chosen particle based on final response selection method
         # log_weights and probabilities are from the last iteration
-        match self.selection_method:
+        match self.final_response_selection:
             case SelectionMethod.SAMPLE:
                 selected_index = random.choices(
                     range(len(particles)), weights=probabilities, k=1
@@ -508,7 +508,7 @@ class ParticleFiltering(ParticleGibbs):
         self,
         sg: StepGeneration,
         prm: AbstractProcessRewardModel,
-        selection_method: str | SelectionMethod = SelectionMethod.ARGMAX,
+        final_response_selection: str | SelectionMethod = SelectionMethod.ARGMAX,
         resampling_method: str | ResamplingMethod = ResamplingMethod.MULTINOMIAL,
     ):
         # initialize with num_iterations=1
@@ -516,7 +516,7 @@ class ParticleFiltering(ParticleGibbs):
             sg=sg,
             prm=prm,
             num_iterations=1,
-            selection_method=selection_method,
+            final_response_selection=final_response_selection,
             num_ref_particles=0,
             does_ancestor_sampling=False,
             does_entropic_annealing=False,
@@ -563,7 +563,7 @@ class EntropicParticleFiltering(ParticleGibbs):
         self,
         sg: StepGeneration,
         prm: AbstractProcessRewardModel,
-        selection_method: str | SelectionMethod = SelectionMethod.ARGMAX,
+        final_response_selection: str | SelectionMethod = SelectionMethod.ARGMAX,
         resampling_method: str | ResamplingMethod = ResamplingMethod.SYSTEMATIC,
         temperature_method: str | TemperatureMethod = TemperatureMethod.ESS,
         ess_threshold: float = 0.5,
@@ -574,7 +574,7 @@ class EntropicParticleFiltering(ParticleGibbs):
             sg=sg,
             prm=prm,
             num_iterations=1,
-            selection_method=selection_method,
+            final_response_selection=final_response_selection,
             num_ref_particles=0,
             does_ancestor_sampling=False,
             does_entropic_annealing=True,
