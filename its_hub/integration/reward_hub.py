@@ -228,7 +228,12 @@ class LLMJudgeRewardModel(AbstractOutcomeRewardModel):
             )
 
         # Log judge results if enabled
-        if self.enable_judge_logging and judge_result.reasonings:
+        # Handle both JudgeResult object and plain list return types
+        has_reasonings = (
+            hasattr(judge_result, 'reasonings') and judge_result.reasonings
+        ) if not isinstance(judge_result, list) else False
+
+        if self.enable_judge_logging and has_reasonings:
             if self.judge_type == "pointwise":
                 # Pointwise: log each response's individual score and reasoning
                 for i, (score, reasoning, response) in enumerate(
@@ -281,6 +286,14 @@ class LLMJudgeRewardModel(AbstractOutcomeRewardModel):
                 )
 
         # Return only scores (single float if single response, list otherwise)
+        # Handle both JudgeResult object and plain list return types
+        if isinstance(judge_result, list):
+            # Judge returned a plain list of scores
+            scores = judge_result
+        else:
+            # Judge returned a JudgeResult object
+            scores = judge_result.scores
+
         if is_single_response:
-            return judge_result.scores[0]
-        return judge_result.scores
+            return scores[0]
+        return scores

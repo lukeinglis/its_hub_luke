@@ -1,0 +1,12 @@
+# Backend dependencies for ITS demo
+fastapi>=0.115.5
+uvicorn>=0.27.0
+pydantic>=2.7.2
+python-dotenv>=1.0.0
+
+# Google Cloud Vertex AI (for Claude via Vertex AI)
+google-cloud-aiplatform>=1.38.0
+anthropic[vertex]>=0.18.0
+
+# its_hub is installed from parent directory
+# Install with: pip install -e ..
