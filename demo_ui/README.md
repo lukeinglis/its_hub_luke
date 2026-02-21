@@ -8,7 +8,14 @@ This demo provides:
 
 - **Backend**: FastAPI server exposing `/health` and `/compare` endpoints
 - **Frontend**: Simple HTML/JS interface with side-by-side comparison
-- **Algorithms**: Best-of-N and Self-Consistency
+- **Models**: OpenAI and Vertex AI models
+  - **OpenAI**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo
+  - **Vertex AI Claude**: Sonnet, Opus, Haiku
+  - **Vertex AI Gemini**: Pro, Flash
+  - **Local**: vLLM server (any self-hosted model)
+- **Algorithms**:
+  - Outcome-based: Best-of-N, Self-Consistency
+  - Process-based: Beam Search, Particle Filtering, Entropic Particle Filtering, Particle Gibbs
 - **Security**: API keys stored server-side only
 
 ## Project Structure
@@ -60,17 +67,24 @@ pip install -r backend/requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` and add your API keys:
+Edit `.env` and add your credentials:
 
 ```bash
-# Required for OpenAI models
+# Required: OpenAI API (for GPT models + LLM judge)
 OPENAI_API_KEY=your-openai-api-key-here
 
-# Optional: for local vLLM server
+# Optional: Google Cloud Vertex AI (for Claude and Gemini)
+# Setup: gcloud auth application-default login
+VERTEX_PROJECT=your-gcp-project-id
+VERTEX_LOCATION=us-central1
+
+# Optional: Local vLLM server
 # VLLM_BASE_URL=http://localhost:8100/v1
 # VLLM_API_KEY=NO_API_KEY
 # VLLM_MODEL_NAME=your-model-name
 ```
+
+**Note**: OpenAI models use native OpenAI API. Vertex AI models (Claude, Gemini) require Google Cloud authentication.
 
 ## Running the Demo
 
@@ -114,17 +128,63 @@ python -m http.server 8080
 ## Using the Demo
 
 1. **Select a model** from the dropdown (e.g., GPT-4o Mini)
-2. **Choose an algorithm**:
+2. **Choose an algorithm** (descriptions appear below the dropdown):
+
+   **Outcome-Based Algorithms** (evaluate final responses):
    - **Best-of-N**: Generates N responses and selects the best using an LLM judge
    - **Self-Consistency**: Generates N responses and selects the most common answer
-3. **Set the budget** (1-32): Number of generations to produce
-4. **Enter a question** in the text area
+
+   **Process-Based Algorithms** (evaluate step-by-step reasoning):
+   - **Beam Search**: Tree search maintaining top-k paths at each step
+   - **Particle Filtering**: Sequential Monte Carlo sampling with resampling
+   - **Entropic Particle Filtering**: Particle filtering with temperature annealing
+   - **Particle Gibbs**: Iterative particle filtering with Gibbs sampling
+
+3. **Set the budget** (1-32): Computational resources allocated
+   - For outcome-based: Number of complete generations
+   - For process-based: Total inference calls (divided across steps/particles)
+4. **Enter a question** or **select an example**:
+   - Type your own question in the text area
+   - Or choose from pre-populated examples optimized for each algorithm
+   - Examples are organized by difficulty (Easy, Medium, Hard)
+   - Examples automatically filter based on the selected algorithm
 5. **Click "Run Comparison"**
 
 The demo will show:
 - **Left pane (ITS Off)**: Single baseline inference
 - **Right pane (ITS On)**: ITS algorithm result
 - **Latency badges**: Time taken for each approach
+- **Expected Answer** (for example questions): The correct answer shown below the results for easy verification
+
+**Note**: Process-based algorithms work best with step-by-step reasoning tasks (e.g., math problems, logic puzzles) where intermediate steps can be evaluated.
+
+### Example Questions
+
+The demo includes 16 curated example questions inspired by the **MATH500** and **AIME-2024** benchmark datasets used in its_hub research:
+
+**Easy Questions** (3):
+- Basic arithmetic and algebra
+- Simple logical reasoning
+- Good for testing all algorithms quickly
+
+**Medium Questions** (8):
+- Quadratic equations, calculus, number theory
+- Word problems and geometry
+- Demonstrate clear ITS benefits
+
+**Hard Questions** (5):
+- Advanced algebra and optimization
+- Complex combinatorics
+- Best for showcasing advanced algorithms (Particle Gibbs, Entropic PF)
+
+Each example includes:
+- **Category**: Type of problem (Algebra, Calculus, etc.)
+- **Difficulty**: Easy, Medium, or Hard
+- **Expected Answer**: The correct answer for verification
+- **Best for**: Recommended algorithms
+- **Why**: Explanation of why this question suits those algorithms
+
+When you select an example question and run a comparison, the expected answer will be displayed in a green box below the results, making it easy to verify which approach (baseline vs ITS) produced the correct answer.
 
 ## API Reference
 
@@ -152,6 +212,29 @@ List available models.
       "id": "gpt-4o-mini",
       "description": "OpenAI GPT-4o Mini",
       "model_name": "gpt-4o-mini"
+    }
+  ]
+}
+```
+
+### GET /examples
+
+Get example questions, optionally filtered by algorithm.
+
+**Query Parameters:**
+- `algorithm` (optional): Filter questions by algorithm (e.g., `beam_search`)
+
+**Response:**
+```json
+{
+  "examples": [
+    {
+      "question": "Solve the quadratic equation: x^2 + 5x + 6 = 0",
+      "category": "Algebra",
+      "difficulty": "Medium",
+      "expected_answer": "x = -2 or x = -3 (factoring: (x+2)(x+3) = 0)",
+      "best_for": ["beam_search", "particle_filtering"],
+      "why": "Multi-step solution with verification"
     }
   ]
 }
@@ -211,13 +294,29 @@ MODEL_REGISTRY = {
 
 Then add the corresponding API key to your `.env` file.
 
+## Algorithm Details
+
+### Outcome-Based vs Process-Based
+
+- **Outcome-based algorithms** generate complete responses and evaluate only the final output
+- **Process-based algorithms** generate responses step-by-step and evaluate intermediate reasoning
+
+The demo uses an **LLM-based Process Reward Model** for process-based algorithms, which:
+- Scores partial responses during generation
+- Enables step-by-step reasoning evaluation
+- Works without requiring a separate reward model server
+- Uses GPT-4o Mini as the judge (configurable in code)
+
+For production use with process-based algorithms, consider using a dedicated process reward model server (e.g., via vLLM) for better performance and cost efficiency.
+
 ## Future Enhancements
 
-The demo includes placeholder support for:
+Potential improvements:
 
-- **Step-by-step logs**: `log_preview` field in responses (currently empty)
-- **Process reward models**: For algorithms like Particle Filtering
-- **More algorithms**: Beam Search, Particle Gibbs, etc.
+- **Step-by-step logs**: Visualize intermediate reasoning steps in the UI
+- **Dedicated PRM server**: Use vLLM with specialized process reward models
+- **Performance metrics**: Token usage, cost estimates, quality scores
+- **Batch testing**: Evaluate multiple questions for benchmarking
 
 ## Troubleshooting
 
