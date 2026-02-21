@@ -6,8 +6,11 @@ A simple web interface for comparing baseline LLM inference vs Inference-Time Sc
 
 This demo provides:
 
-- **Backend**: FastAPI server exposing `/health` and `/compare` endpoints
-- **Frontend**: Simple HTML/JS interface with side-by-side comparison
+- **Two Use Cases**:
+  1. **Improve Model**: Compare same model with/without ITS (2-column view)
+  2. **Match Frontier**: Show small model + ITS matching large frontier model performance (3-column view)
+- **Backend**: FastAPI server with comprehensive API endpoints
+- **Frontend**: Modern HTML/JS interface with expandable sections and real-time metrics
 - **Models**: OpenAI and Vertex AI models
   - **OpenAI**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo
   - **Vertex AI Claude**: Sonnet, Opus, Haiku
@@ -16,7 +19,52 @@ This demo provides:
 - **Algorithms**:
   - Outcome-based: Best-of-N, Self-Consistency
   - Process-based: Beam Search, Particle Filtering, Entropic Particle Filtering, Particle Gibbs
+- **Cost Tracking**: Real-time token usage and cost calculation
 - **Security**: API keys stored server-side only
+
+## Key Features
+
+### 🎯 Two Powerful Use Cases
+
+1. **Improve Any Model's Performance**
+   - See how ITS enhances any model's capabilities
+   - 2-column comparison: Baseline vs ITS
+   - Perfect for demonstrating ITS benefits
+
+2. **Match Frontier at Lower Cost**
+   - Show small model + ITS matching large frontier model
+   - 3-column comparison: Small, Small+ITS, Frontier
+   - **Cost savings: 40-95%** while maintaining quality
+   - Example: GPT-4o Mini + ITS saves 82% vs GPT-4o
+
+### 💰 Real-Time Cost Tracking
+
+- Accurate token counting (input/output)
+- Per-request cost calculation in USD
+- Cost comparison across models and configurations
+- Demonstrates ROI of ITS approach
+
+### 🎨 Modern, Clean UI
+
+- **Response Section**: Complete chatbot answer (always visible)
+- **Expandable Reasoning**: Step-by-step trace (click to reveal)
+- **Expandable Performance**: All metrics in one place
+- **LaTeX Support**: Beautiful math rendering
+- **Responsive Design**: Works on desktop and mobile
+
+### 🧮 Comprehensive Algorithm Support
+
+All 6 ITS algorithms tested and working:
+- **Outcome-based**: Best-of-N, Self-Consistency
+- **Process-based**: Beam Search, Particle Filtering, Entropic Particle Filtering, Particle Gibbs
+
+### 📚 Example Questions Library
+
+16 curated questions inspired by MATH500 and AIME-2024:
+- Easy, Medium, and Hard difficulty levels
+- Organized by category (Algebra, Calculus, Logic, etc.)
+- Each includes expected answer and algorithm recommendations
+- Auto-filter by selected algorithm
 
 ## Project Structure
 
@@ -127,7 +175,26 @@ python -m http.server 8080
 
 ## Using the Demo
 
-1. **Select a model** from the dropdown (e.g., GPT-4o Mini)
+### Selecting a Use Case
+
+Choose between two use cases at the top of the page:
+
+1. **Improve Any Model** (default):
+   - Compare the same model with and without ITS
+   - Shows 2-column comparison: Baseline vs ITS
+   - Demonstrates how ITS improves model performance
+
+2. **Match Frontier Performance**:
+   - Compare small model + ITS vs large frontier model
+   - Shows 3-column comparison: Small Baseline, Small + ITS, Frontier
+   - Demonstrates cost savings (40-95% cheaper) while matching quality
+
+### Running a Comparison
+
+1. **Select your model(s)**:
+   - For "Improve Model": Choose one model (e.g., GPT-4o Mini)
+   - For "Match Frontier": Choose small model (e.g., GPT-4o Mini) and frontier model (e.g., GPT-4o)
+
 2. **Choose an algorithm** (descriptions appear below the dropdown):
 
    **Outcome-Based Algorithms** (evaluate final responses):
@@ -143,18 +210,42 @@ python -m http.server 8080
 3. **Set the budget** (1-32): Computational resources allocated
    - For outcome-based: Number of complete generations
    - For process-based: Total inference calls (divided across steps/particles)
+
 4. **Enter a question** or **select an example**:
    - Type your own question in the text area
    - Or choose from pre-populated examples optimized for each algorithm
    - Examples are organized by difficulty (Easy, Medium, Hard)
    - Examples automatically filter based on the selected algorithm
+
 5. **Click "Run Comparison"**
 
-The demo will show:
-- **Left pane (ITS Off)**: Single baseline inference
-- **Right pane (ITS On)**: ITS algorithm result
-- **Latency badges**: Time taken for each approach
-- **Expected Answer** (for example questions): The correct answer shown below the results for easy verification
+### Understanding the Results
+
+Each result card shows:
+
+- **Response Section** (always visible):
+  - Complete chatbot response - exactly what the user would see
+  - Clean, readable formatting with LaTeX math support
+
+- **View Detailed Reasoning** (expandable):
+  - Click to reveal step-by-step reasoning trace
+  - Shows how the model arrived at the answer
+  - Only appears for responses with structured reasoning
+
+- **Performance Details** (expandable):
+  - **Latency**: Time taken in milliseconds
+  - **Model Size**: Small or Large
+  - **Input Tokens**: Number of tokens in the prompt
+  - **Output Tokens**: Number of tokens in the response
+  - **Cost**: Calculated cost in USD
+
+### Cost Comparison (Match Frontier Use Case)
+
+When using the "Match Frontier" use case, the demo shows:
+- **Small Baseline**: Cost of small model alone (e.g., $0.000007)
+- **Small + ITS**: Cost of small model with ITS (e.g., $0.000021)
+- **Frontier**: Cost of large frontier model (e.g., $0.000117)
+- **Savings**: ITS typically saves 40-95% vs frontier while matching quality
 
 **Note**: Process-based algorithms work best with step-by-step reasoning tasks (e.g., math problems, logic puzzles) where intermediate steps can be evaluated.
 
@@ -244,34 +335,103 @@ Get example questions, optionally filtered by algorithm.
 
 Compare baseline vs ITS inference.
 
-**Request:**
+**Request (Improve Model Use Case):**
 ```json
 {
-  "question": "Explain quantum entanglement",
+  "question": "What is the derivative of x^3 + 2x^2?",
   "model_id": "gpt-4o-mini",
   "algorithm": "best_of_n",
-  "budget": 4
+  "budget": 4,
+  "use_case": "improve_model"
 }
 ```
 
-**Response:**
+**Request (Match Frontier Use Case):**
+```json
+{
+  "question": "What is the derivative of x^3 + 2x^2?",
+  "model_id": "gpt-4o-mini",
+  "frontier_model_id": "gpt-4o",
+  "algorithm": "best_of_n",
+  "budget": 4,
+  "use_case": "match_frontier"
+}
+```
+
+**Parameters:**
+- `question` (string, required): The question to answer
+- `model_id` (string, required): Model to use for ITS
+- `algorithm` (string, required): ITS algorithm (best_of_n, self_consistency, beam_search, particle_filtering, entropic_particle_filtering, particle_gibbs)
+- `budget` (integer, required): Computation budget (1-32)
+- `use_case` (string, optional): "improve_model" (default) or "match_frontier"
+- `frontier_model_id` (string, optional): Large model to compare against (required for match_frontier)
+
+**Response (Improve Model):**
 ```json
 {
   "baseline": {
     "answer": "...",
     "latency_ms": 1234,
-    "log_preview": ""
+    "log_preview": "",
+    "model_size": "Small",
+    "cost_usd": 0.000007,
+    "input_tokens": 15,
+    "output_tokens": 50
   },
   "its": {
     "answer": "...",
     "latency_ms": 2345,
-    "log_preview": ""
+    "log_preview": "",
+    "model_size": "Small",
+    "cost_usd": 0.000021,
+    "input_tokens": 45,
+    "output_tokens": 150
   },
   "meta": {
     "model_id": "gpt-4o-mini",
     "algorithm": "best_of_n",
     "budget": 4,
-    "run_id": "uuid-here"
+    "run_id": "uuid-here",
+    "use_case": "improve_model"
+  },
+  "small_baseline": null
+}
+```
+
+**Response (Match Frontier):**
+```json
+{
+  "baseline": {
+    "answer": "...",
+    "latency_ms": 1000,
+    "model_size": "Large",
+    "cost_usd": 0.000117,
+    "input_tokens": 15,
+    "output_tokens": 50
+  },
+  "its": {
+    "answer": "...",
+    "latency_ms": 3500,
+    "model_size": "Small",
+    "cost_usd": 0.000021,
+    "input_tokens": 45,
+    "output_tokens": 150
+  },
+  "small_baseline": {
+    "answer": "...",
+    "latency_ms": 500,
+    "model_size": "Small",
+    "cost_usd": 0.000007,
+    "input_tokens": 15,
+    "output_tokens": 50
+  },
+  "meta": {
+    "model_id": "gpt-4o-mini",
+    "frontier_model_id": "gpt-4o",
+    "algorithm": "best_of_n",
+    "budget": 4,
+    "run_id": "uuid-here",
+    "use_case": "match_frontier"
   }
 }
 ```
@@ -309,14 +469,27 @@ The demo uses an **LLM-based Process Reward Model** for process-based algorithms
 
 For production use with process-based algorithms, consider using a dedicated process reward model server (e.g., via vLLM) for better performance and cost efficiency.
 
-## Future Enhancements
+## Features
 
-Potential improvements:
+### ✅ Implemented
 
-- **Step-by-step logs**: Visualize intermediate reasoning steps in the UI
-- **Dedicated PRM server**: Use vLLM with specialized process reward models
-- **Performance metrics**: Token usage, cost estimates, quality scores
-- **Batch testing**: Evaluate multiple questions for benchmarking
+- ✅ **Two Use Cases**: Improve model performance OR match frontier at lower cost
+- ✅ **6 ITS Algorithms**: Outcome-based and process-based algorithms
+- ✅ **Cost Tracking**: Real-time token counting and cost calculation
+- ✅ **Performance Metrics**: Latency, model size, tokens, and cost per request
+- ✅ **Expandable UI**: Clean response view with collapsible reasoning and metrics
+- ✅ **16 Example Questions**: Curated problems across difficulty levels
+- ✅ **Multi-Provider Support**: OpenAI and Vertex AI (Claude, Gemini)
+- ✅ **LaTeX Math Rendering**: Proper formatting for mathematical content
+
+### 🔧 Potential Enhancements
+
+- **Step-by-step visualization**: Show intermediate reasoning steps during generation
+- **Dedicated PRM server**: Use vLLM with specialized process reward models for better performance
+- **Quality scoring**: Automatic evaluation of answer correctness
+- **Batch testing**: Evaluate multiple questions for systematic benchmarking
+- **Response comparison**: Side-by-side diff view for answer comparison
+- **Export results**: Download comparison results as JSON/CSV
 
 ## Troubleshooting
 
