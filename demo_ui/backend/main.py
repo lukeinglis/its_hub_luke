@@ -151,6 +151,8 @@ async def list_examples(algorithm: str | None = None):
                 "expected_answer": q["expected_answer"],
                 "best_for": q["best_for"],
                 "why": q["why"],
+                "source": q.get("source", "unknown"),
+                "source_id": q.get("source_id", ""),
             }
             for q in questions
         ]

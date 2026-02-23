@@ -1,154 +1,176 @@
 """
 Example questions for the ITS demo.
 
-These questions are curated to demonstrate where ITS algorithms
-provide clear improvements over baseline inference. Questions are
-inspired by the MATH500 and AIME datasets used in its_hub benchmarks.
+These questions are loaded directly from the benchmark datasets used in its_hub:
+- MATH500: HuggingFaceH4/MATH-500
+- AIME-2024: Maxwell-Jia/AIME_2024
 """
 
 from typing import List, Dict
+import datasets
+import logging
 
-# Example questions organized by difficulty and type
-EXAMPLE_QUESTIONS: List[Dict[str, str]] = [
-    # ===== EASY: Good for all algorithms =====
-    {
-        "category": "Basic Math",
-        "difficulty": "Easy",
-        "question": "What is 2+2? Show your work.",
-        "expected_answer": "4",
-        "best_for": ["self_consistency", "best_of_n"],
-        "why": "Simple verification task where self-consistency excels"
-    },
-    {
-        "category": "Algebra",
-        "difficulty": "Easy",
-        "question": "Solve the equation: 2x + 5 = 13. Show your steps.",
-        "expected_answer": "x = 4",
-        "best_for": ["beam_search", "particle_filtering"],
-        "why": "Clear step-by-step solution path"
-    },
-    {
-        "category": "Logic",
-        "difficulty": "Easy",
-        "question": "If all roses are flowers and some flowers fade quickly, can we conclude that some roses fade quickly? Explain your reasoning.",
-        "expected_answer": "No, we cannot conclude that. The statement only tells us that some flowers (not necessarily roses) fade quickly. The roses could be among the flowers that don't fade quickly.",
-        "best_for": ["best_of_n", "self_consistency"],
-        "why": "Logical reasoning with clear correct answer"
-    },
+logger = logging.getLogger(__name__)
 
-    # ===== MEDIUM: Shows clear ITS benefits =====
-    {
-        "category": "Algebra",
-        "difficulty": "Medium",
-        "question": "Solve the quadratic equation: x^2 + 5x + 6 = 0. Show all steps and verify your answer.",
-        "expected_answer": "x = -2 or x = -3 (factoring: (x+2)(x+3) = 0)",
-        "best_for": ["beam_search", "particle_filtering"],
-        "why": "Multi-step solution with verification"
-    },
-    {
-        "category": "Calculus",
-        "difficulty": "Medium",
-        "question": "Find the derivative of f(x) = x^3 + 2x^2 - 5x + 3. Show your work step by step.",
-        "expected_answer": "f'(x) = 3x^2 + 4x - 5",
-        "best_for": ["beam_search", "self_consistency"],
-        "why": "Systematic application of derivative rules"
-    },
-    {
-        "category": "Number Theory",
-        "difficulty": "Medium",
-        "question": "What is the sum of all prime numbers between 10 and 30? List the primes first, then calculate.",
-        "expected_answer": "Primes: 11, 13, 17, 19, 23, 29. Sum = 112",
-        "best_for": ["particle_filtering", "beam_search"],
-        "why": "Requires careful enumeration and calculation"
-    },
-    {
-        "category": "Word Problem",
-        "difficulty": "Medium",
-        "question": "A train travels 120 miles in 2 hours. If it continues at the same speed, how long will it take to travel 300 miles? Show your reasoning.",
-        "expected_answer": "5 hours (speed = 60 mph, time = 300/60 = 5 hours)",
-        "best_for": ["best_of_n", "beam_search"],
-        "why": "Multi-step word problem"
-    },
-    {
-        "category": "Geometry",
-        "difficulty": "Medium",
-        "question": "A rectangle has a length of 12 cm and a width of 5 cm. What is its area and perimeter? Show your calculations.",
-        "expected_answer": "Area = 60 cm², Perimeter = 34 cm",
-        "best_for": ["self_consistency", "beam_search"],
-        "why": "Multiple calculations with clear answers"
-    },
-
-    # ===== HARD: Best for advanced algorithms =====
-    {
-        "category": "Algebra",
-        "difficulty": "Hard",
-        "question": "Let a be a positive real number such that all the roots of x^3 + ax^2 + ax + 1 = 0 are real. Find the smallest possible value of a.",
-        "expected_answer": "a = 3 (this is the minimum value for which all roots are real)",
-        "best_for": ["particle_gibbs", "entropic_particle_filtering"],
-        "why": "Complex optimization requiring multiple refinement passes"
-    },
-    {
-        "category": "Number Theory",
-        "difficulty": "Hard",
-        "question": "Find all integer solutions to the equation x^2 - 4y^2 = 13. Show your complete reasoning.",
-        "expected_answer": "(x, y) = (±7, ±3) are the only integer solutions. This can be factored as (x-2y)(x+2y) = 13.",
-        "best_for": ["beam_search", "particle_filtering"],
-        "why": "Requires systematic search through possibilities"
-    },
-    {
-        "category": "Combinatorics",
-        "difficulty": "Hard",
-        "question": "In how many ways can you arrange the letters in the word MATHEMATICS? Show your step-by-step calculation.",
-        "expected_answer": "4,989,600 ways (11!/(2!×2!×2!) since M, A, and T each appear twice)",
-        "best_for": ["particle_filtering", "beam_search"],
-        "why": "Multi-step counting with careful attention to duplicates"
-    },
-    {
-        "category": "Algebra",
-        "difficulty": "Hard",
-        "question": "If f(x) = x^2 + 3x + 2 and g(x) = 2x - 1, find (f ∘ g)(x) and determine its range when x is in [0, 5].",
-        "expected_answer": "(f ∘ g)(x) = 4x^2 + 2x; Range for x ∈ [0,5] is [0, 110]",
-        "best_for": ["entropic_particle_filtering", "particle_gibbs"],
-        "why": "Function composition requiring careful algebraic manipulation"
-    },
-    {
-        "category": "Logic Puzzle",
-        "difficulty": "Hard",
-        "question": "Three friends (Alice, Bob, and Carol) have different favorite colors (red, blue, green). Alice doesn't like red. Bob's favorite color is not blue. Carol likes green. What color does each person like?",
-        "expected_answer": "Carol: green, Alice: blue, Bob: red",
-        "best_for": ["beam_search", "particle_filtering"],
-        "why": "Constraint satisfaction requiring systematic reasoning"
-    },
-
-    # ===== REASONING: Good for demonstrating ITS value =====
-    {
-        "category": "Mathematical Reasoning",
-        "difficulty": "Medium",
-        "question": "Is 97 a prime number? Explain your reasoning by checking all necessary divisors.",
-        "expected_answer": "Yes, 97 is prime. Need to check divisors up to √97 ≈ 9.8. Testing 2,3,5,7 shows none divide 97 evenly.",
-        "best_for": ["self_consistency", "beam_search"],
-        "why": "Systematic verification with clear answer"
-    },
-    {
-        "category": "Optimization",
-        "difficulty": "Hard",
-        "question": "A farmer has 100 feet of fence and wants to create a rectangular garden with maximum area. What should the dimensions be? Show your work.",
-        "expected_answer": "25 feet × 25 feet (a square). This gives maximum area of 625 square feet.",
-        "best_for": ["particle_filtering", "entropic_particle_filtering"],
-        "why": "Optimization problem requiring calculus or systematic search"
-    },
-    {
-        "category": "Probability",
-        "difficulty": "Medium",
-        "question": "If you flip a fair coin 3 times, what is the probability of getting exactly 2 heads? Show all possible outcomes.",
-        "expected_answer": "3/8 or 0.375. Favorable outcomes: HHT, HTH, THH (3 out of 8 total outcomes)",
-        "best_for": ["beam_search", "self_consistency"],
-        "why": "Requires enumeration of sample space"
-    },
-]
+# Cache for loaded datasets
+_MATH500_CACHE = None
+_AIME_CACHE = None
 
 
-def get_questions_by_algorithm(algorithm: str, limit: int = 5) -> List[Dict[str, str]]:
+def _load_math500():
+    """Load MATH500 dataset and cache it."""
+    global _MATH500_CACHE
+    if _MATH500_CACHE is None:
+        try:
+            logger.info("Loading MATH500 dataset from HuggingFace (streaming mode)...")
+            # Use streaming to avoid downloading entire dataset
+            ds = datasets.load_dataset("HuggingFaceH4/MATH-500", split="test", streaming=True)
+            # Take first 50 problems and convert to list for caching
+            _MATH500_CACHE = list(ds.take(50))
+            logger.info(f"Loaded {len(_MATH500_CACHE)} MATH500 problems")
+        except Exception as e:
+            logger.error(f"Failed to load MATH500: {e}")
+            _MATH500_CACHE = []
+    return _MATH500_CACHE
+
+
+def _load_aime_2024():
+    """Load AIME-2024 dataset and cache it."""
+    global _AIME_CACHE
+    if _AIME_CACHE is None:
+        try:
+            logger.info("Loading AIME-2024 dataset from HuggingFace...")
+            # AIME is small (30 problems), so load it all
+            ds = datasets.load_dataset("Maxwell-Jia/AIME_2024", split="train")
+            _AIME_CACHE = list(ds)
+            logger.info(f"Loaded {len(_AIME_CACHE)} AIME-2024 problems")
+        except Exception as e:
+            logger.error(f"Failed to load AIME-2024: {e}")
+            _AIME_CACHE = []
+    return _AIME_CACHE
+
+
+def _categorize_math500_problem(problem: dict) -> str:
+    """Extract category from MATH500 problem."""
+    # MATH500 has a 'type' field indicating the category
+    return problem.get("type", "Math")
+
+
+def _determine_difficulty(problem: dict, dataset: str) -> str:
+    """Determine difficulty level of a problem."""
+    if dataset == "AIME":
+        # All AIME problems are hard
+        return "Hard"
+    elif dataset == "MATH500":
+        # MATH problems have a 'level' field (1-5)
+        level = problem.get("level", 3)
+        if isinstance(level, str):
+            level = int(level.replace("Level ", ""))
+
+        if level <= 2:
+            return "Easy"
+        elif level <= 4:
+            return "Medium"
+        else:
+            return "Hard"
+    return "Medium"
+
+
+def _get_best_algorithms_for_problem(difficulty: str, category: str) -> List[str]:
+    """Suggest which algorithms work best for this problem type."""
+    # All problems benefit from process-based methods
+    if difficulty == "Hard":
+        return ["beam_search", "particle_filtering", "entropic_particle_filtering", "particle_gibbs"]
+    elif difficulty == "Medium":
+        return ["beam_search", "particle_filtering", "self_consistency", "best_of_n"]
+    else:  # Easy
+        return ["self_consistency", "best_of_n", "beam_search"]
+
+
+def _format_math500_problem(problem: dict, idx: int) -> Dict[str, str]:
+    """Format a MATH500 problem for the UI."""
+    category = _categorize_math500_problem(problem)
+    difficulty = _determine_difficulty(problem, "MATH500")
+
+    return {
+        "category": f"MATH500 - {category}",
+        "difficulty": difficulty,
+        "question": problem["problem"],
+        "expected_answer": problem["answer"],
+        "best_for": _get_best_algorithms_for_problem(difficulty, category),
+        "why": f"MATH500 Level {problem.get('level', '?')} {category} problem",
+        "source": "MATH500",
+        "source_id": problem.get("unique_id", idx),
+    }
+
+
+def _format_aime_problem(problem: dict, idx: int) -> Dict[str, str]:
+    """Format an AIME-2024 problem for the UI."""
+    # AIME problems use uppercase keys initially, normalize them
+    problem_text = problem.get("Problem") or problem.get("problem", "")
+    answer = problem.get("Answer") or problem.get("answer", "")
+
+    # Convert answer to string if it's not already
+    if not isinstance(answer, str):
+        answer = str(answer)
+
+    return {
+        "category": "AIME-2024",
+        "difficulty": "Hard",
+        "question": problem_text,
+        "expected_answer": answer,
+        "best_for": ["beam_search", "particle_filtering", "entropic_particle_filtering", "particle_gibbs"],
+        "why": "AIME competition problem - requires advanced reasoning",
+        "source": "AIME-2024",
+        "source_id": problem.get("ID") or problem.get("id", idx),
+    }
+
+
+def get_all_questions() -> List[Dict[str, str]]:
+    """
+    Get all example questions from benchmark datasets.
+
+    Returns a mix of MATH500 and AIME-2024 problems organized by difficulty.
+    """
+    questions = []
+
+    # Load MATH500 dataset
+    math500_ds = _load_math500()
+    if math500_ds:
+        # Sample problems from different difficulty levels
+        try:
+            # Get a diverse set: 3 easy, 4 medium, 3 hard from MATH500
+            easy_problems = [p for i, p in enumerate(math500_ds)
+                           if _determine_difficulty(p, "MATH500") == "Easy"][:3]
+            medium_problems = [p for i, p in enumerate(math500_ds)
+                             if _determine_difficulty(p, "MATH500") == "Medium"][:4]
+            hard_problems = [p for i, p in enumerate(math500_ds)
+                           if _determine_difficulty(p, "MATH500") == "Hard"][:3]
+
+            for i, problem in enumerate(easy_problems + medium_problems + hard_problems):
+                questions.append(_format_math500_problem(problem, i))
+        except Exception as e:
+            logger.error(f"Error sampling MATH500 problems: {e}")
+
+    # Load AIME-2024 dataset
+    aime_ds = _load_aime_2024()
+    if aime_ds:
+        # Take first 5 AIME problems
+        try:
+            for i, problem in enumerate(list(aime_ds)[:5]):
+                questions.append(_format_aime_problem(problem, i))
+        except Exception as e:
+            logger.error(f"Error sampling AIME problems: {e}")
+
+    # If we couldn't load any datasets, provide a fallback
+    if not questions:
+        logger.warning("Could not load benchmark datasets, using fallback questions")
+        questions = _get_fallback_questions()
+
+    return questions
+
+
+def get_questions_by_algorithm(algorithm: str, limit: int = 10) -> List[Dict[str, str]]:
     """
     Get example questions best suited for a specific algorithm.
 
@@ -159,12 +181,14 @@ def get_questions_by_algorithm(algorithm: str, limit: int = 5) -> List[Dict[str,
     Returns:
         List of question dictionaries
     """
+    all_questions = get_all_questions()
+
     # Filter questions that are good for this algorithm
-    suitable = [q for q in EXAMPLE_QUESTIONS if algorithm in q["best_for"]]
+    suitable = [q for q in all_questions if algorithm in q["best_for"]]
 
     # If we don't have enough, add others
     if len(suitable) < limit:
-        remaining = [q for q in EXAMPLE_QUESTIONS if algorithm not in q["best_for"]]
+        remaining = [q for q in all_questions if algorithm not in q["best_for"]]
         suitable.extend(remaining[:limit - len(suitable)])
 
     return suitable[:limit]
@@ -180,9 +204,44 @@ def get_questions_by_difficulty(difficulty: str) -> List[Dict[str, str]]:
     Returns:
         List of question dictionaries
     """
-    return [q for q in EXAMPLE_QUESTIONS if q["difficulty"] == difficulty]
+    all_questions = get_all_questions()
+    return [q for q in all_questions if q["difficulty"] == difficulty]
 
 
-def get_all_questions() -> List[Dict[str, str]]:
-    """Get all example questions."""
-    return EXAMPLE_QUESTIONS
+def _get_fallback_questions() -> List[Dict[str, str]]:
+    """
+    Fallback questions if datasets cannot be loaded.
+    These are simple examples that don't require external datasets.
+    """
+    return [
+        {
+            "category": "Algebra",
+            "difficulty": "Easy",
+            "question": "Solve for x: 2x + 5 = 13",
+            "expected_answer": "x = 4",
+            "best_for": ["beam_search", "self_consistency", "best_of_n"],
+            "why": "Simple algebraic equation",
+            "source": "fallback",
+            "source_id": "fallback-1",
+        },
+        {
+            "category": "Algebra",
+            "difficulty": "Medium",
+            "question": "Solve the quadratic equation: x^2 + 5x + 6 = 0",
+            "expected_answer": "x = -2 or x = -3",
+            "best_for": ["beam_search", "particle_filtering"],
+            "why": "Multi-step quadratic solution",
+            "source": "fallback",
+            "source_id": "fallback-2",
+        },
+        {
+            "category": "Calculus",
+            "difficulty": "Medium",
+            "question": "Find the derivative of f(x) = x^3 + 2x^2 - 5x + 3",
+            "expected_answer": "f'(x) = 3x^2 + 4x - 5",
+            "best_for": ["beam_search", "self_consistency"],
+            "why": "Derivative calculation",
+            "source": "fallback",
+            "source_id": "fallback-3",
+        },
+    ]
