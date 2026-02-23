@@ -688,68 +688,7 @@
             transform: none !important;
         }
 
-        /* Performance Metrics - Simplified */
-        .metrics-dashboard {
-            display: none;
-            margin-bottom: 24px;
-        }
-
-        .metrics-dashboard.visible {
-            display: block;
-        }
-
-        .metrics-summary {
-            display: flex;
-            gap: 12px;
-            padding: 20px;
-            background: var(--bg-primary);
-            border-radius: var(--radius-lg);
-            border: 2px solid var(--border-color);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .metric-item {
-            flex: 1;
-            text-align: center;
-            padding: 16px;
-            border-radius: var(--radius);
-            background: var(--bg-secondary);
-        }
-
-        .metric-label {
-            font-size: 12px;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .metric-value {
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .metric-unit {
-            font-size: 14px;
-            color: var(--text-secondary);
-            font-weight: 400;
-        }
-
-        .metric-delta {
-            font-size: 12px;
-            margin-top: 6px;
-            font-weight: 500;
-        }
-
-        .metric-delta.faster {
-            color: var(--success);
-        }
-
-        .metric-delta.slower {
-            color: var(--text-tertiary);
-        }
+        /* Performance Metrics - Removed from main dashboard, moved to Performance Details */
 
         /* Results - Clean Side-by-Side */
         .results {
@@ -1616,40 +1555,6 @@
 
         <div id="errorContainer"></div>
 
-        <!-- Performance Metrics (Simplified) -->
-        <div class="metrics-dashboard" id="metricsDashboard">
-            <div class="metrics-summary" id="metricsSummary">
-                <!-- Small Model Baseline (only in match_frontier mode) -->
-                <div class="metric-item" id="smallMetricItem" style="display: none;">
-                    <div class="metric-label">Small Model</div>
-                    <div class="metric-value">
-                        <span id="smallLatencyMetric">-</span>
-                        <span class="metric-unit">ms</span>
-                    </div>
-                </div>
-
-                <!-- Middle metric (ITS or Baseline depending on mode) -->
-                <div class="metric-item">
-                    <div class="metric-label" id="middleMetricLabel">Baseline</div>
-                    <div class="metric-value">
-                        <span id="middleLatencyMetric">-</span>
-                        <span class="metric-unit">ms</span>
-                    </div>
-                    <div class="metric-delta" id="middleComparison"></div>
-                </div>
-
-                <!-- Right metric (Frontier or ITS depending on mode) -->
-                <div class="metric-item">
-                    <div class="metric-label" id="rightMetricLabel">ITS</div>
-                    <div class="metric-value">
-                        <span id="rightLatencyMetric">-</span>
-                        <span class="metric-unit">ms</span>
-                    </div>
-                    <div class="metric-delta" id="rightComparison"></div>
-                </div>
-            </div>
-        </div>
-
         <!-- Expected Answer -->
         <div id="expectedAnswerContainer" class="expected-answer-container">
             <div class="expected-answer-header">
@@ -1965,7 +1870,6 @@
             document.getElementById('rightPaneSize').style.display = 'none';
             document.getElementById('rightPaneCost').style.display = 'none';
 
-            document.getElementById('metricsDashboard').classList.remove('visible');
             document.getElementById('expectedAnswerContainer').classList.remove('visible');
         }
 
@@ -2104,82 +2008,7 @@
             document.getElementById('rightPaneCost').style.display = 'none';
         }
 
-        // Update metrics dashboard (simplified)
-        function updateMetrics(data) {
-            const dashboard = document.getElementById('metricsDashboard');
-            dashboard.classList.add('visible');
-
-            const smallMetricItem = document.getElementById('smallMetricItem');
-            const middleMetricLabel = document.getElementById('middleMetricLabel');
-            const rightMetricLabel = document.getElementById('rightMetricLabel');
-
-            if (currentUseCase === 'match_frontier' && data.small_baseline) {
-                // 3-column metrics: Small, Small+ITS, Frontier
-                smallMetricItem.style.display = 'block';
-
-                const smallMs = data.small_baseline.latency_ms;
-                const itsMs = data.its.latency_ms;
-                const frontierMs = data.baseline.latency_ms;
-
-                document.getElementById('smallLatencyMetric').textContent = smallMs;
-                document.getElementById('middleLatencyMetric').textContent = itsMs;
-                document.getElementById('rightLatencyMetric').textContent = frontierMs;
-
-                middleMetricLabel.textContent = 'Small + ITS';
-                rightMetricLabel.textContent = 'Frontier';
-
-                // Show improvement from small to small+ITS
-                const middleComparison = document.getElementById('middleComparison');
-                if (itsMs > smallMs) {
-                    const percent = (((itsMs - smallMs) / smallMs) * 100).toFixed(0);
-                    middleComparison.textContent = `+${percent}% slower`;
-                    middleComparison.className = 'metric-delta slower';
-                } else {
-                    const percent = (((smallMs - itsMs) / smallMs) * 100).toFixed(0);
-                    middleComparison.textContent = `${percent}% faster`;
-                    middleComparison.className = 'metric-delta faster';
-                }
-
-                // Show comparison to frontier
-                const rightComparison = document.getElementById('rightComparison');
-                if (frontierMs > itsMs) {
-                    const percent = (((frontierMs - itsMs) / frontierMs) * 100).toFixed(0);
-                    rightComparison.textContent = `${percent}% faster than Frontier`;
-                    rightComparison.className = 'metric-delta faster';
-                } else {
-                    const percent = (((itsMs - frontierMs) / itsMs) * 100).toFixed(0);
-                    rightComparison.textContent = `${percent}% slower than Frontier`;
-                    rightComparison.className = 'metric-delta slower';
-                }
-            } else {
-                // 2-column metrics: Baseline, ITS
-                smallMetricItem.style.display = 'none';
-
-                const baselineMs = data.baseline.latency_ms;
-                const itsMs = data.its.latency_ms;
-
-                document.getElementById('middleLatencyMetric').textContent = baselineMs;
-                document.getElementById('rightLatencyMetric').textContent = itsMs;
-
-                middleMetricLabel.textContent = 'Baseline';
-                rightMetricLabel.textContent = 'ITS';
-
-                // Clear middle comparison for baseline
-                document.getElementById('middleComparison').textContent = '';
-
-                // Show ITS comparison to baseline
-                const rightComparison = document.getElementById('rightComparison');
-                if (itsMs > baselineMs) {
-                    const percent = (((itsMs - baselineMs) / baselineMs) * 100).toFixed(0);
-                    rightComparison.textContent = `+${percent}% slower`;
-                    rightComparison.className = 'metric-delta slower';
-                } else {
-                    const percent = (((baselineMs - itsMs) / baselineMs) * 100).toFixed(0);
-                    rightComparison.textContent = `${percent}% faster`;
-                    rightComparison.className = 'metric-delta faster';
-                }
-            }
-        }
+        // Metrics moved to Performance Details within each result pane
 
         // Extract final answer from text
         function extractFinalAnswer(text) {
@@ -2496,7 +2325,7 @@
             section.classList.toggle('expanded');
         }
 
-        function renderAnswerBox(containerId, data) {
+        function renderAnswerBox(containerId, data, comparisonData = null) {
             const container = document.getElementById(containerId);
 
             // The full response contains all reasoning
@@ -2619,6 +2448,16 @@
                 `;
             }
 
+            // Add comparison data if provided
+            if (comparisonData) {
+                html += `
+                    <div class="detail-row">
+                        <span class="detail-label">${comparisonData.label}</span>
+                        <span class="detail-value">${comparisonData.value}</span>
+                    </div>
+                `;
+            }
+
             html += `
                         </div>
                     </div>
@@ -2648,13 +2487,29 @@
 
             if (currentUseCase === 'match_frontier' && data.small_baseline) {
                 // 3-column layout: Small baseline, Small+ITS, Frontier
+                const smallMs = data.small_baseline.latency_ms;
+                const itsMs = data.its.latency_ms;
+                const frontierMs = data.baseline.latency_ms;
+
                 renderAnswerBox('smallBaselineContent', data.small_baseline);
-                renderAnswerBox('middlePaneContent', data.its);
-                renderAnswerBox('rightPaneContent', data.baseline);
+                renderAnswerBox('middlePaneContent', data.its, {
+                    label: 'vs Small Model',
+                    value: `${itsMs - smallMs > 0 ? '+' : ''}${(itsMs - smallMs).toFixed(0)}ms`
+                });
+                renderAnswerBox('rightPaneContent', data.baseline, {
+                    label: 'vs ITS Result',
+                    value: `${frontierMs - itsMs > 0 ? '+' : ''}${(frontierMs - itsMs).toFixed(0)}ms`
+                });
             } else {
                 // 2-column layout: Baseline, ITS
+                const baselineMs = data.baseline.latency_ms;
+                const itsMs = data.its.latency_ms;
+
                 renderAnswerBox('middlePaneContent', data.baseline);
-                renderAnswerBox('rightPaneContent', data.its);
+                renderAnswerBox('rightPaneContent', data.its, {
+                    label: 'vs Baseline',
+                    value: `${itsMs - baselineMs > 0 ? '+' : ''}${(itsMs - baselineMs).toFixed(0)}ms`
+                });
             }
 
             // Expected answer - show simply without the complex formatting
@@ -2664,9 +2519,6 @@
                 renderMath(expectedContent);
                 document.getElementById('expectedAnswerContainer').classList.add('visible');
             }
-
-            // Update metrics (currently shows 2 metrics, could be updated for 3)
-            updateMetrics(data);
         }
 
         // Run comparison
