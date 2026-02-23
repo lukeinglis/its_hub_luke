@@ -113,20 +113,63 @@ async def health_check():
     )
 
 
+def check_server_available(base_url: str, timeout: float = 1.0) -> bool:
+    """Check if a server is available by attempting to connect to it."""
+    import socket
+    from urllib.parse import urlparse
+
+    try:
+        parsed = urlparse(base_url)
+        host = parsed.hostname or 'localhost'
+        port = parsed.port or 8100
+
+        # Try to connect to the server
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        result = sock.connect_ex((host, port))
+        sock.close()
+
+        return result == 0
+    except Exception as e:
+        logger.debug(f"Server check failed for {base_url}: {e}")
+        return False
+
+
 @app.get("/models")
 async def list_models():
-    """List available models."""
-    return {
-        "models": [
-            {
+    """List available models. Only include models where the server is available."""
+    available_models = []
+
+    for model_id, config in MODEL_REGISTRY.items():
+        # Check if model requires external server (has non-standard base_url)
+        base_url = config.get("base_url", "")
+
+        # Skip server check for standard OpenAI and Vertex AI models
+        if (base_url.startswith("https://api.openai.com") or
+            config.get("provider") == "vertex_ai" or
+            not base_url):
+            available_models.append({
                 "id": model_id,
                 "description": config["description"],
                 "model_name": config["model_name"],
                 "size": config.get("size", "Unknown"),
-            }
-            for model_id, config in MODEL_REGISTRY.items()
-        ]
-    }
+            })
+            continue
+
+        # For custom endpoints (Granite, local vLLM), check if server is available
+        server_available = check_server_available(base_url, timeout=1.0)
+
+        if server_available:
+            available_models.append({
+                "id": model_id,
+                "description": config["description"],
+                "model_name": config["model_name"],
+                "size": config.get("size", "Unknown"),
+            })
+        else:
+            logger.debug(f"Skipping model {model_id} - server at {base_url} not available")
+
+    return {"models": available_models}
 
 
 @app.get("/examples")
