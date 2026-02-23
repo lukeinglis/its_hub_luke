@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # Configure logging first
 logging.basicConfig(
@@ -107,6 +108,13 @@ app.add_middleware(
 # Mount frontend static files (for logo and other assets)
 frontend_dir = Path(__file__).parent.parent / "frontend"
 app.mount("/frontend", StaticFiles(directory=str(frontend_dir)), name="frontend")
+
+
+@app.get("/")
+async def serve_frontend():
+    """Serve the frontend HTML."""
+    frontend_path = Path(__file__).parent.parent / "frontend" / "index.html"
+    return FileResponse(frontend_path)
 
 
 @app.get("/health", response_model=HealthResponse)
