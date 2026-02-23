@@ -25,6 +25,17 @@ All models use either OpenAI API or Google Cloud Vertex AI.
 - **gemini-pro-vertex** 🏆 - Gemini 1.5 Pro (Frontier)
 - **gemini-flash-vertex** ⚡ - Gemini 1.5 Flash (Small, fast)
 
+### IBM Granite Models (Self-Hosted)
+
+**IBM's Open-Source Enterprise Models 🏢**
+
+Latest Granite models available via Hugging Face:
+- **granite-4.0-8b** - Granite 4.0 8B Instruct (Latest, Dec 2024)
+- **granite-4.0-3b** ⚡ - Granite 4.0 3B Instruct (Small, fast)
+- **granite-3.3-8b** - Granite 3.3 8B Instruct (Open-source)
+
+Run with vLLM: `vllm serve ibm-granite/granite-4.0-8b-instruct --port 8100`
+
 ## ✅ Working Algorithms
 
 ### Outcome-Based Algorithms
@@ -76,8 +87,12 @@ OPENAI_API_KEY=your-openai-api-key
 VERTEX_PROJECT=your-gcp-project-id
 VERTEX_LOCATION=us-central1
 
-# Optional: For local vLLM
-VLLM_BASE_URL=http://localhost:8100/v1
+# Optional: For IBM Granite models (self-hosted)
+GRANITE_BASE_URL=http://localhost:8100/v1
+GRANITE_API_KEY=NO_API_KEY
+
+# Optional: For other local vLLM models
+VLLM_BASE_URL=http://localhost:8200/v1
 VLLM_API_KEY=NO_API_KEY
 VLLM_MODEL_NAME=your-model-name
 ```
@@ -89,6 +104,7 @@ VLLM_MODEL_NAME=your-model-name
 | **OpenAI** | GPT-4o, GPT-4o Mini, GPT-3.5 | OPENAI_API_KEY | Native OpenAI API |
 | **Vertex AI** | Claude (Sonnet, Opus, Haiku) | GCP credentials | Anthropic on Vertex |
 | **Vertex AI** | Gemini (Pro, Flash) | GCP credentials | Native Google models |
+| **Self-Hosted** | IBM Granite 4.0, 3.3 | N/A | vLLM via Hugging Face |
 | **Local vLLM** | Any open-source model | N/A | Self-hosted |
 
 ## Vertex AI Setup
@@ -116,6 +132,40 @@ To use Vertex AI models (Claude and Gemini):
    VERTEX_PROJECT=your-gcp-project-id
    VERTEX_LOCATION=us-central1
    ```
+
+## IBM Granite Setup
+
+To use IBM Granite 4.0 or 3.3 models:
+
+1. **Install vLLM** (if not already installed):
+   ```bash
+   pip install vllm
+   ```
+
+2. **Start vLLM server** with Granite model:
+   ```bash
+   # Granite 4.0 8B (Latest)
+   vllm serve ibm-granite/granite-4.0-8b-instruct --port 8100
+
+   # Or Granite 4.0 3B (Faster)
+   vllm serve ibm-granite/granite-4.0-3b-instruct --port 8100
+
+   # Or Granite 3.3 8B
+   vllm serve ibm-granite/granite-3.3-8b-instruct --port 8100
+   ```
+
+3. **Set environment variables** in `.env`:
+   ```bash
+   GRANITE_BASE_URL=http://localhost:8100/v1
+   GRANITE_API_KEY=NO_API_KEY
+   ```
+
+4. **Available Granite models**:
+   - `granite-4.0-8b` - Latest 8B instruct model (Dec 2024)
+   - `granite-4.0-3b` - Smaller 3B instruct model
+   - `granite-3.3-8b` - Previous generation 8B model
+
+**Hugging Face Hub**: https://huggingface.co/ibm-granite
 
 ## Testing
 

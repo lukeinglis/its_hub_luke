@@ -148,6 +148,47 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "output_cost_per_1m": 0.30,
     },
 
+    # ========================================================================
+    # IBM GRANITE MODELS
+    # ========================================================================
+    # IBM's open-source Granite models for enterprise AI
+    # Latest versions: Granite 4.0 and Granite 3.3
+    # Available via Hugging Face or self-hosted via vLLM
+
+    # === Granite 4.0 Models (Latest) ===
+    "granite-4.0-8b": {
+        "base_url": os.getenv("GRANITE_BASE_URL", "http://localhost:8100/v1"),
+        "api_key_env_var": "GRANITE_API_KEY",
+        "model_name": "ibm-granite/granite-4.0-8b-instruct",
+        "description": "🏢 IBM Granite 4.0 8B (Latest, open-source)",
+        "provider": "openai",
+        "size": "8B",
+        "input_cost_per_1m": 0.0,  # Free if self-hosted
+        "output_cost_per_1m": 0.0,
+    },
+    "granite-4.0-3b": {
+        "base_url": os.getenv("GRANITE_BASE_URL", "http://localhost:8100/v1"),
+        "api_key_env_var": "GRANITE_API_KEY",
+        "model_name": "ibm-granite/granite-4.0-3b-instruct",
+        "description": "⚡ IBM Granite 4.0 3B (Small, fast)",
+        "provider": "openai",
+        "size": "3B",
+        "input_cost_per_1m": 0.0,  # Free if self-hosted
+        "output_cost_per_1m": 0.0,
+    },
+
+    # === Granite 3.3 Models ===
+    "granite-3.3-8b": {
+        "base_url": os.getenv("GRANITE_BASE_URL", "http://localhost:8100/v1"),
+        "api_key_env_var": "GRANITE_API_KEY",
+        "model_name": "ibm-granite/granite-3.3-8b-instruct",
+        "description": "🏢 IBM Granite 3.3 8B (Open-source)",
+        "provider": "openai",
+        "size": "8B",
+        "input_cost_per_1m": 0.0,  # Free if self-hosted
+        "output_cost_per_1m": 0.0,
+    },
+
     # ===== LOCAL/CUSTOM MODELS =====
     # For running your own vLLM server with any open-source model
     "local-vllm": {
