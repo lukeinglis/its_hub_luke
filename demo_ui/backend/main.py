@@ -17,6 +17,7 @@ from typing import Dict
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 # Configure logging first
 logging.basicConfig(
@@ -102,6 +103,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount frontend static files (for logo and other assets)
+frontend_dir = Path(__file__).parent.parent / "frontend"
+app.mount("/frontend", StaticFiles(directory=str(frontend_dir)), name="frontend")
 
 
 @app.get("/health", response_model=HealthResponse)
