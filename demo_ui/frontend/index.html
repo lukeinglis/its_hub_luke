@@ -2184,15 +2184,35 @@
         // Extract final answer from text
         function extractFinalAnswer(text) {
             // Try to find boxed answer (common in math problems)
-            const boxedMatch = text.match(/\\boxed\{([^}]+)\}/);
-            if (boxedMatch) {
-                return boxedMatch[1];
+            // Need to handle nested braces properly for things like \boxed{\frac{14}{3}}
+            const boxedIndex = text.indexOf('\\boxed{');
+            if (boxedIndex !== -1) {
+                let braceCount = 0;
+                let startIndex = boxedIndex + 7; // Start after '\boxed{'
+                let endIndex = startIndex;
+
+                for (let i = startIndex; i < text.length; i++) {
+                    if (text[i] === '{') {
+                        braceCount++;
+                    } else if (text[i] === '}') {
+                        if (braceCount === 0) {
+                            endIndex = i;
+                            break;
+                        }
+                        braceCount--;
+                    }
+                }
+
+                if (endIndex > startIndex) {
+                    return text.substring(startIndex, endIndex);
+                }
             }
 
             // Try to find explicit "Final Answer:" patterns
             const finalAnswerPatterns = [
                 /Final Answer:\s*(.+?)(?:\n\n|$)/is,
                 /Answer:\s*(.+?)(?:\n\n|$)/is,
+                /Therefore,?\s+the\s+(?:answer|value|result)\s+(?:is|equals?)\s+(.+?)(?:\.|$)/is,
                 /Therefore,?\s+(.+?)(?:\n\n|$)/is,
                 /Thus,?\s+(.+?)(?:\n\n|$)/is,
                 /So,?\s+(.+?)(?:\n\n|$)/is,
@@ -2202,7 +2222,14 @@
             for (const pattern of finalAnswerPatterns) {
                 const match = text.match(pattern);
                 if (match) {
-                    const answer = match[1].trim();
+                    let answer = match[1].trim();
+
+                    // Extract just the math expression if it's in the format "is $...$"
+                    const mathMatch = answer.match(/\$([^$]+)\$/);
+                    if (mathMatch) {
+                        answer = mathMatch[1];
+                    }
+
                     // Only use if it's reasonably short (not a whole paragraph)
                     if (answer.length < 200) {
                         return answer;
@@ -2482,13 +2509,21 @@
 
             // Show extracted final answer prominently, or a message if not found
             if (finalAnswer) {
-                // Check if the answer contains LaTeX
-                const hasLatex = finalAnswer.includes('$') || /[\\{}_^]/.test(finalAnswer);
-                const displayAnswer = hasLatex
-                    ? finalAnswer
-                    : (finalAnswer.includes('=') || /^[-+]?\d/.test(finalAnswer))
-                        ? '$' + finalAnswer + '$'
-                        : finalAnswer;
+                // Check if answer needs math rendering and wrap in $ delimiters if needed
+                let displayAnswer = finalAnswer;
+
+                // If it contains LaTeX commands but isn't already wrapped in $
+                if (/[\\{}_^]/.test(finalAnswer) && !finalAnswer.includes('$')) {
+                    displayAnswer = '$' + finalAnswer + '$';
+                }
+                // If it's already wrapped in $, use as-is
+                else if (finalAnswer.includes('$')) {
+                    displayAnswer = finalAnswer;
+                }
+                // If it looks like a number or equation, wrap in $
+                else if (finalAnswer.includes('=') || /^[-+]?\d/.test(finalAnswer)) {
+                    displayAnswer = '$' + finalAnswer + '$';
+                }
 
                 html += `
                     <div class="final-answer-section">
