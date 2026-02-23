@@ -155,41 +155,22 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
     # Latest versions: Granite 4.0 and Granite 3.3
     # Available via Hugging Face or self-hosted via vLLM
 
-    # === Granite 4.0 Models (Latest) ===
+    # === Granite Models (IBM Open-Source) ===
     # Note: Requires vLLM server running on GRANITE_BASE_URL
-    # Start with: vllm serve ibm-granite/granite-4.0-8b-instruct --port 8100
-    "granite-4.0-8b": {
-        "base_url": os.getenv("GRANITE_BASE_URL", "http://localhost:8100/v1"),
-        "api_key_env_var": "GRANITE_API_KEY",
-        "model_name": "ibm-granite/granite-4.0-8b-instruct",
-        "description": "🏢 IBM Granite 4.0 8B (Latest, open-source)",
-        "provider": "openai",
-        "size": "8B",
-        "input_cost_per_1m": 0.0,  # Free if self-hosted
-        "output_cost_per_1m": 0.0,
-    },
-    "granite-4.0-3b": {
-        "base_url": os.getenv("GRANITE_BASE_URL", "http://localhost:8100/v1"),
-        "api_key_env_var": "GRANITE_API_KEY",
-        "model_name": "ibm-granite/granite-4.0-3b-instruct",
-        "description": "⚡ IBM Granite 4.0 3B (Small, fast)",
-        "provider": "openai",
-        "size": "3B",
-        "input_cost_per_1m": 0.0,  # Free if self-hosted
-        "output_cost_per_1m": 0.0,
-    },
-
-    # === Granite 3.3 Models ===
+    # vLLM works best on Linux with GPU. May have compatibility issues on macOS/CPU.
+    # Start with: python -m vllm.entrypoints.openai.api_server --model ibm-granite/granite-3.3-8b-instruct --port 8100 --max-model-len 8192
     "granite-3.3-8b": {
         "base_url": os.getenv("GRANITE_BASE_URL", "http://localhost:8100/v1"),
         "api_key_env_var": "GRANITE_API_KEY",
         "model_name": "ibm-granite/granite-3.3-8b-instruct",
-        "description": "🏢 IBM Granite 3.3 8B (Open-source)",
+        "description": "🏢 IBM Granite 3.3 8B Instruct (Open-source)",
         "provider": "openai",
         "size": "8B",
         "input_cost_per_1m": 0.0,  # Free if self-hosted
         "output_cost_per_1m": 0.0,
     },
+    # Note: Granite 4.0 models are not yet available as instruction-tuned models on Hugging Face
+    # Use granite-3.3-8b-instruct or granite-8b-code-instruct instead
 
     # ===== LOCAL/CUSTOM MODELS =====
     # For running your own vLLM server with any open-source model

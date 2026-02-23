@@ -135,23 +135,24 @@ To use Vertex AI models (Claude and Gemini):
 
 ## IBM Granite Setup
 
-To use IBM Granite 4.0 or 3.3 models:
+To use IBM Granite models (requires Linux with GPU for optimal performance):
 
-1. **Install vLLM** (if not already installed):
+**⚠️ Note:** vLLM is designed for Linux with CUDA GPUs. Running on macOS or CPU-only systems may have compatibility issues.
+
+### Option 1: Linux with GPU (Recommended)
+
+1. **Install vLLM**:
    ```bash
    pip install vllm
    ```
 
-2. **Start vLLM server** with Granite model:
+2. **Start vLLM server**:
    ```bash
-   # Granite 4.0 8B (Latest)
-   vllm serve ibm-granite/granite-4.0-8b-instruct --port 8100
-
-   # Or Granite 4.0 3B (Faster)
-   vllm serve ibm-granite/granite-4.0-3b-instruct --port 8100
-
-   # Or Granite 3.3 8B
-   vllm serve ibm-granite/granite-3.3-8b-instruct --port 8100
+   # Granite 3.3 8B (Currently available)
+   python -m vllm.entrypoints.openai.api_server \
+     --model ibm-granite/granite-3.3-8b-instruct \
+     --port 8100 \
+     --max-model-len 8192
    ```
 
 3. **Set environment variables** in `.env`:
@@ -160,12 +161,16 @@ To use IBM Granite 4.0 or 3.3 models:
    GRANITE_API_KEY=NO_API_KEY
    ```
 
-4. **Available Granite models**:
-   - `granite-4.0-8b` - Latest 8B instruct model (Dec 2024)
-   - `granite-4.0-3b` - Smaller 3B instruct model
-   - `granite-3.3-8b` - Previous generation 8B model
+### Option 2: Use Alternative Models
+
+If you can't run Granite locally, consider these alternatives:
+- **GPT models** (gpt-4o-mini, gpt-3.5-turbo) - Fast and affordable via OpenAI API
+- **Claude models** (via Vertex AI) - High quality, available through Google Cloud
+- **Gemini models** (via Vertex AI) - Google's models, good performance
 
 **Hugging Face Hub**: https://huggingface.co/ibm-granite
+
+**Note:** Granite models will automatically appear in the model dropdown only when the vLLM server is running and accessible.
 
 ## Testing
 
