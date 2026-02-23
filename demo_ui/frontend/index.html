@@ -175,22 +175,59 @@
 
         .header-content {
             text-align: center;
-            max-width: 640px;
+            max-width: 800px;
             margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-logo-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            filter: var(--logo-filter, none);
+        }
+
+        [data-theme="dark"] .header-logo {
+            --logo-filter: brightness(0) invert(1);
+        }
+
+        .header-text {
+            text-align: left;
         }
 
         .header-content h1 {
-            font-size: 32px;
-            margin-bottom: 8px;
-            font-weight: 800;
+            font-size: 28px;
+            margin-bottom: 4px;
+            font-weight: 700;
             color: var(--text-primary);
-            letter-spacing: -0.03em;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+
+        .header-title-main {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
         }
 
         .subtitle {
             color: var(--text-secondary);
             font-size: 16px;
             font-weight: 400;
+            text-align: center;
+            margin-top: 4px;
         }
 
         /* Dark Mode Toggle - Floating */
@@ -1370,8 +1407,26 @@
                 padding: 24px 20px;
             }
 
+            .header-logo-section {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .header-text {
+                text-align: center;
+            }
+
+            .header-logo {
+                width: 60px;
+                height: 60px;
+            }
+
+            .header-title-main {
+                font-size: 12px;
+            }
+
             .header-content h1 {
-                font-size: 24px;
+                font-size: 20px;
             }
 
             .subtitle {
@@ -1417,7 +1472,13 @@
         <!-- Header -->
         <header>
             <div class="header-content">
-                <h1>Inference-Time Scaling Demo</h1>
+                <div class="header-logo-section">
+                    <img src="ai-innovation-lab-logo.png" alt="AI Innovation Lab" class="header-logo">
+                    <div class="header-text">
+                        <div class="header-title-main">Red Hat AI Innovation Team</div>
+                        <h1>Inference-Time Scaling</h1>
+                    </div>
+                </div>
                 <p class="subtitle" id="headerSubtitle">Compare baseline inference with ITS algorithms side by side</p>
             </div>
         </header>
