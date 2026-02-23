@@ -193,11 +193,6 @@
             width: 80px;
             height: 80px;
             object-fit: contain;
-            filter: var(--logo-filter, none);
-        }
-
-        [data-theme="dark"] .header-logo {
-            --logo-filter: brightness(0) invert(1);
         }
 
         .header-text {
@@ -1059,7 +1054,7 @@
         }
 
         .expandable-section.expanded .expandable-content {
-            max-height: 2000px;
+            max-height: 5000px;
         }
 
         .details-section {
@@ -1092,6 +1087,265 @@
             font-family: 'IBM Plex Mono', monospace;
         }
 
+        /* Algorithm Trace Visualization */
+        .trace-section {
+            padding: 16px;
+            background: var(--bg-secondary);
+        }
+
+        .trace-summary {
+            font-size: 13px;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+
+        .candidate-card {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            transition: border-color 0.2s ease;
+        }
+
+        .candidate-card.winner {
+            border-color: var(--success);
+            background: rgba(163, 190, 140, 0.08);
+        }
+
+        .candidate-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .candidate-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .candidate-card.winner .candidate-label {
+            color: var(--success);
+        }
+
+        .winner-badge {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--success);
+            background: rgba(163, 190, 140, 0.15);
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .candidate-content {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            max-height: 80px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .candidate-content.expanded-candidate {
+            max-height: none;
+        }
+
+        .candidate-content::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(transparent, var(--bg-primary));
+            pointer-events: none;
+        }
+
+        .candidate-content.expanded-candidate::after {
+            display: none;
+        }
+
+        .candidate-card.winner .candidate-content::after {
+            background: linear-gradient(transparent, rgba(46, 52, 64, 0.92));
+        }
+
+        .candidate-expand-btn {
+            font-size: 11px;
+            color: var(--primary);
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 4px 0;
+            margin-top: 4px;
+        }
+
+        .candidate-expand-btn:hover {
+            text-decoration: underline;
+        }
+
+        .candidate-metric {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .metric-bar-container {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .metric-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .metric-bar.score-bar {
+            background: var(--primary);
+        }
+
+        .candidate-card.winner .metric-bar.score-bar {
+            background: var(--success);
+        }
+
+        .metric-bar.vote-bar {
+            background: var(--info);
+        }
+
+        .candidate-card.winner .metric-bar.vote-bar {
+            background: var(--success);
+        }
+
+        .metric-bar.weight-bar {
+            background: var(--primary);
+        }
+
+        .candidate-card.winner .metric-bar.weight-bar {
+            background: var(--success);
+        }
+
+        .metric-value {
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-secondary);
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            min-width: 40px;
+        }
+
+        /* Vote distribution for Self-Consistency */
+        .vote-distribution {
+            margin-bottom: 16px;
+        }
+
+        .vote-distribution-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .vote-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .vote-answer {
+            font-size: 12px;
+            color: var(--text-secondary);
+            min-width: 80px;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .vote-bar-container {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .vote-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--info);
+            transition: width 0.5s ease;
+        }
+
+        .vote-count {
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-secondary);
+            min-width: 30px;
+            text-align: right;
+        }
+
+        /* Iteration tabs for Particle Gibbs */
+        .iteration-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .iteration-tab {
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .iteration-tab:hover {
+            color: var(--text-secondary);
+            border-color: var(--primary);
+        }
+
+        .iteration-tab.active {
+            color: var(--primary);
+            background: var(--bg-tertiary);
+            border-color: var(--primary);
+        }
+
+        .iteration-content {
+            display: none;
+        }
+
+        .iteration-content.active {
+            display: block;
+        }
+
         .final-answer-content .katex {
             font-size: 1.1em;
         }
@@ -1102,6 +1356,27 @@
             padding: 0;
             background: transparent;
             border: none;
+        }
+
+        /* Chat response - main model output */
+        .chat-response {
+            padding: 20px 24px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            margin-bottom: 16px;
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-primary);
+            animation: slideDown 0.3s ease;
+        }
+
+        .chat-response p {
+            margin: 0 0 12px 0;
+        }
+
+        .chat-response p:last-child {
+            margin-bottom: 0;
         }
 
         /* No final answer fallback */
@@ -1473,7 +1748,6 @@
         <header>
             <div class="header-content">
                 <div class="header-logo-section">
-                    <img src="/frontend/ai-innovation-lab-logo-small.png" alt="AI Innovation Lab" class="header-logo">
                     <div class="header-text">
                         <div class="header-title-main">Red Hat AI Innovation Team</div>
                         <h1>Inference-Time Scaling</h1>
@@ -1655,7 +1929,7 @@
             <div class="result-pane">
                 <div class="pane-header">
                     <div class="pane-title">
-                        <span class="pane-indicator" id="middlePaneIndicator" class="baseline"></span>
+                        <span class="pane-indicator baseline" id="middlePaneIndicator"></span>
                         <span id="middlePaneTitle">Baseline</span>
                         <span class="size-badge" id="middlePaneSize" style="display: none;">-</span>
                     </div>
@@ -1874,8 +2148,9 @@
 
             try {
                 await navigator.clipboard.writeText(content);
-                // Visual feedback
-                const btn = event.target;
+                // Visual feedback - find the button that triggered this
+                const btn = document.querySelector(`#${type}Actions .action-btn`);
+                if (!btn) return;
                 const originalText = btn.textContent;
                 btn.textContent = '✓';
                 btn.style.background = 'var(--success)';
@@ -2386,55 +2661,302 @@
             section.classList.toggle('expanded');
         }
 
-        function renderAnswerBox(containerId, data, comparisonData = null) {
-            const container = document.getElementById(containerId);
+        // Extract the concluding answer from a model response.
+        // Returns the last meaningful paragraph(s) that contain the answer,
+        // stripping away the step-by-step reasoning.
+        function extractConclusion(text) {
+            if (!text || !text.trim()) return text;
 
-            // The full response contains all reasoning
-            const fullResponse = data.answer;
+            // Split into paragraphs
+            const paragraphs = text.trim().split(/\n\n+/).map(p => p.trim()).filter(p => p);
 
-            // Extract just the final answer
-            const finalAnswer = extractFinalAnswer(fullResponse);
+            // If 3 or fewer paragraphs, it's already short — show it all
+            if (paragraphs.length <= 3) return text;
 
-            let html = '';
+            // Look for concluding paragraphs from the end
+            // These typically start with conclusion-like phrases or contain "answer is"
+            const conclusionPatterns = [
+                /^(therefore|thus|so,|hence|in conclusion|the answer|the sum|the value|the result|the remainder|the probability|the largest|the number|there are|this gives|we get|we find|we have|finally)/i,
+                /answer is/i,
+                /=\s*\$?[\d\\]/,
+                /\\boxed/,
+            ];
 
-            // Show extracted final answer prominently, or a message if not found
-            if (finalAnswer) {
-                // Check if answer needs math rendering and wrap in $ delimiters if needed
-                let displayAnswer = finalAnswer;
-
-                // If it contains LaTeX commands but isn't already wrapped in $
-                if (/[\\{}_^]/.test(finalAnswer) && !finalAnswer.includes('$')) {
-                    displayAnswer = '$' + finalAnswer + '$';
+            // Walk backwards to find where the conclusion starts
+            let conclusionStart = paragraphs.length - 1;
+            for (let i = paragraphs.length - 1; i >= Math.max(0, paragraphs.length - 3); i--) {
+                const p = paragraphs[i];
+                const isConclusion = conclusionPatterns.some(pat => pat.test(p));
+                if (isConclusion) {
+                    conclusionStart = i;
                 }
-                // If it's already wrapped in $, use as-is
-                else if (finalAnswer.includes('$')) {
-                    displayAnswer = finalAnswer;
-                }
-                // If it looks like a number or equation, wrap in $
-                else if (finalAnswer.includes('=') || /^[-+]?\d/.test(finalAnswer)) {
-                    displayAnswer = '$' + finalAnswer + '$';
-                }
+            }
 
-                html += `
-                    <div class="final-answer-section">
-                        <div class="final-answer-label">
-                            <span>✓</span>
-                            <span>Final Answer</span>
-                        </div>
-                        <div class="final-answer-content">
-                            ${displayAnswer}
-                        </div>
+            // Take from the conclusion start to the end
+            const conclusion = paragraphs.slice(conclusionStart).join('\n\n');
+            return conclusion;
+        }
+
+        // Format text as HTML paragraphs
+        function formatAsHTML(text) {
+            if (!text || !text.trim()) return '<p>No response</p>';
+
+            let html = text;
+
+            // Escape HTML but preserve $ for KaTeX
+            html = html.replace(/&/g, '&amp;')
+                       .replace(/</g, '&lt;')
+                       .replace(/>/g, '&gt;');
+
+            // Bold: **text**
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+            // Split into paragraphs on double newlines
+            const paragraphs = html.split(/\n\n+/);
+            html = paragraphs.map(p => {
+                p = p.trim();
+                if (!p) return '';
+                p = p.replace(/\n/g, '<br>');
+                return `<p>${p}</p>`;
+            }).filter(p => p).join('');
+
+            return html;
+        }
+
+        // --- Algorithm Trace Rendering ---
+
+        function toggleCandidateContent(btn) {
+            const content = btn.previousElementSibling;
+            content.classList.toggle('expanded-candidate');
+            btn.textContent = content.classList.contains('expanded-candidate') ? 'Show less' : 'Show more';
+        }
+
+        function renderCandidateCard(candidate, metricHtml) {
+            const winnerClass = candidate.is_selected ? ' winner' : '';
+            const winnerBadge = candidate.is_selected ? '<span class="winner-badge">Winner</span>' : '';
+            return `
+                <div class="candidate-card${winnerClass}">
+                    <div class="candidate-header">
+                        <span class="candidate-label">Candidate ${candidate.index + 1}</span>
+                        ${winnerBadge}
                     </div>
-                `;
-            } else {
+                    <div class="candidate-content">${candidate.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</div>
+                    <button class="candidate-expand-btn" onclick="toggleCandidateContent(this)">Show more</button>
+                    ${metricHtml}
+                </div>
+            `;
+        }
+
+        function renderSelfConsistencyTrace(trace) {
+            let html = '<div class="trace-summary">Self-Consistency: generated ' + trace.candidates.length + ' candidates, selected by majority vote (' + trace.total_votes + ' votes)</div>';
+
+            // Vote distribution chart
+            const sortedVotes = Object.entries(trace.vote_counts).sort((a, b) => b[1] - a[1]);
+            const maxVotes = sortedVotes.length > 0 ? sortedVotes[0][1] : 1;
+
+            html += '<div class="vote-distribution">';
+            html += '<div class="vote-distribution-title">Vote Distribution</div>';
+            for (const [answer, count] of sortedVotes) {
+                const pct = (count / maxVotes) * 100;
+                const displayAnswer = answer.length > 20 ? answer.substring(0, 20) + '...' : answer;
                 html += `
-                    <div class="no-final-answer">
-                        No explicit final answer detected. See detailed response below.
+                    <div class="vote-row">
+                        <span class="vote-answer" title="${answer.replace(/"/g, '&quot;')}">${displayAnswer}</span>
+                        <div class="vote-bar-container">
+                            <div class="vote-bar-fill" style="width: ${pct}%"></div>
+                        </div>
+                        <span class="vote-count">${count}</span>
                     </div>
                 `;
             }
+            html += '</div>';
 
-            // Always add expandable section with full response (all reasoning)
+            // Candidate cards
+            for (const candidate of trace.candidates) {
+                html += renderCandidateCard(candidate, '');
+            }
+            return html;
+        }
+
+        function renderBestOfNTrace(trace) {
+            let html = '<div class="trace-summary">Best-of-N: generated ' + trace.candidates.length + ' candidates, scored by LLM judge (range: ' + trace.min_score.toFixed(2) + ' - ' + trace.max_score.toFixed(2) + ')</div>';
+
+            // Sort candidates by score descending
+            const sorted = trace.candidates.map((c, i) => ({ ...c, score: trace.scores[i] }))
+                .sort((a, b) => b.score - a.score);
+
+            const range = trace.max_score - trace.min_score || 1;
+            for (const candidate of sorted) {
+                const pct = ((candidate.score - trace.min_score) / range) * 100;
+                const metricHtml = `
+                    <div class="candidate-metric">
+                        <span class="metric-label">Score</span>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar score-bar" style="width: ${pct}%"></div>
+                        </div>
+                        <span class="metric-value">${candidate.score.toFixed(2)}</span>
+                    </div>
+                `;
+                html += renderCandidateCard(candidate, metricHtml);
+            }
+            return html;
+        }
+
+        function renderBeamSearchTrace(trace) {
+            let html = '<div class="trace-summary">Beam Search: explored ' + trace.candidates.length + ' beams with PRM scoring</div>';
+
+            // Sort by score descending
+            const sorted = trace.candidates.map((c, i) => ({ ...c, score: trace.scores[i], steps: trace.steps_used[i] }))
+                .sort((a, b) => b.score - a.score);
+
+            const maxScore = Math.max(...trace.scores);
+            const minScore = Math.min(...trace.scores);
+            const range = maxScore - minScore || 1;
+
+            for (const candidate of sorted) {
+                const pct = ((candidate.score - minScore) / range) * 100;
+                const metricHtml = `
+                    <div class="candidate-metric">
+                        <span class="metric-label">PRM</span>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar score-bar" style="width: ${pct}%"></div>
+                        </div>
+                        <span class="metric-value">${candidate.score.toFixed(3)}</span>
+                    </div>
+                    <div class="candidate-metric">
+                        <span class="metric-label">Steps</span>
+                        <span class="metric-value">${candidate.steps}</span>
+                    </div>
+                `;
+                html += renderCandidateCard(candidate, metricHtml);
+            }
+            return html;
+        }
+
+        function renderParticleFilteringTrace(trace, containerId) {
+            let html = '<div class="trace-summary">Particle Filtering: maintained ' + trace.candidates.length + ' particles with importance weighting</div>';
+
+            // Sort by normalized weight descending
+            const sorted = trace.candidates.map((c, i) => ({
+                ...c,
+                logWeight: trace.log_weights[i],
+                normWeight: trace.normalized_weights[i],
+                steps: trace.steps_used[i],
+            })).sort((a, b) => b.normWeight - a.normWeight);
+
+            const maxWeight = Math.max(...trace.normalized_weights);
+
+            for (const candidate of sorted) {
+                const pct = maxWeight > 0 ? (candidate.normWeight / maxWeight) * 100 : 0;
+                const metricHtml = `
+                    <div class="candidate-metric">
+                        <span class="metric-label">Weight</span>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar weight-bar" style="width: ${pct}%"></div>
+                        </div>
+                        <span class="metric-value">${(candidate.normWeight * 100).toFixed(1)}%</span>
+                    </div>
+                    <div class="candidate-metric">
+                        <span class="metric-label">Steps</span>
+                        <span class="metric-value">${candidate.steps}</span>
+                    </div>
+                `;
+                html += renderCandidateCard(candidate, metricHtml);
+            }
+            return html;
+        }
+
+        function switchIteration(tabBtn, iterIdx, containerId) {
+            // Update tab active state
+            const tabContainer = tabBtn.parentElement;
+            tabContainer.querySelectorAll('.iteration-tab').forEach(t => t.classList.remove('active'));
+            tabBtn.classList.add('active');
+
+            // Show/hide iteration content
+            const parent = tabContainer.parentElement;
+            parent.querySelectorAll('.iteration-content').forEach(c => c.classList.remove('active'));
+            const target = parent.querySelector('[data-iteration="' + iterIdx + '"]');
+            if (target) target.classList.add('active');
+        }
+
+        function renderParticleGibbsTrace(trace, containerId) {
+            let html = '<div class="trace-summary">Particle Gibbs: ' + trace.num_iterations + ' iterations of particle filtering with reference particle</div>';
+
+            // Iteration tabs
+            html += '<div class="iteration-tabs">';
+            for (let i = 0; i < trace.num_iterations; i++) {
+                const activeClass = i === trace.num_iterations - 1 ? ' active' : '';
+                html += `<button class="iteration-tab${activeClass}" onclick="switchIteration(this, ${i}, '${containerId}')">Iteration ${i + 1}</button>`;
+            }
+            html += '</div>';
+
+            // Iteration content
+            for (let i = 0; i < trace.num_iterations; i++) {
+                const activeClass = i === trace.num_iterations - 1 ? ' active' : '';
+                html += `<div class="iteration-content${activeClass}" data-iteration="${i}">`;
+                html += renderParticleFilteringTrace(trace.iterations[i], containerId + '_iter' + i);
+                html += '</div>';
+            }
+
+            return html;
+        }
+
+        function renderAlgorithmTrace(trace) {
+            if (!trace || !trace.algorithm) return '';
+
+            let traceHtml = '';
+            switch (trace.algorithm) {
+                case 'self_consistency':
+                    traceHtml = renderSelfConsistencyTrace(trace);
+                    break;
+                case 'best_of_n':
+                    traceHtml = renderBestOfNTrace(trace);
+                    break;
+                case 'beam_search':
+                    traceHtml = renderBeamSearchTrace(trace);
+                    break;
+                case 'particle_filtering':
+                    traceHtml = renderParticleFilteringTrace(trace, 'pf_trace');
+                    break;
+                case 'particle_gibbs':
+                    traceHtml = renderParticleGibbsTrace(trace, 'pg_trace');
+                    break;
+                default:
+                    return '';
+            }
+
+            return `
+                <div class="expandable-section">
+                    <button class="expand-button" onclick="toggleSection(this)">
+                        <svg class="expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Algorithm Trace (${trace.candidates ? trace.candidates.length + ' candidates' : trace.num_iterations + ' iterations'})</span>
+                    </button>
+                    <div class="expandable-content">
+                        <div class="trace-section">
+                            ${traceHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAnswerBox(containerId, data, comparisonData = null) {
+            const container = document.getElementById(containerId);
+
+            // The full response from the model
+            const fullResponse = data.answer;
+
+            // Extract just the concluding answer for the main display
+            const conclusion = extractConclusion(fullResponse);
+
+            let html = '';
+
+            // Main response area — show just the conclusion/answer
+            html += `<div class="chat-response">${formatAsHTML(conclusion)}</div>`;
+
+            // Expandable section with full detailed reasoning
             html += `
                 <div class="expandable-section">
                     <button class="expand-button" onclick="toggleSection(this)">
@@ -2524,6 +3046,11 @@
                     </div>
                 </div>
             `;
+
+            // Add algorithm trace section (only for ITS results that have trace data)
+            if (data.trace) {
+                html += renderAlgorithmTrace(data.trace);
+            }
 
             container.innerHTML = html;
             container.classList.add('fade-in');

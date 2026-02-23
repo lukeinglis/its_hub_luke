@@ -31,6 +31,56 @@ class CompareRequest(BaseModel):
     )
 
 
+# --- Algorithm Trace Models ---
+
+class CandidateResponse(BaseModel):
+    """A single candidate response from an algorithm."""
+    index: int = Field(..., description="Candidate index")
+    content: str = Field(..., description="Response text content")
+    is_selected: bool = Field(default=False, description="Whether this candidate was selected as the winner")
+
+
+class SelfConsistencyTrace(BaseModel):
+    """Trace data for Self-Consistency algorithm."""
+    algorithm: Literal["self_consistency"] = "self_consistency"
+    candidates: list[CandidateResponse]
+    vote_counts: dict[str, int] = Field(..., description="Vote counts per unique answer")
+    total_votes: int = Field(..., description="Total number of votes cast")
+
+
+class BestOfNTrace(BaseModel):
+    """Trace data for Best-of-N algorithm."""
+    algorithm: Literal["best_of_n"] = "best_of_n"
+    candidates: list[CandidateResponse]
+    scores: list[float] = Field(..., description="LLM judge scores for each candidate")
+    max_score: float
+    min_score: float
+
+
+class BeamSearchTrace(BaseModel):
+    """Trace data for Beam Search algorithm."""
+    algorithm: Literal["beam_search"] = "beam_search"
+    candidates: list[CandidateResponse]
+    scores: list[float] = Field(..., description="PRM scores for each beam")
+    steps_used: list[int] = Field(..., description="Number of steps used per beam")
+
+
+class ParticleFilteringTrace(BaseModel):
+    """Trace data for Particle Filtering algorithm."""
+    algorithm: Literal["particle_filtering"] = "particle_filtering"
+    candidates: list[CandidateResponse]
+    log_weights: list[float] = Field(..., description="Log-weights for each particle")
+    normalized_weights: list[float] = Field(..., description="Normalized weights (sum to 1)")
+    steps_used: list[int] = Field(..., description="Number of steps used per particle")
+
+
+class ParticleGibbsTrace(BaseModel):
+    """Trace data for Particle Gibbs algorithm."""
+    algorithm: Literal["particle_gibbs"] = "particle_gibbs"
+    num_iterations: int = Field(..., description="Number of Gibbs iterations")
+    iterations: list[ParticleFilteringTrace] = Field(..., description="Trace per iteration")
+
+
 class ResultDetail(BaseModel):
     """Details of a single result (baseline or ITS)."""
     answer: str = Field(..., description="The final answer text")
@@ -40,6 +90,7 @@ class ResultDetail(BaseModel):
     cost_usd: Optional[float] = Field(default=None, description="Cost in USD")
     input_tokens: Optional[int] = Field(default=None, description="Number of input tokens")
     output_tokens: Optional[int] = Field(default=None, description="Number of output tokens")
+    trace: Optional[dict] = Field(default=None, description="Algorithm trace data for visualization")
 
 
 class CompareResponse(BaseModel):

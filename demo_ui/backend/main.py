@@ -40,7 +40,7 @@ if openai_key:
 else:
     logger.warning("OPENAI_API_KEY not found in environment!")
 
-from its_hub.lms import OpenAICompatibleLanguageModel, StepGeneration
+from its_hub.lms import OpenAICompatibleLanguageModel, LiteLLMLanguageModel, StepGeneration
 from its_hub.algorithms import (
     BestOfN,
     SelfConsistency,
@@ -87,7 +87,17 @@ from .models import (
     CompareResponse,
     ResultDetail,
     HealthResponse,
+    CandidateResponse,
+    SelfConsistencyTrace,
+    BestOfNTrace,
+    BeamSearchTrace,
+    ParticleFilteringTrace,
+    ParticleGibbsTrace,
 )
+from its_hub.algorithms.self_consistency import SelfConsistencyResult
+from its_hub.algorithms.bon import BestOfNResult
+from its_hub.algorithms.beam_search import BeamSearchResult
+from its_hub.algorithms.particle_gibbs import ParticleFilteringResult, ParticleGibbsResult
 
 # Create FastAPI app
 app = FastAPI(
@@ -157,9 +167,9 @@ async def list_models():
         # Check if model requires external server (has non-standard base_url)
         base_url = config.get("base_url", "")
 
-        # Skip server check for standard OpenAI and Vertex AI models
+        # Skip server check for standard OpenAI, Vertex AI, and Model Garden models
         if (base_url.startswith("https://api.openai.com") or
-            config.get("provider") == "vertex_ai" or
+            config.get("provider") in ("vertex_ai", "vertex_ai_model_garden") or
             not base_url):
             available_models.append({
                 "id": model_id,
@@ -260,6 +270,32 @@ def create_language_model(model_id: str) -> AbstractLanguageModel:
             )
         else:
             raise ValueError(f"Unknown Vertex AI model type: {model_name}")
+
+    elif provider == "vertex_ai_model_garden":
+        # Open-source models (Llama, Mistral, etc.) hosted on Vertex AI Model Garden
+        # Uses litellm's vertex_ai/ prefix for routing and Google ADC for auth
+        vertex_project = model_config.get("vertex_project")
+        vertex_location = model_config.get("vertex_location")
+
+        if not vertex_project or vertex_project == "your-gcp-project-id":
+            raise ValueError(
+                "VERTEX_PROJECT not configured. Please set VERTEX_PROJECT "
+                "environment variable in your .env file"
+            )
+
+        model_name = f"vertex_ai/{model_config['model_name']}"
+
+        logger.info(
+            f"Creating Vertex AI Model Garden model: {model_name} "
+            f"(project: {vertex_project}, location: {vertex_location})"
+        )
+
+        return LiteLLMLanguageModel(
+            model_name=model_name,
+            vertex_project=vertex_project,
+            vertex_location=vertex_location,
+        )
+
     else:
         # All other models use OpenAI-compatible endpoints
         # This includes: OpenAI, OpenRouter (Claude, Gemini), Together AI (open-source), vLLM
@@ -327,6 +363,118 @@ async def run_baseline(
     return answer, latency_ms, input_tokens, output_tokens
 
 
+def _build_pf_trace(result: ParticleFilteringResult) -> ParticleFilteringTrace:
+    """Build a ParticleFilteringTrace from a ParticleFilteringResult."""
+    import numpy as np
+
+    log_w = result.log_weights_lst
+    # Normalize log-weights to probabilities
+    max_lw = max(log_w) if log_w else 0.0
+    exp_w = [np.exp(lw - max_lw) for lw in log_w]
+    sum_w = sum(exp_w)
+    normalized = [w / sum_w for w in exp_w] if sum_w > 0 else [1.0 / len(log_w)] * len(log_w)
+
+    candidates = []
+    for i, resp in enumerate(result.responses):
+        content = extract_content_from_lm_response(resp)
+        candidates.append(CandidateResponse(
+            index=i,
+            content=content,
+            is_selected=(i == result.selected_index),
+        ))
+
+    return ParticleFilteringTrace(
+        candidates=candidates,
+        log_weights=[round(w, 4) for w in log_w],
+        normalized_weights=[round(w, 4) for w in normalized],
+        steps_used=result.steps_used_lst,
+    )
+
+
+def build_trace(algorithm: str, result) -> dict | None:
+    """Convert an algorithm Result object into a serializable trace dict."""
+    try:
+        if isinstance(result, SelfConsistencyResult):
+            candidates = []
+            for i, resp in enumerate(result.responses):
+                content = extract_content_from_lm_response(resp)
+                candidates.append(CandidateResponse(
+                    index=i,
+                    content=content,
+                    is_selected=(i == result.selected_index),
+                ))
+            vote_counts = {str(k): v for k, v in result.response_counts.items()}
+            trace = SelfConsistencyTrace(
+                candidates=candidates,
+                vote_counts=vote_counts,
+                total_votes=sum(result.response_counts.values()),
+            )
+            return trace.model_dump()
+
+        elif isinstance(result, BestOfNResult):
+            candidates = []
+            for i, resp in enumerate(result.responses):
+                content = extract_content_from_lm_response(resp)
+                candidates.append(CandidateResponse(
+                    index=i,
+                    content=content,
+                    is_selected=(i == result.selected_index),
+                ))
+            trace = BestOfNTrace(
+                candidates=candidates,
+                scores=[round(s, 4) for s in result.scores],
+                max_score=round(max(result.scores), 4),
+                min_score=round(min(result.scores), 4),
+            )
+            return trace.model_dump()
+
+        elif isinstance(result, BeamSearchResult):
+            candidates = []
+            for i, resp in enumerate(result.responses):
+                content = extract_content_from_lm_response(resp)
+                candidates.append(CandidateResponse(
+                    index=i,
+                    content=content,
+                    is_selected=(i == result.selected_index),
+                ))
+            trace = BeamSearchTrace(
+                candidates=candidates,
+                scores=[round(s, 4) for s in result.scores],
+                steps_used=result.steps_used,
+            )
+            return trace.model_dump()
+
+        elif isinstance(result, ParticleGibbsResult):
+            iterations = []
+            num_iterations = len(result.responses_lst)
+            for it_idx in range(num_iterations):
+                # Build a ParticleFilteringResult-like object for each iteration
+                it_result = ParticleFilteringResult(
+                    responses=result.responses_lst[it_idx],
+                    log_weights_lst=result.log_weights_lst[it_idx],
+                    selected_index=result.selected_index if it_idx == num_iterations - 1 else 0,
+                    steps_used_lst=result.steps_used_lst[it_idx],
+                )
+                iterations.append(_build_pf_trace(it_result))
+            trace = ParticleGibbsTrace(
+                num_iterations=num_iterations,
+                iterations=iterations,
+            )
+            return trace.model_dump()
+
+        elif isinstance(result, ParticleFilteringResult):
+            trace = _build_pf_trace(result)
+            return trace.model_dump()
+
+        else:
+            logger.warning(f"Unknown result type for trace: {type(result)}")
+            return None
+
+    except Exception as e:
+        logger.warning(f"Failed to build trace for {algorithm}: {e}", exc_info=True)
+        return None
+
+
 async def run_its(
     lm: OpenAICompatibleLanguageModel,
     question: str,
@@ -335,12 +483,12 @@ async def run_its(
     api_key: str,
     baseline_input_tokens: int = 0,
     baseline_output_tokens: int = 0,
-) -> tuple[str, int, int, int]:
+) -> tuple[str, int, int, int, dict | None]:
     """
     Run ITS inference with the specified algorithm.
 
     Returns:
-        (answer, latency_ms, input_tokens, output_tokens)
+        (answer, latency_ms, input_tokens, output_tokens, trace)
     """
     start_time = time.time()
 
@@ -383,8 +531,8 @@ async def run_its(
         if algorithm == "beam_search":
             # BeamSearch with beam_width (use budget/2 for reasonable beam width)
             beam_width = max(2, min(4, budget // 2))
-            # Adjust budget to be divisible by beam_width
-            adjusted_budget = (budget // beam_width) * beam_width
+            # Adjust budget to be divisible by beam_width, minimum beam_width
+            adjusted_budget = max(beam_width, (budget // beam_width) * beam_width)
             alg = BeamSearch(sg=step_gen, prm=prm, beam_width=beam_width)
             budget = adjusted_budget
 
@@ -414,11 +562,14 @@ async def run_its(
     else:
         raise ValueError(f"Unknown algorithm: {algorithm}")
 
-    # Run inference
-    result = await alg.ainfer(lm, question, budget=budget, return_response_only=True)
-    answer = extract_content_from_lm_response(result)
+    # Run inference with full result to capture trace data
+    result = await alg.ainfer(lm, question, budget=budget, return_response_only=False)
+    answer = extract_content_from_lm_response(result.the_one)
 
     latency_ms = int((time.time() - start_time) * 1000)
+
+    # Build trace from the full result
+    trace = build_trace(algorithm, result)
 
     # Estimate token usage for ITS
     # ITS algorithms typically make multiple calls (roughly proportional to budget)
@@ -435,7 +586,7 @@ async def run_its(
         estimated_input = 0
         estimated_output = 0
 
-    return answer, latency_ms, estimated_input, estimated_output
+    return answer, latency_ms, estimated_input, estimated_output, trace
 
 
 @app.post("/compare", response_model=CompareResponse)
@@ -498,7 +649,7 @@ async def compare(request: CompareRequest):
             )
             frontier_baseline_task = run_baseline(frontier_model, request.question)
 
-            (its_answer, its_latency, its_input_tokens, its_output_tokens), (baseline_answer, baseline_latency, baseline_input_tokens, baseline_output_tokens) = await asyncio.gather(
+            (its_answer, its_latency, its_input_tokens, its_output_tokens, its_trace), (baseline_answer, baseline_latency, baseline_input_tokens, baseline_output_tokens) = await asyncio.gather(
                 its_task,
                 frontier_baseline_task,
             )
@@ -512,7 +663,7 @@ async def compare(request: CompareRequest):
             )
 
             # Run ITS with token estimates
-            its_answer, its_latency, its_input_tokens, its_output_tokens = await run_its(
+            its_answer, its_latency, its_input_tokens, its_output_tokens, its_trace = await run_its(
                 lm,
                 request.question,
                 request.algorithm,
@@ -590,6 +741,7 @@ async def compare(request: CompareRequest):
                 cost_usd=its_cost if its_cost > 0 else None,
                 input_tokens=its_input_tokens if its_input_tokens > 0 else None,
                 output_tokens=its_output_tokens if its_output_tokens > 0 else None,
+                trace=its_trace,
             ),
             "meta": {
                 "model_id": request.model_id,
