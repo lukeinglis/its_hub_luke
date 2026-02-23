@@ -156,6 +156,8 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
     # Available via Hugging Face or self-hosted via vLLM
 
     # === Granite 4.0 Models (Latest) ===
+    # Note: Requires vLLM server running on GRANITE_BASE_URL
+    # Start with: vllm serve ibm-granite/granite-4.0-8b-instruct --port 8100
     "granite-4.0-8b": {
         "base_url": os.getenv("GRANITE_BASE_URL", "http://localhost:8100/v1"),
         "api_key_env_var": "GRANITE_API_KEY",
