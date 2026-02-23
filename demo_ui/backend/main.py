@@ -167,8 +167,9 @@ async def list_models():
         # Check if model requires external server (has non-standard base_url)
         base_url = config.get("base_url", "")
 
-        # Skip server check for standard OpenAI, Vertex AI, and Model Garden models
+        # Skip server check for standard OpenAI, OpenRouter, Vertex AI, and Model Garden models
         if (base_url.startswith("https://api.openai.com") or
+            base_url.startswith("https://openrouter.ai") or
             config.get("provider") in ("vertex_ai", "vertex_ai_model_garden") or
             not base_url):
             available_models.append({

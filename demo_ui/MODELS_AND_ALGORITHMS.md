@@ -25,16 +25,33 @@ All models use either OpenAI API or Google Cloud Vertex AI.
 - **gemini-pro-vertex** 🏆 - Gemini 1.5 Pro (Frontier)
 - **gemini-flash-vertex** ⚡ - Gemini 1.5 Flash (Small, fast)
 
-### IBM Granite Models (Self-Hosted)
+### OpenRouter Models (Multiple Providers via API)
 
-**IBM's Open-Source Enterprise Models 🏢**
+**Access dozens of models with one API key 🎯**
 
-Latest Granite models available via Hugging Face:
-- **granite-4.0-8b** - Granite 4.0 8B Instruct (Latest, Dec 2024)
-- **granite-4.0-3b** ⚡ - Granite 4.0 3B Instruct (Small, fast)
-- **granite-3.3-8b** - Granite 3.3 8B Instruct (Open-source)
+Get API key at: https://openrouter.ai/keys
 
-Run with vLLM: `vllm serve ibm-granite/granite-4.0-8b-instruct --port 8100`
+**Weak Models (3B-9B - Great for ITS demos):**
+- **llama-3.1-8b** - Llama 3.1 8B Instruct
+- **llama-3.2-3b** - Llama 3.2 3B Instruct (Very weak)
+- **mistral-7b** - Mistral 7B Instruct
+- **qwen-2.5-7b** - Qwen 2.5 7B Instruct
+- **phi-3-mini** - Phi-3 Mini 3.8B (Very weak)
+- **gemma-2-9b** - Gemma 2 9B Instruct
+
+**Medium Models (27B-70B - Good balance):**
+- **llama-3.1-70b** - Llama 3.1 70B Instruct
+- **llama-3.3-70b** - Llama 3.3 70B Instruct (Latest)
+- **qwen-2.5-72b** - Qwen 2.5 72B Instruct (Strong reasoning)
+- **gemma-2-27b** - Gemma 2 27B Instruct
+- **deepseek-r1** 🏆 - DeepSeek R1 (Reasoning specialist)
+
+**Code-Specialized Models 💻:**
+- **qwen-2.5-coder-32b** - Qwen 2.5 Coder 32B
+- **deepseek-coder-v2** - DeepSeek Coder V2
+
+**IBM Granite Models (Enterprise AI) 🏢:**
+- **granite-4.0-micro** - IBM Granite 4.0 Micro 3B (Very weak - excellent for ITS demos)
 
 ## ✅ Working Algorithms
 
@@ -82,6 +99,11 @@ Create a `.env` file in `demo_ui/` with:
 # Required: OpenAI API (for GPT models + LLM judge)
 OPENAI_API_KEY=your-openai-api-key
 
+# Optional: OpenRouter (for Llama, Mistral, Qwen, DeepSeek, etc.)
+# Get your key at: https://openrouter.ai/keys
+# Gives access to 100+ open-source and commercial models
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+
 # Optional: Google Cloud Vertex AI (for Claude and Gemini)
 # Setup with: gcloud auth application-default login
 VERTEX_PROJECT=your-gcp-project-id
@@ -102,10 +124,9 @@ VLLM_MODEL_NAME=your-model-name
 | Provider | Models | Authentication | Notes |
 |----------|--------|----------------|-------|
 | **OpenAI** | GPT-4o, GPT-4o Mini, GPT-3.5 | OPENAI_API_KEY | Native OpenAI API |
+| **OpenRouter** | Llama, Mistral, Qwen, DeepSeek, Gemma, Phi, Granite | OPENROUTER_API_KEY | Access 100+ models with one key |
 | **Vertex AI** | Claude (Sonnet, Opus, Haiku) | GCP credentials | Anthropic on Vertex |
 | **Vertex AI** | Gemini (Pro, Flash) | GCP credentials | Native Google models |
-| **Self-Hosted** | IBM Granite 4.0, 3.3 | N/A | vLLM via Hugging Face |
-| **Local vLLM** | Any open-source model | N/A | Self-hosted |
 
 ## Vertex AI Setup
 
