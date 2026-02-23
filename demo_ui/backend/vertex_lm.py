@@ -110,13 +110,19 @@ class VertexAIClaudeModel(AbstractLanguageModel):
 
             # Run in thread pool to avoid blocking
             def sync_call():
-                response = self.client.messages.create(
-                    model=self.model_name,
-                    max_tokens=max_tok,
-                    temperature=temp,
-                    messages=anthropic_messages,
-                    stop_sequences=[stop] if stop else None,
-                )
+                # Only include stop_sequences if stop is a non-empty string
+                kwargs = {
+                    "model": self.model_name,
+                    "max_tokens": max_tok,
+                    "temperature": temp,
+                    "messages": anthropic_messages,
+                }
+
+                # Claude API requires stop sequences to be non-whitespace strings
+                if stop and stop.strip():
+                    kwargs["stop_sequences"] = [stop]
+
+                response = self.client.messages.create(**kwargs)
                 return response
 
             # Execute synchronous call in thread pool
@@ -255,13 +261,19 @@ class VertexAIGeminiModel(AbstractLanguageModel):
 
             # Run in thread pool to avoid blocking
             def sync_call():
+                # Build generation config
+                gen_config = {
+                    "max_output_tokens": max_tok,
+                    "temperature": temp,
+                }
+
+                # Only include stop_sequences if stop is a non-empty string
+                if stop and stop.strip():
+                    gen_config["stop_sequences"] = [stop]
+
                 response = self.model.generate_content(
                     prompt,
-                    generation_config={
-                        "max_output_tokens": max_tok,
-                        "temperature": temp,
-                        "stop_sequences": [stop] if stop else None,
-                    }
+                    generation_config=gen_config
                 )
                 return response
 
