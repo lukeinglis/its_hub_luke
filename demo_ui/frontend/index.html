@@ -2472,46 +2472,61 @@
         function renderAnswerBox(containerId, data) {
             const container = document.getElementById(containerId);
 
-            // The final answer is the complete response (what user sees in chatbot)
+            // The full response contains all reasoning
             const fullResponse = data.answer;
 
-            // Check if there's step-by-step reasoning we should show separately
-            const hasReasoningSteps = /(?:Step \d+|^\d+\.|^[-*]\s)/m.test(fullResponse) ||
-                                      fullResponse.split('\n\n').length > 3;
+            // Extract just the final answer
+            const finalAnswer = extractFinalAnswer(fullResponse);
 
-            let html = `
-                <!-- Final Answer (always visible) - Complete chatbot response -->
-                <div class="final-answer-section">
-                    <div class="final-answer-label">
-                        <span>✓</span>
-                        <span>Response</span>
-                    </div>
-                    <div class="final-answer-content">
-                        ${formatParagraph(fullResponse)}
-                    </div>
-                </div>
-            `;
+            let html = '';
 
-            // Add expandable reasoning section only if there's detailed step-by-step reasoning
-            if (hasReasoningSteps) {
+            // Show extracted final answer prominently, or a message if not found
+            if (finalAnswer) {
+                // Check if the answer contains LaTeX
+                const hasLatex = finalAnswer.includes('$') || /[\\{}_^]/.test(finalAnswer);
+                const displayAnswer = hasLatex
+                    ? finalAnswer
+                    : (finalAnswer.includes('=') || /^[-+]?\d/.test(finalAnswer))
+                        ? '$' + finalAnswer + '$'
+                        : finalAnswer;
+
                 html += `
-                    <div class="expandable-section">
-                        <button class="expand-button" onclick="toggleSection(this)">
-                            <svg class="expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>View Detailed Reasoning</span>
-                        </button>
-                        <div class="expandable-content">
-                            <div class="reasoning-section">
-                                <div class="reasoning-content">
-                                    ${formatReasoningSteps(fullResponse)}
-                                </div>
-                            </div>
+                    <div class="final-answer-section">
+                        <div class="final-answer-label">
+                            <span>✓</span>
+                            <span>Final Answer</span>
+                        </div>
+                        <div class="final-answer-content">
+                            ${displayAnswer}
                         </div>
                     </div>
                 `;
+            } else {
+                html += `
+                    <div class="no-final-answer">
+                        No explicit final answer detected. See detailed response below.
+                    </div>
+                `;
             }
+
+            // Always add expandable section with full response (all reasoning)
+            html += `
+                <div class="expandable-section">
+                    <button class="expand-button" onclick="toggleSection(this)">
+                        <svg class="expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>View Detailed Response</span>
+                    </button>
+                    <div class="expandable-content">
+                        <div class="reasoning-section">
+                            <div class="reasoning-content">
+                                ${formatReasoningSteps(fullResponse)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
 
             // Add expandable performance details section
             html += `
