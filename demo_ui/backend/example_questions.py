@@ -168,6 +168,124 @@ CURATED_QUESTIONS: List[Dict] = [
 ]
 
 
+# Tool calling example questions - demonstrate agent tool selection consensus
+TOOL_CALLING_QUESTIONS: List[Dict] = [
+    # =========================================================================
+    # TOOL SELECTION QUESTIONS
+    # These demonstrate the value of consensus on tool choice and parameters
+    # =========================================================================
+    {
+        "category": "Finance",
+        "difficulty": "Easy",
+        "question": (
+            "What's the compound annual growth rate (CAGR) if I invest $1000 "
+            "and it grows to $2000 in 5 years?"
+        ),
+        "expected_answer": "14.87%",
+        "best_for": ["self_consistency"],
+        "why": "Could use 'calculate' OR 'code_executor'. Tool voting shows consensus on best approach.",
+        "source": "tool_calling",
+        "source_id": "tc-finance-1",
+        "expected_tools": ["calculate", "code_executor"],
+    },
+    {
+        "category": "Data Retrieval",
+        "difficulty": "Easy",
+        "question": (
+            "What's the current temperature in San Francisco in Celsius?"
+        ),
+        "expected_answer": "22°C (approximately)",
+        "best_for": ["self_consistency"],
+        "why": "Could use 'get_data' (weather API) OR 'calculate' (if temp in F is known). Shows tool selection consensus.",
+        "source": "tool_calling",
+        "source_id": "tc-data-1",
+        "expected_tools": ["get_data", "calculate"],
+    },
+    {
+        "category": "Finance",
+        "difficulty": "Medium",
+        "question": (
+            "What's the current price of Apple (AAPL) stock and how has it "
+            "changed in the last quarter?"
+        ),
+        "expected_answer": "Current price with percentage change",
+        "best_for": ["self_consistency", "best_of_n"],
+        "why": "Requires both 'get_data' for current price and 'web_search' for historical context. Tool parameter voting important.",
+        "source": "tool_calling",
+        "source_id": "tc-finance-2",
+        "expected_tools": ["get_data", "web_search"],
+    },
+    {
+        "category": "Unit Conversion",
+        "difficulty": "Easy",
+        "question": (
+            "If it's currently 72°F outside, what's that in Celsius?"
+        ),
+        "expected_answer": "22.2°C",
+        "best_for": ["self_consistency"],
+        "why": "Simple calculation. Could use 'calculate' with formula OR 'get_data' for conversion. Shows tool choice reliability.",
+        "source": "tool_calling",
+        "source_id": "tc-convert-1",
+        "expected_tools": ["calculate", "get_data"],
+    },
+    {
+        "category": "Data Analysis",
+        "difficulty": "Medium",
+        "question": (
+            "Calculate the monthly payment on a $300,000 mortgage at 6.5% "
+            "interest over 30 years."
+        ),
+        "expected_answer": "$1,896 per month",
+        "best_for": ["self_consistency", "best_of_n"],
+        "why": "Complex formula - could use 'calculate' (with proper formula) OR 'code_executor' for clarity. Tool voting reduces errors.",
+        "source": "tool_calling",
+        "source_id": "tc-finance-3",
+        "expected_tools": ["calculate", "code_executor"],
+    },
+    {
+        "category": "Information Retrieval",
+        "difficulty": "Medium",
+        "question": (
+            "What's the exchange rate from USD to EUR today?"
+        ),
+        "expected_answer": "~0.92 EUR per USD",
+        "best_for": ["self_consistency"],
+        "why": "Clearly needs 'get_data' for currency rates, but models might try 'web_search'. Tool consensus ensures correct approach.",
+        "source": "tool_calling",
+        "source_id": "tc-data-2",
+        "expected_tools": ["get_data", "web_search"],
+    },
+    {
+        "category": "Computation",
+        "difficulty": "Hard",
+        "question": (
+            "Calculate the standard deviation of the following dataset: "
+            "[12, 15, 18, 22, 25, 28, 30, 35, 40, 45]. Show your work."
+        ),
+        "expected_answer": "~10.96",
+        "best_for": ["self_consistency", "best_of_n"],
+        "why": "Multi-step calculation. 'code_executor' is cleanest but 'calculate' could work. Parameter consensus shows best approach.",
+        "source": "tool_calling",
+        "source_id": "tc-stats-1",
+        "expected_tools": ["code_executor", "calculate"],
+    },
+    {
+        "category": "Mixed",
+        "difficulty": "Hard",
+        "question": (
+            "I bought Microsoft stock at $250 per share. It's now at $378.91. "
+            "If I invested $10,000, what's my return percentage and dollar gain?"
+        ),
+        "expected_answer": "51.56% return, $5,156.40 gain",
+        "best_for": ["self_consistency", "best_of_n"],
+        "why": "Requires 'get_data' for current price verification AND 'calculate' for returns. Tool sequencing and parameters matter.",
+        "source": "tool_calling",
+        "source_id": "tc-mixed-1",
+        "expected_tools": ["calculate", "get_data"],
+    },
+]
+
+
 def get_all_questions() -> List[Dict[str, str]]:
     """
     Get all curated example questions.
@@ -221,3 +339,44 @@ def get_questions_by_difficulty(difficulty: str) -> List[Dict[str, str]]:
         List of question dictionaries
     """
     return [q for q in get_all_questions() if q["difficulty"] == difficulty]
+
+
+def get_tool_calling_questions() -> List[Dict[str, str]]:
+    """
+    Get all tool calling example questions.
+
+    These questions demonstrate agent tool selection consensus scenarios.
+
+    Returns:
+        List of tool calling question dictionaries
+    """
+    return TOOL_CALLING_QUESTIONS
+
+
+def get_tool_calling_questions_by_algorithm(algorithm: str, limit: int = 10) -> List[Dict[str, str]]:
+    """
+    Get tool calling questions ordered by how well they showcase the given algorithm.
+
+    Args:
+        algorithm: Algorithm name (e.g., 'self_consistency', 'best_of_n')
+        limit: Maximum number of questions to return
+
+    Returns:
+        List of question dictionaries, ordered by demo effectiveness.
+    """
+    all_questions = get_tool_calling_questions()
+
+    # Tier 1: Algorithm is the FIRST entry in best_for
+    tier1 = [q for q in all_questions
+             if q["best_for"] and q["best_for"][0] == algorithm]
+
+    # Tier 2: Algorithm appears in best_for but not first
+    tier2 = [q for q in all_questions
+             if algorithm in q["best_for"] and q not in tier1]
+
+    # Tier 3: Algorithm not listed, but still available
+    tier3 = [q for q in all_questions
+             if algorithm not in q["best_for"]]
+
+    result = tier1 + tier2 + tier3
+    return result[:limit]

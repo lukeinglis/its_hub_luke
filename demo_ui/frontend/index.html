@@ -1764,7 +1764,7 @@
                 <p class="section-description">Select what you want to demonstrate with ITS</p>
             </div>
 
-            <div style="display: grid; gap: 16px; grid-template-columns: 1fr 1fr;">
+            <div style="display: grid; gap: 16px; grid-template-columns: 1fr 1fr 1fr;">
                 <label class="use-case-card" data-use-case="improve_model">
                     <input type="radio" name="useCase" value="improve_model" checked onchange="onUseCaseChange()">
                     <div class="use-case-content">
@@ -1795,6 +1795,22 @@
                             <span class="comparison-item highlight">Small + ITS</span>
                             <span class="comparison-vs">≈</span>
                             <span class="comparison-item">Frontier</span>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="use-case-card" data-use-case="tool_consensus">
+                    <input type="radio" name="useCase" value="tool_consensus" onchange="onUseCaseChange()">
+                    <div class="use-case-content">
+                        <div class="use-case-header">
+                            <span class="use-case-icon">🤖</span>
+                            <h3 class="use-case-title">Agent Tool Consensus</h3>
+                        </div>
+                        <p class="use-case-description">Show how ITS creates consensus on tool selection for reliable agents</p>
+                        <div class="use-case-comparison">
+                            <span class="comparison-item">Single Call</span>
+                            <span class="comparison-vs">vs</span>
+                            <span class="comparison-item highlight">Tool Voting</span>
                         </div>
                     </div>
                 </label>
@@ -2101,6 +2117,33 @@
 
                 // Adjust grid to show both models
                 document.getElementById('modelSelectionGrid').style.gridTemplateColumns = '1fr 1fr';
+
+                // Reload all models (no filter)
+                loadModels();
+            } else if (currentUseCase === 'tool_consensus') {
+                // Use Case 3: 2-column layout - Single Tool Call, Tool Voting
+                modelLabel.textContent = 'Model';
+                frontierModelGroup.style.display = 'none';
+                configDescription.textContent = 'Compare single agent call vs ITS with tool voting for reliable tool selection';
+                headerSubtitle.textContent = 'Demonstrate how ITS creates consensus on tool selection for reliable agent behavior';
+
+                // Show 2-column layout
+                resultsContainer.classList.remove('three-column');
+                smallBaselinePane.style.display = 'none';
+
+                // Update pane titles and indicators for 2-column layout
+                // Middle: Single Call (gray)
+                // Right: Tool Voting (blue)
+                middlePaneIndicator.className = 'pane-indicator baseline';
+                middlePaneTitle.textContent = 'Single Agent Call';
+                rightPaneIndicator.className = 'pane-indicator its';
+                rightPaneTitle.textContent = 'ITS + Tool Voting';
+
+                // Reset grid
+                document.getElementById('modelSelectionGrid').style.gridTemplateColumns = '';
+
+                // Reload models to show only tool-compatible models
+                loadModels('tool_consensus');
             } else {
                 // Use Case 1: 2-column layout - Baseline, ITS
                 modelLabel.textContent = 'Model';
@@ -2122,6 +2165,9 @@
 
                 // Reset grid
                 document.getElementById('modelSelectionGrid').style.gridTemplateColumns = '';
+
+                // Reload all models (no filter)
+                loadModels();
             }
         }
 
@@ -2241,13 +2287,28 @@
         });
 
         // Load models
-        async function loadModels() {
+        async function loadModels(useCase = null) {
             try {
-                const response = await fetch(`${API_BASE_URL}/models`);
+                const url = useCase ? `${API_BASE_URL}/models?use_case=${useCase}` : `${API_BASE_URL}/models`;
+                const response = await fetch(url);
                 if (!response.ok) throw new Error('Failed to load models');
 
                 const data = await response.json();
-                const modelHTML = data.models.map(model => {
+
+                // Filter models for tool_consensus to only show those supporting tools
+                let models = data.models;
+                if (useCase === 'tool_consensus') {
+                    models = models.filter(m => m.supports_tools);
+                }
+
+                if (models.length === 0 && useCase === 'tool_consensus') {
+                    const errorMsg = '<option value="">No models support tool calling - use OpenAI models</option>';
+                    document.getElementById('model').innerHTML = errorMsg;
+                    document.getElementById('frontierModel').innerHTML = errorMsg;
+                    return;
+                }
+
+                const modelHTML = models.map(model => {
                     const sizeLabel = model.size ? ` [${model.size}]` : '';
                     return `<option value="${model.id}">${model.description}${sizeLabel}</option>`;
                 }).join('');
@@ -2274,7 +2335,7 @@
             const exampleSelect = document.getElementById('exampleQuestions');
 
             try {
-                const url = `${API_BASE_URL}/examples?algorithm=${selectedAlgorithm}`;
+                const url = `${API_BASE_URL}/examples?algorithm=${selectedAlgorithm}&use_case=${currentUseCase}`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('Failed to load examples');
 
@@ -2750,6 +2811,51 @@
         function renderSelfConsistencyTrace(trace) {
             let html = '<div class="trace-summary">Self-Consistency: generated ' + trace.candidates.length + ' candidates, selected by majority vote (' + trace.total_votes + ' votes)</div>';
 
+            // Tool voting section if present
+            if (trace.tool_voting) {
+                const tv = trace.tool_voting;
+                html += `
+                    <div class="tool-voting-section" style="margin: 16px 0; padding: 16px; background: var(--primary-light); border-radius: 4px; border-left: 4px solid var(--primary);">
+                        <div style="font-weight: 600; color: var(--primary); margin-bottom: 8px;">
+                            🤖 Tool Voting Consensus
+                        </div>
+                        <div style="font-size: 0.9em; margin-bottom: 12px; color: var(--text-secondary);">
+                            Voting type: <strong>${tv.tool_vote_type}</strong> |
+                            Total tool calls: <strong>${tv.total_tool_calls}</strong>
+                        </div>
+                        <div class="vote-distribution">
+                            <div class="vote-distribution-title">Tool Selection Distribution</div>
+                `;
+
+                const sortedTools = Object.entries(tv.tool_counts).sort((a, b) => b[1] - a[1]);
+                const maxToolVotes = sortedTools.length > 0 ? sortedTools[0][1] : 1;
+
+                for (const [tool, count] of sortedTools) {
+                    const pct = (count / maxToolVotes) * 100;
+                    const isWinner = tool === tv.winning_tool;
+                    const displayTool = tool.length > 30 ? tool.substring(0, 30) + '...' : tool;
+                    html += `
+                        <div class="vote-row" ${isWinner ? 'style="background: var(--primary-light);"' : ''}>
+                            <span class="vote-answer" title="${tool.replace(/"/g, '&quot;')}">
+                                ${isWinner ? '✓ ' : ''}${displayTool}
+                            </span>
+                            <div class="vote-bar-container">
+                                <div class="vote-bar-fill" style="width: ${pct}%; background: ${isWinner ? 'var(--primary)' : 'var(--text-tertiary)'}"></div>
+                            </div>
+                            <span class="vote-count">${count}</span>
+                        </div>
+                    `;
+                }
+
+                html += `
+                        </div>
+                        <div style="margin-top: 12px; padding: 8px; background: var(--bg-elevated); border-radius: 4px; font-size: 0.85em;">
+                            <strong>Winning selection:</strong> ${tv.winning_tool}
+                        </div>
+                    </div>
+                `;
+            }
+
             // Vote distribution chart
             const sortedVotes = Object.entries(trace.vote_counts).sort((a, b) => b[1] - a[1]);
             const maxVotes = sortedVotes.length > 0 ? sortedVotes[0][1] : 1;
@@ -2901,6 +3007,51 @@
             return html;
         }
 
+        function renderToolCalls(toolCalls) {
+            if (!toolCalls || toolCalls.length === 0) return '';
+
+            let html = `
+                <div class="expandable-section">
+                    <button class="expand-button" onclick="toggleSection(this)">
+                        <svg class="expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Tool Calls (${toolCalls.length})</span>
+                    </button>
+                    <div class="expandable-content">
+                        <div class="trace-section">
+            `;
+
+            toolCalls.forEach((tc, idx) => {
+                const args = JSON.stringify(tc.arguments, null, 2);
+                html += `
+                    <div class="tool-call-item" style="margin-bottom: 12px; padding: 12px; background: var(--bg-tertiary); border-radius: 4px;">
+                        <div style="font-weight: 600; color: var(--primary); margin-bottom: 8px;">
+                            🔧 ${tc.name}
+                        </div>
+                        <div style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px;">
+                            <strong>Arguments:</strong>
+                            <pre style="margin: 4px 0; padding: 8px; background: var(--bg-primary); border-radius: 4px; overflow-x: auto;">${args}</pre>
+                        </div>
+                        ${tc.result ? `
+                        <div style="font-size: 0.9em; color: var(--text-secondary);">
+                            <strong>Result:</strong>
+                            <pre style="margin: 4px 0; padding: 8px; background: var(--bg-primary); border-radius: 4px; overflow-x: auto;">${tc.result}</pre>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return html;
+        }
+
         function renderAlgorithmTrace(trace) {
             if (!trace || !trace.algorithm) return '';
 
@@ -3047,6 +3198,11 @@
                 </div>
             `;
 
+            // Add tool calls section if present
+            if (data.tool_calls && data.tool_calls.length > 0) {
+                html += renderToolCalls(data.tool_calls);
+            }
+
             // Add algorithm trace section (only for ITS results that have trace data)
             if (data.trace) {
                 html += renderAlgorithmTrace(data.trace);
@@ -3150,6 +3306,13 @@
                 // Add frontier model if using match_frontier use case
                 if (currentUseCase === 'match_frontier') {
                     requestBody.frontier_model_id = document.getElementById('frontierModel').value;
+                }
+
+                // Add tool calling parameters for tool_consensus use case
+                if (currentUseCase === 'tool_consensus') {
+                    requestBody.enable_tools = true;
+                    requestBody.tool_vote = 'tool_name';  // Default to tool_name voting
+                    requestBody.exclude_args = [];
                 }
 
                 const response = await fetch(`${API_BASE_URL}/compare`, {

@@ -20,6 +20,7 @@ class ModelConfig(TypedDict, total=False):
     size: str  # Optional: Model size (e.g., "175B", "70B", "7B")
     input_cost_per_1m: float  # Optional: Cost per 1M input tokens in USD
     output_cost_per_1m: float  # Optional: Cost per 1M output tokens in USD
+    supports_tools: bool  # Optional: Whether model supports function/tool calling (defaults to True for OpenAI)
 
 
 # Model registry
@@ -39,6 +40,7 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "size": "Large",
         "input_cost_per_1m": 2.50,
         "output_cost_per_1m": 10.00,
+        "supports_tools": True,
     },
     "gpt-4-turbo": {
         "base_url": "https://api.openai.com/v1",
@@ -49,6 +51,7 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "size": "Large",
         "input_cost_per_1m": 10.00,
         "output_cost_per_1m": 30.00,
+        "supports_tools": True,
     },
 
     # === Small/Fast Models ⚡ ===
@@ -61,6 +64,7 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "size": "Small",
         "input_cost_per_1m": 0.15,
         "output_cost_per_1m": 0.60,
+        "supports_tools": True,
     },
     "gpt-3.5-turbo": {
         "base_url": "https://api.openai.com/v1",
@@ -71,6 +75,7 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "size": "Small",
         "input_cost_per_1m": 0.50,
         "output_cost_per_1m": 1.50,
+        "supports_tools": True,
     },
 
     # === Weak Models (for ITS demonstration) 🎯 ===
@@ -83,6 +88,7 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "size": "Small",
         "input_cost_per_1m": 0.50,
         "output_cost_per_1m": 1.50,
+        "supports_tools": True,
     },
 
     # ========================================================================
@@ -90,6 +96,10 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
     # ========================================================================
     # Setup: Get API key from https://openrouter.ai/keys
     # Set OPENROUTER_API_KEY in your .env file
+    #
+    # NOTE: OpenRouter model availability changes over time. If a model fails with
+    # "No endpoints found", check https://openrouter.ai/models for current list.
+    # Models below have been verified to work as of Feb 2024.
 
     # === Weak Models (Great for demonstrating ITS) 🎯 ===
     "llama-3.1-8b": {
@@ -101,6 +111,7 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "size": "8B",
         "input_cost_per_1m": 0.06,
         "output_cost_per_1m": 0.06,
+        "supports_tools": False,
     },
     "mistral-7b": {
         "base_url": "https://openrouter.ai/api/v1",
@@ -122,16 +133,17 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "input_cost_per_1m": 0.15,
         "output_cost_per_1m": 0.15,
     },
-    "phi-3-mini": {
-        "base_url": "https://openrouter.ai/api/v1",
-        "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "microsoft/phi-3-mini-128k-instruct",
-        "description": "🎯 Phi-3 Mini 3.8B (Very weak - dramatic ITS demo)",
-        "provider": "openai",
-        "size": "3.8B",
-        "input_cost_per_1m": 0.10,
-        "output_cost_per_1m": 0.10,
-    },
+    # Phi-3 Mini - Disabled (not currently available on OpenRouter)
+    # "phi-3-mini": {
+    #     "base_url": "https://openrouter.ai/api/v1",
+    #     "api_key_env_var": "OPENROUTER_API_KEY",
+    #     "model_name": "microsoft/phi-3-mini-128k-instruct",
+    #     "description": "🎯 Phi-3 Mini 3.8B (Very weak - dramatic ITS demo)",
+    #     "provider": "openai",
+    #     "size": "3.8B",
+    #     "input_cost_per_1m": 0.10,
+    #     "output_cost_per_1m": 0.10,
+    # },
     "llama-3.2-3b": {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key_env_var": "OPENROUTER_API_KEY",
@@ -228,16 +240,17 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
     },
 
     # === IBM Granite Models (via OpenRouter) 🏢 ===
-    "granite-4.0-micro": {
-        "base_url": "https://openrouter.ai/api/v1",
-        "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "ibm-granite/granite-4.0-h-micro",
-        "description": "🏢 IBM Granite 4.0 Micro 3B (Very weak - excellent for ITS demo)",
-        "provider": "openai",
-        "size": "3B",
-        "input_cost_per_1m": 0.017,  # $0.017 per 1M tokens
-        "output_cost_per_1m": 0.11,   # $0.11 per 1M tokens
-    },
+    # Disabled - not currently available on OpenRouter
+    # "granite-4.0-micro": {
+    #     "base_url": "https://openrouter.ai/api/v1",
+    #     "api_key_env_var": "OPENROUTER_API_KEY",
+    #     "model_name": "ibm-granite/granite-4.0-h-micro",
+    #     "description": "🏢 IBM Granite 4.0 Micro 3B (Very weak - excellent for ITS demo)",
+    #     "provider": "openai",
+    #     "size": "3B",
+    #     "input_cost_per_1m": 0.017,  # $0.017 per 1M tokens
+    #     "output_cost_per_1m": 0.11,   # $0.11 per 1M tokens
+    # },
 
     # ========================================================================
     # VERTEX AI MODEL GARDEN (Open-source models via Google Cloud)

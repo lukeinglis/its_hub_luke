@@ -21,23 +21,56 @@ class CompareRequest(BaseModel):
         ..., description="ITS algorithm to use"
     )
     budget: int = Field(..., ge=1, le=32, description="Computation budget (1-32)")
-    use_case: Literal["improve_model", "match_frontier"] = Field(
+    use_case: Literal["improve_model", "match_frontier", "tool_consensus"] = Field(
         default="improve_model",
-        description="Use case: improve_model (same model +ITS) or match_frontier (small+ITS vs large)"
+        description="Use case: improve_model (same model +ITS), match_frontier (small+ITS vs large), or tool_consensus (agent tool selection)"
     )
     frontier_model_id: Optional[str] = Field(
         default=None,
         description="Frontier model to compare against (only for match_frontier use case)"
     )
+    # Tool calling parameters
+    enable_tools: bool = Field(
+        default=False,
+        description="Enable tool calling for agent scenarios"
+    )
+    tool_vote: Optional[Literal["tool_name", "tool_args", "tool_hierarchical"]] = Field(
+        default=None,
+        description="Tool voting strategy for self-consistency algorithm"
+    )
+    exclude_args: Optional[list[str]] = Field(
+        default=None,
+        description="Argument names to exclude from tool voting (e.g., ['timestamp', 'id'])"
+    )
+    question_type: Optional[Literal["auto", "math", "tool_calling", "general"]] = Field(
+        default="auto",
+        description="Question type for configuration. 'auto' detects automatically."
+    )
 
 
 # --- Algorithm Trace Models ---
+
+class ToolCall(BaseModel):
+    """A tool call made by the model."""
+    name: str = Field(..., description="Tool function name")
+    arguments: dict = Field(..., description="Tool arguments")
+    result: Optional[str] = Field(default=None, description="Tool execution result")
+
 
 class CandidateResponse(BaseModel):
     """A single candidate response from an algorithm."""
     index: int = Field(..., description="Candidate index")
     content: str = Field(..., description="Response text content")
     is_selected: bool = Field(default=False, description="Whether this candidate was selected as the winner")
+    tool_calls: Optional[list[ToolCall]] = Field(default=None, description="Tool calls made in this response")
+
+
+class ToolVotingTrace(BaseModel):
+    """Trace data for tool voting in self-consistency."""
+    tool_vote_type: str = Field(..., description="Type of tool voting: tool_name, tool_args, or tool_hierarchical")
+    tool_counts: dict[str, int] = Field(..., description="Distribution of tool selections")
+    winning_tool: str = Field(..., description="Tool/parameters that won the vote")
+    total_tool_calls: int = Field(..., description="Total number of tool calls made")
 
 
 class SelfConsistencyTrace(BaseModel):
@@ -46,6 +79,7 @@ class SelfConsistencyTrace(BaseModel):
     candidates: list[CandidateResponse]
     vote_counts: dict[str, int] = Field(..., description="Vote counts per unique answer")
     total_votes: int = Field(..., description="Total number of votes cast")
+    tool_voting: Optional[ToolVotingTrace] = Field(default=None, description="Tool voting statistics if enabled")
 
 
 class BestOfNTrace(BaseModel):
@@ -91,6 +125,7 @@ class ResultDetail(BaseModel):
     input_tokens: Optional[int] = Field(default=None, description="Number of input tokens")
     output_tokens: Optional[int] = Field(default=None, description="Number of output tokens")
     trace: Optional[dict] = Field(default=None, description="Algorithm trace data for visualization")
+    tool_calls: Optional[list[ToolCall]] = Field(default=None, description="Tool calls made during execution")
 
 
 class CompareResponse(BaseModel):
