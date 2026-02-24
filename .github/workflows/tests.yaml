@@ -22,7 +22,10 @@ jobs:
       run: uv python install 3.11
         
     - name: Install dependencies
-      run: uv sync --extra dev
+      run: |
+        # Temporarily comment out vllm dependencies to avoid CUDA requirement in CI
+        sed -i 's/^    "reward-hub\[vllm\]>=0.1.8",$/    # "reward-hub[vllm]>=0.1.8",  # Disabled in CI - requires CUDA/' pyproject.toml
+        uv sync --extra dev
         
     - name: Run linting checks
       run: uv run ruff check its_hub/
@@ -48,7 +51,10 @@ jobs:
       run: uv python install ${{ matrix.python-version }}
         
     - name: Install dependencies
-      run: uv sync --extra dev
+      run: |
+        # Temporarily comment out vllm dependencies to avoid CUDA requirement in CI
+        sed -i 's/^    "reward-hub\[vllm\]>=0.1.8",$/    # "reward-hub[vllm]>=0.1.8",  # Disabled in CI - requires CUDA/' pyproject.toml
+        uv sync --extra dev
         
     - name: Run tests
       run: uv run pytest tests/ --cov=its_hub --cov-report=xml
