@@ -29,8 +29,13 @@ This demo provides:
   - **System Prompts**: Applies QWEN system prompt for math questions to ensure consistent answer formatting
 - **Backend**: FastAPI server with comprehensive API endpoints
 - **Frontend**: Modern HTML/JS interface with expandable sections, algorithm traces, and real-time metrics
-- **Models**: OpenAI and Vertex AI models
+- **Models**: OpenAI, OpenRouter, and Vertex AI models
   - **OpenAI**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo
+  - **OpenRouter**:
+    - Weak models (3B-9B): Llama 3.1/3.2, Mistral 7B, Qwen 2.5, Gemma 2 - **great for ITS demos**
+    - Medium models (27B-70B): Llama 3.1/3.3 70B, Qwen 2.5 72B, Gemma 2 27B
+    - Frontier models: DeepSeek R1 (reasoning specialist)
+    - Code specialists: Qwen 2.5 Coder, DeepSeek Coder V2
   - **Vertex AI Claude**: Sonnet, Opus, Haiku
   - **Vertex AI Gemini**: Pro, Flash
   - **Local**: vLLM server (any self-hosted model)
@@ -172,6 +177,11 @@ Edit `.env` and add your credentials:
 # Required: OpenAI API (for GPT models + LLM judge)
 OPENAI_API_KEY=your-openai-api-key-here
 
+# Optional: OpenRouter (for Llama, Mistral, Qwen, Gemma, DeepSeek models)
+# Get your key from: https://openrouter.ai/keys
+# Provides access to 15+ open-source and specialized models
+OPENROUTER_API_KEY=your-openrouter-api-key-here
+
 # Optional: Google Cloud Vertex AI (for Claude and Gemini)
 # Setup: gcloud auth application-default login
 VERTEX_PROJECT=your-gcp-project-id
@@ -183,7 +193,11 @@ VERTEX_LOCATION=us-central1
 # VLLM_MODEL_NAME=your-model-name
 ```
 
-**Note**: OpenAI models use native OpenAI API. Vertex AI models (Claude, Gemini) require Google Cloud authentication.
+**Provider Notes**:
+- **OpenAI**: Native OpenAI API - most reliable, best for production demos
+- **OpenRouter**: Unified API for open-source models - great for cost-effective demos and model diversity
+  - **Note**: OpenRouter does NOT support function/tool calling - use OpenAI models for Tool Consensus demos
+- **Vertex AI**: Claude and Gemini models via Google Cloud - requires `gcloud auth application-default login`
 
 ## Running the Demo
 
@@ -242,12 +256,16 @@ Choose between three use cases at the top of the page:
    - Compare the same model with and without ITS
    - Shows 2-column comparison: Baseline vs ITS
    - **Best for**: Mathematical reasoning, probability questions
+   - **Recommended models**: GPT-3.5 Turbo, Mistral 7B, Llama 3.1 8B (weak models show dramatic improvement)
    - **Example**: GPT-3.5 on "Alice & Bob dice probability" - baseline may get wrong answer, ITS achieves consensus on correct answer
 
 2. **Match Frontier Performance**:
    - Compare small model + ITS vs large frontier model
    - Shows 3-column comparison: Small Baseline, Small + ITS, Frontier
    - **Best for**: Algebra, complex math problems
+   - **Recommended combos**:
+     - GPT-4o Mini + ITS vs GPT-4o (64% cost savings)
+     - Mistral 7B + ITS vs GPT-4o (73% cost savings via OpenRouter)
    - **Example**: GPT-4o Mini + ITS matches GPT-4o at 64% lower cost
    - Demonstrates cost savings (64-73% cheaper) while matching quality
 
@@ -255,6 +273,8 @@ Choose between three use cases at the top of the page:
    - Compare single tool call vs consensus voting
    - Shows 2-column comparison: Baseline vs ITS with tool voting
    - **Best for**: Agent scenarios, financial calculations, data analysis
+   - **Recommended models**: GPT-4o Mini, GPT-3.5 Turbo (OpenAI models only)
+   - **⚠️ Note**: OpenRouter models do NOT support function/tool calling - use OpenAI models for this demo
    - **Example**: CAGR calculation shows tool consensus (e.g., `{'calculate': 6}`)
    - Demonstrates agent reliability through democratic voting
 
@@ -539,6 +559,70 @@ MODEL_REGISTRY = {
 ```
 
 Then add the corresponding API key to your `.env` file.
+
+## OpenRouter Models
+
+OpenRouter provides access to 15+ open-source and specialized models through a unified API. Get your API key at https://openrouter.ai/keys.
+
+### Available Model Categories
+
+**🎯 Weak Models (3B-9B) - Great for ITS Demos:**
+- **Llama 3.1 8B** - Good balance of performance and cost
+- **Llama 3.2 3B** - Very weak, shows dramatic ITS improvement
+- **Mistral 7B** - Popular open-source model
+- **Qwen 2.5 7B** - Strong reasoning for its size
+- **Gemma 2 9B** - Google's open model
+
+**Why use weak models?** They make mistakes on baseline but ITS corrects them, creating impressive before/after demos.
+
+**⚖️ Medium Models (27B-70B) - Good Balance:**
+- **Llama 3.1/3.3 70B** - Latest Meta models
+- **Qwen 2.5 72B** - Strong reasoning capabilities
+- **Gemma 2 27B** - Good mid-size option
+
+**🏆 Frontier Models:**
+- **DeepSeek R1** - Reasoning specialist
+
+**💻 Code Specialists:**
+- **Qwen 2.5 Coder 32B** - Code-focused model
+- **DeepSeek Coder V2** - Advanced coding model
+
+### OpenRouter Best Practices
+
+**✅ Use OpenRouter for:**
+- **Improve Model** demos - weak models show dramatic improvement
+- **Match Frontier** demos - Mistral 7B + ITS vs GPT-4o saves 73%
+- **Cost-effective testing** - open-source models are much cheaper
+- **Model diversity** - test across different architectures
+
+**❌ Don't use OpenRouter for:**
+- **Tool Consensus** demos - OpenRouter doesn't support function calling
+- Production tool calling scenarios - use OpenAI models instead
+
+**⚠️ Important Notes:**
+- Model availability changes - check https://openrouter.ai/models for current list
+- Some models may have rate limits or timeouts
+- For live demos, test your chosen model first
+- If you get "No endpoints found", the model may no longer be available
+
+### Recommended Demo Configurations
+
+**Best cost/impact ratio:**
+```
+Use Case: Match Frontier
+Small Model: mistral-7b (via OpenRouter - $0.06/1M)
+Frontier Model: gpt-4o (via OpenAI - $10/1M)
+Cost Savings: 73%
+```
+
+**Most dramatic improvement:**
+```
+Use Case: Improve Model
+Model: llama-3.2-3b (very weak - makes many mistakes)
+Algorithm: self_consistency
+Budget: 8
+Expected: Baseline often wrong, ITS corrects through consensus
+```
 
 ## Algorithm Details
 
