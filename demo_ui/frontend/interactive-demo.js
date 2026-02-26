@@ -501,41 +501,47 @@ function iwRenderResults(data) {
     const isMatch = iwState.scenario === 'match_frontier' && data.small_baseline;
     const resultsEl = document.getElementById('iwResultsArea');
 
-    // Determine visual indicator badges
-    const allPanes = [];
-    if (isMatch) {
-        allPanes.push({ key: 'small_baseline', data: data.small_baseline });
-        allPanes.push({ key: 'its', data: data.its });
-        allPanes.push({ key: 'frontier', data: data.baseline });
-    } else {
-        allPanes.push({ key: 'baseline', data: data.baseline });
-        allPanes.push({ key: 'its', data: data.its });
+    try {
+        // Determine visual indicator badges
+        const allPanes = [];
+        if (isMatch) {
+            allPanes.push({ key: 'small_baseline', data: data.small_baseline });
+            allPanes.push({ key: 'its', data: data.its });
+            allPanes.push({ key: 'frontier', data: data.baseline });
+        } else {
+            allPanes.push({ key: 'baseline', data: data.baseline });
+            allPanes.push({ key: 'its', data: data.its });
+        }
+
+        // Find cheapest and fastest
+        let minCost = Infinity, minLatency = Infinity;
+        allPanes.forEach(p => {
+            if (p.data && p.data.cost_usd != null && p.data.cost_usd < minCost) minCost = p.data.cost_usd;
+            if (p.data && p.data.latency_ms != null && p.data.latency_ms < minLatency) minLatency = p.data.latency_ms;
+        });
+
+        const colClass = isMatch ? 'three-col' : 'two-col';
+        let html = `<div class="iw-results-grid ${colClass}">`;
+
+        if (isMatch) {
+            html += iwBuildResultPaneSafe(data.small_baseline, 'baseline', iwGetModelDesc(iwState.modelId) + ' (Baseline)', minCost, minLatency);
+            html += iwBuildResultPaneSafe(data.its, 'its', iwGetModelDesc(iwState.modelId) + ' + ITS', minCost, minLatency);
+            html += iwBuildResultPaneSafe(data.baseline, 'frontier', iwGetModelDesc(iwState.frontierModelId) + ' (Frontier)', minCost, minLatency);
+        } else {
+            html += iwBuildResultPaneSafe(data.baseline, 'baseline', 'Baseline', minCost, minLatency);
+            html += iwBuildResultPaneSafe(data.its, 'its', 'ITS Enhanced', minCost, minLatency);
+        }
+
+        html += '</div>';
+        resultsEl.innerHTML = html;
+
+        // Render math in results
+        if (typeof renderMath === 'function') renderMath(resultsEl);
+
+    } catch (err) {
+        console.error('iwRenderResults error:', err);
+        resultsEl.innerHTML = `<div class="iw-error">Error rendering results: ${err.message}</div>`;
     }
-
-    // Find cheapest and fastest
-    let minCost = Infinity, minLatency = Infinity;
-    allPanes.forEach(p => {
-        if (p.data.cost_usd < minCost) minCost = p.data.cost_usd;
-        if (p.data.latency_ms < minLatency) minLatency = p.data.latency_ms;
-    });
-
-    const colClass = isMatch ? 'three-col' : 'two-col';
-    let html = `<div class="iw-results-grid ${colClass}">`;
-
-    if (isMatch) {
-        html += iwBuildResultPane(data.small_baseline, 'baseline', iwGetModelDesc(iwState.modelId) + ' (Baseline)', minCost, minLatency);
-        html += iwBuildResultPane(data.its, 'its', iwGetModelDesc(iwState.modelId) + ' + ITS', minCost, minLatency);
-        html += iwBuildResultPane(data.baseline, 'frontier', iwGetModelDesc(iwState.frontierModelId) + ' (Frontier)', minCost, minLatency);
-    } else {
-        html += iwBuildResultPane(data.baseline, 'baseline', 'Baseline', minCost, minLatency);
-        html += iwBuildResultPane(data.its, 'its', 'ITS Enhanced', minCost, minLatency);
-    }
-
-    html += '</div>';
-    resultsEl.innerHTML = html;
-
-    // Render math in results
-    if (typeof renderMath === 'function') renderMath(resultsEl);
 
     // Show expected answer if applicable
     if (iwState.expectedAnswer) {
@@ -545,12 +551,26 @@ function iwRenderResults(data) {
     }
 
     // Show trace section if ITS result has trace
-    if (data.its && data.its.trace) {
-        iwRenderTrace(data.its.trace);
-    }
+    try {
+        if (data.its && data.its.trace) {
+            iwRenderTrace(data.its.trace);
+        }
+    } catch (e) { console.error('Trace section error:', e); }
 
     // Show performance section
-    iwRenderPerformance(data);
+    try {
+        iwRenderPerformance(data);
+    } catch (e) { console.error('Performance section error:', e); }
+}
+
+// Wrapper that catches errors per-pane so one bad pane doesn't break all results
+function iwBuildResultPaneSafe(data, type, title, minCost, minLatency) {
+    try {
+        return iwBuildResultPane(data, type, title, minCost, minLatency);
+    } catch (err) {
+        console.error('Error building pane "' + title + '":', err);
+        return `<div class="iw-result-pane"><div class="iw-pane-header"><div class="iw-pane-title">${title}</div></div><div class="iw-pane-body"><div class="iw-error">Error rendering this pane: ${err.message}</div></div></div>`;
+    }
 }
 
 function iwGetModelDesc(modelId) {
@@ -584,33 +604,43 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
     // Trace expandable (for ITS results)
     let traceExpandable = '';
     if (data.trace && typeof renderAlgorithmTrace === 'function') {
-        traceExpandable = `
-            <div class="iw-expandable" onclick="this.classList.toggle('expanded')">
-                <button class="iw-expand-btn">
-                    <span class="iw-expand-icon">▶</span>
-                    Algorithm Trace (${data.trace.candidates ? data.trace.candidates.length + ' candidates' : 'details'})
-                </button>
-                <div class="iw-expand-content">
-                    ${renderAlgorithmTrace(data.trace, true)}
-                </div>
-            </div>
-        `;
+        try {
+            // Parse trace if it arrived as a string
+            const trace = typeof data.trace === 'string' ? JSON.parse(data.trace) : data.trace;
+            if (trace && trace.algorithm) {
+                const traceHtml = renderAlgorithmTrace(trace, true);
+                const count = trace.candidates ? trace.candidates.length + ' candidates' : 'details';
+                traceExpandable = `
+                    <div class="iw-expandable" onclick="this.classList.toggle('expanded')">
+                        <button class="iw-expand-btn">
+                            <span class="iw-expand-icon">▶</span>
+                            Algorithm Trace (${count})
+                        </button>
+                        <div class="iw-expand-content">${traceHtml}</div>
+                    </div>
+                `;
+            }
+        } catch (e) {
+            console.error('Trace render error in pane:', e);
+        }
     }
 
     // Tool calls expandable
     let toolsExpandable = '';
     if (data.tool_calls && data.tool_calls.length > 0 && typeof renderToolCalls === 'function') {
-        toolsExpandable = `
-            <div class="iw-expandable" onclick="this.classList.toggle('expanded')">
-                <button class="iw-expand-btn">
-                    <span class="iw-expand-icon">▶</span>
-                    Tool Calls (${data.tool_calls.length})
-                </button>
-                <div class="iw-expand-content">
-                    ${renderToolCalls(data.tool_calls)}
+        try {
+            toolsExpandable = `
+                <div class="iw-expandable" onclick="this.classList.toggle('expanded')">
+                    <button class="iw-expand-btn">
+                        <span class="iw-expand-icon">▶</span>
+                        Tool Calls (${data.tool_calls.length})
+                    </button>
+                    <div class="iw-expand-content">${renderToolCalls(data.tool_calls)}</div>
                 </div>
-            </div>
-        `;
+            `;
+        } catch (e) {
+            console.error('Tool calls render error:', e);
+        }
     }
 
     return `
@@ -664,9 +694,15 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
 // TRACE RENDERING
 // ============================================================
 
-function iwRenderTrace(trace) {
+function iwRenderTrace(traceRaw) {
     const section = document.getElementById('iwTraceSection');
     const content = document.getElementById('iwTraceContent');
+
+    // Parse if string
+    let trace = traceRaw;
+    try {
+        if (typeof trace === 'string') trace = JSON.parse(trace);
+    } catch (_) {}
 
     if (!trace || !trace.algorithm) { section.style.display = 'none'; return; }
 
@@ -678,7 +714,12 @@ function iwRenderTrace(trace) {
         `${algName} evaluated ${trace.candidates ? trace.candidates.length : '?'} candidates`;
 
     if (typeof renderAlgorithmTrace === 'function') {
-        content.innerHTML = renderAlgorithmTrace(trace, true);
+        try {
+            content.innerHTML = renderAlgorithmTrace(trace, true);
+        } catch (e) {
+            console.error('renderAlgorithmTrace error:', e);
+            content.innerHTML = '<div class="iw-error">Could not render trace visualization.</div>';
+        }
     }
 }
 
