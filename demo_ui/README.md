@@ -4,7 +4,15 @@ A simple web interface for comparing baseline LLM inference vs Inference-Time Sc
 
 ## 🆕 Recent Updates (February 2026)
 
-**Guided Demo Experience (Latest):**
+**Interactive Demo Experience (Latest):**
+
+- 🔑 **Provider onboarding page**: Shows setup instructions for OpenAI, OpenRouter, Vertex AI, and self-hosted models
+- 🔍 **Provider detection**: New `/providers` endpoint detects configured API keys; frontend shows status and available model count
+- 🔄 **Dynamic model availability**: Model dropdowns populated only with models from active providers
+- 📊 **Visual indicators**: Cheapest/Fastest badges on result panes, extensible for LLM-as-judge correctness evaluation
+- 🧩 **Modular architecture**: New `interactive-demo.js` and `interactive-demo.css` files
+
+**Guided Demo Experience:**
 
 - 🎯 **New Guided Demo Flow**: Completely redesigned step-by-step guided experience with 6-stage progressive disclosure
 - 📈 **Goal-first navigation**: Users choose their goal (Improve Performance or Match Frontier) before anything else
@@ -12,7 +20,6 @@ A simple web interface for comparing baseline LLM inference vs Inference-Time Sc
 - 🔀 **Branching scenarios**: Model options change based on the selected goal
 - ⚡ **Trace animation**: Staged 3-phase visualization (Generate → Evaluate → Select) shows how ITS works
 - 📊 **Performance page**: Dedicated bar charts comparing Cost, Quality, Latency, and Tokens
-- 🧩 **Modular architecture**: New `guided-demo.js` and `guided-demo.css` files with clearly marked placeholder data
 
 **Previous: Answer Extraction & Tool Consensus:**
 
@@ -49,9 +56,24 @@ The Guided Demo follows a 6-step progressive disclosure:
 
 All guided demo data uses placeholders. See [Plugging in Real Data](#plugging-in-real-data-guided-demo) below for where to replace them.
 
+### Interactive Demo Flow
+
+The Interactive Demo follows a 6-step credential-aware flow:
+
+| Step | Screen | What happens |
+|------|--------|--------------|
+| 1 | **Access** | Provider info page — shows setup instructions for OpenAI, OpenRouter, Vertex AI, and self-hosted models |
+| 2 | **Status** | Calls `/providers` and `/models` to detect which credentials are active and which models are available |
+| 3 | **Scenario** | Choose "Improve Model Performance" or "Match Frontier" |
+| 4 | **Configure** | Select model(s), ITS algorithm (Self-Consistency / Best-of-N), and compute budget |
+| 5 | **Prompt** | Choose a curated question or write a custom one, then submit |
+| 6 | **Results** | Live response panes with visual indicators (Cheapest, Fastest), expandable reasoning/trace, and performance charts |
+
+The model dropdowns in step 4 are dynamically populated based on which providers were detected in step 2. See [Plugging in Real Data (Interactive Demo)](#plugging-in-real-data-interactive-demo) below.
+
 ### Interactive Demo Use Cases
 
-- **Three Use Cases**:
+- **Two Scenarios**:
   1. **Improve Model**: Compare same model with/without ITS (2-column view)
   2. **Match Frontier**: Show small model + ITS matching large frontier model performance (3-column view)
   3. **Tool Consensus**: Demonstrate agent reliability through tool voting (2-column view)
@@ -168,9 +190,11 @@ demo_ui/
 │   ├── llm_prm.py                              # LLM-based process reward model
 │   └── requirements.txt                        # Backend dependencies
 └── frontend/
-    ├── index.html                              # Main web interface (landing page + interactive + guided shell)
+    ├── index.html                              # Main web interface (landing page + wizard shells)
     ├── guided-demo.js                          # Guided Demo flow logic, state, and mock data
     ├── guided-demo.css                         # Guided Demo styles
+    ├── interactive-demo.js                     # Interactive Demo flow logic, provider detection, live execution
+    ├── interactive-demo.css                    # Interactive Demo styles
     ├── performance-viz-v2.js                   # Performance visualization charts
     └── performance-viz-v2.css                  # Performance visualization styles
 ```
@@ -448,6 +472,36 @@ function getMockResponse(scenarioId, method) {
 3. Optionally add specific response data in `getMockResponse()`
 4. The scenario will automatically appear in Step 3 based on its `goal` field
 
+## Plugging in Real Data (Interactive Demo)
+
+The Interactive Demo logic lives in `frontend/interactive-demo.js`. Key extension points:
+
+| What to customize | Where in `interactive-demo.js` | Notes |
+|-------------------|-------------------------------|-------|
+| **Curated prompts** | `IW_CURATED_PROMPTS` object | Key = `${scenario}_${algorithm}`, value = array of `{q, a}` |
+| **Result presentation** | `iwBuildResultPane()` function | Customize badges, indicators, answer formatting |
+| **Judge integration** | `iwBuildResultPane()` badges section | Add `correct` badge by comparing against expected answer or LLM judge |
+| **Provider docs** | Step 1 HTML in `index.html` | Update setup instructions per provider |
+| **Model grouping** | `iwPopulateConfig()` function | Customize how models are grouped in dropdowns |
+
+### Adding curated prompts
+
+```javascript
+// In IW_CURATED_PROMPTS, add questions per scenario+algorithm:
+'improve_performance_self_consistency': [
+    { q: 'Your math question here', a: 'Expected answer' },
+    { q: 'Open-ended question', a: null },  // null = no expected answer
+],
+```
+
+### Adding a judge/evaluation mechanism
+
+The result panes already support a `correct` badge class. To wire up evaluation:
+
+1. After receiving results, compare `data.its.answer` against `iwState.expectedAnswer`
+2. Or call an LLM judge endpoint to score response quality
+3. Add badge: `<span class="iw-pane-badge correct">Correct</span>`
+
 ## API Reference
 
 ### GET /health
@@ -462,9 +516,26 @@ Health check endpoint.
 }
 ```
 
+### GET /providers
+
+Check which model providers have credentials configured.
+
+**Response:**
+```json
+{
+  "providers": {
+    "openai": { "enabled": true, "name": "OpenAI", "description": "GPT-4o, ...", "env_var": "OPENAI_API_KEY", "setup": "export OPENAI_API_KEY=sk-..." },
+    "openrouter": { "enabled": false, "name": "OpenRouter", "..." : "..." },
+    "vertex_ai": { "enabled": false, "..." : "..." },
+    "local": { "enabled": false, "..." : "..." }
+  },
+  "any_enabled": true
+}
+```
+
 ### GET /models
 
-List available models.
+List available models. Now includes `provider` field for each model.
 
 **Response:**
 ```json
@@ -473,7 +544,10 @@ List available models.
     {
       "id": "gpt-4o-mini",
       "description": "OpenAI GPT-4o Mini",
-      "model_name": "gpt-4o-mini"
+      "model_name": "gpt-4o-mini",
+      "size": "Small",
+      "supports_tools": true,
+      "provider": "openai"
     }
   ]
 }
@@ -726,6 +800,9 @@ For production use with process-based algorithms, consider using a dedicated pro
 ### ✅ Implemented
 
 - ✅ **Guided Demo Flow**: 6-step progressive disclosure with goal → method → scenario → submit → trace → performance
+- ✅ **Interactive Demo Flow**: 6-step credential-aware live experience with provider detection and dynamic model availability
+- ✅ **Provider Detection**: `/providers` endpoint checks configured API keys; frontend shows status and available models
+- ✅ **Visual Indicators**: Cheapest/Fastest badges on result panes, extensible for correctness judge
 - ✅ **Trace Animation**: Staged 3-phase visualization showing Generate → Evaluate → Select
 - ✅ **Performance Page**: Bar charts for Cost, Quality, Latency, and Tokens with best-value highlighting
 - ✅ **Branching Scenarios**: Model options change based on selected goal (Improve vs Match Frontier)
@@ -784,11 +861,13 @@ The frontend uses:
 - Fetch API for HTTP requests
 
 Frontend file responsibilities:
-- `index.html` — Landing page, interactive demo, inline styles/scripts, shared utility functions
+- `index.html` — Landing page, wizard HTML shells, inline styles/scripts, shared utility functions
 - `guided-demo.js` — Guided Demo flow: state management, step navigation, mock data, trace animation, performance charts
-- `guided-demo.css` — Guided Demo styles: progress bar, cards, response panes, trace phases, performance charts
-- `performance-viz-v2.js` / `.css` — Performance visualization component (used by interactive mode)
+- `guided-demo.css` — Guided Demo styles
+- `interactive-demo.js` — Interactive Demo flow: provider detection, live execution, results rendering, performance visualization
+- `interactive-demo.css` — Interactive Demo styles
+- `performance-viz-v2.js` / `.css` — Performance visualization component (used by both modes)
 
 To modify the backend, edit files in `backend/` and the server will auto-reload (if started with `--reload` flag).
 
-To modify the frontend, edit the relevant file and refresh your browser. The guided demo logic is self-contained in `guided-demo.js` — it overrides the `initGuidedWizard()` function from `index.html` at load time.
+To modify the frontend, edit the relevant file and refresh your browser. Both demo flows are self-contained in their respective JS files — they override entry-point functions from `index.html` at load time (`initGuidedWizard` for guided, `selectExperience` for interactive).

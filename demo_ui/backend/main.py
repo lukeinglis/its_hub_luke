@@ -214,6 +214,68 @@ def check_server_available(base_url: str, timeout: float = 1.0) -> bool:
         return False
 
 
+def _get_provider_group(config: dict) -> str:
+    """Determine the provider group for a model config."""
+    provider = config.get("provider", "")
+    base_url = config.get("base_url", "")
+    if provider in ("vertex_ai", "vertex_ai_model_garden"):
+        return "vertex_ai"
+    if "openrouter.ai" in base_url:
+        return "openrouter"
+    if "api.openai.com" in base_url:
+        return "openai"
+    return "local"
+
+
+@app.get("/providers")
+async def check_providers():
+    """Check which model providers have credentials configured."""
+    openai_key = os.getenv("OPENAI_API_KEY")
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    vertex_project = os.getenv("VERTEX_PROJECT")
+    vllm_url = os.getenv("VLLM_BASE_URL")
+
+    local_available = False
+    if vllm_url:
+        local_available = check_server_available(vllm_url)
+    else:
+        local_available = check_server_available("http://localhost:8100/v1")
+
+    providers = {
+        "openai": {
+            "enabled": bool(openai_key),
+            "name": "OpenAI",
+            "description": "GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo",
+            "env_var": "OPENAI_API_KEY",
+            "setup": "export OPENAI_API_KEY=sk-...",
+        },
+        "openrouter": {
+            "enabled": bool(openrouter_key),
+            "name": "OpenRouter",
+            "description": "Llama 3, Mistral 7B, Qwen 2.5, Gemma 2, DeepSeek (15+ open-source models)",
+            "env_var": "OPENROUTER_API_KEY",
+            "setup": "export OPENROUTER_API_KEY=sk-or-...",
+        },
+        "vertex_ai": {
+            "enabled": bool(vertex_project),
+            "name": "Google Cloud Vertex AI",
+            "description": "Claude 3.5 Sonnet/Opus/Haiku, Gemini 1.5 Pro/Flash",
+            "env_var": "VERTEX_PROJECT",
+            "setup": "export VERTEX_PROJECT=your-project-id\ngcloud auth application-default login",
+        },
+        "local": {
+            "enabled": local_available,
+            "name": "Self-Hosted / Local",
+            "description": "Any model served via vLLM or OpenAI-compatible endpoint",
+            "env_var": "VLLM_BASE_URL",
+            "setup": "export VLLM_BASE_URL=http://localhost:8100/v1",
+        },
+    }
+
+    any_enabled = any(p["enabled"] for p in providers.values())
+    return {"providers": providers, "any_enabled": any_enabled}
+
+
 @app.get("/models")
 async def list_models(use_case: str | None = None):
     """
@@ -233,32 +295,30 @@ async def list_models(use_case: str | None = None):
 
         # Check if model requires external server (has non-standard base_url)
         base_url = config.get("base_url", "")
+        provider_group = _get_provider_group(config)
+
+        model_entry = {
+            "id": model_id,
+            "description": config["description"],
+            "model_name": config["model_name"],
+            "size": config.get("size", "Unknown"),
+            "supports_tools": config.get("supports_tools", False),
+            "provider": provider_group,
+        }
 
         # Skip server check for standard OpenAI, OpenRouter, Vertex AI, and Model Garden models
         if (base_url.startswith("https://api.openai.com") or
             base_url.startswith("https://openrouter.ai") or
             config.get("provider") in ("vertex_ai", "vertex_ai_model_garden") or
             not base_url):
-            available_models.append({
-                "id": model_id,
-                "description": config["description"],
-                "model_name": config["model_name"],
-                "size": config.get("size", "Unknown"),
-                "supports_tools": config.get("supports_tools", False),
-            })
+            available_models.append(model_entry)
             continue
 
         # For custom endpoints (Granite, local vLLM), check if server is available
         server_available = check_server_available(base_url, timeout=1.0)
 
         if server_available:
-            available_models.append({
-                "id": model_id,
-                "description": config["description"],
-                "model_name": config["model_name"],
-                "size": config.get("size", "Unknown"),
-                "supports_tools": config.get("supports_tools", False),
-            })
+            available_models.append(model_entry)
         else:
             logger.debug(f"Skipping model {model_id} - server at {base_url} not available")
 

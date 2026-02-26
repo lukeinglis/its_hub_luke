@@ -14,6 +14,9 @@
     <!-- Guided Demo CSS -->
     <link rel="stylesheet" href="guided-demo.css">
 
+    <!-- Interactive Demo CSS -->
+    <link rel="stylesheet" href="interactive-demo.css">
+
     <!-- KaTeX for Math Rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
@@ -3483,6 +3486,226 @@
             </div>
         </div>
 
+        <!-- Interactive Demo Wizard -->
+        <div id="interactiveWizard" class="interactive-wizard" style="display: none;">
+            <!-- Progress Bar -->
+            <div class="iw-progress">
+                <div class="iw-progress-bar" id="iwProgressBar" style="width: 0%"></div>
+            </div>
+            <div class="iw-breadcrumbs">
+                <span class="iw-crumb active" data-step="1">Access</span>
+                <span class="iw-crumb-sep">/</span>
+                <span class="iw-crumb" data-step="2">Status</span>
+                <span class="iw-crumb-sep">/</span>
+                <span class="iw-crumb" data-step="3">Scenario</span>
+                <span class="iw-crumb-sep">/</span>
+                <span class="iw-crumb" data-step="4">Configure</span>
+                <span class="iw-crumb-sep">/</span>
+                <span class="iw-crumb" data-step="5">Prompt</span>
+                <span class="iw-crumb-sep">/</span>
+                <span class="iw-crumb" data-step="6">Results</span>
+            </div>
+
+            <!-- Step 1: Provider Access Page -->
+            <div id="iwStep1" class="iw-step">
+                <h3 class="iw-step-title">Live Model Access</h3>
+                <p class="iw-step-subtitle">This demo runs live API calls against real models. You need at least one provider configured.</p>
+
+                <div class="iw-info-banner">
+                    <strong>How it works:</strong> The demo connects to your configured model providers.
+                    Which models appear depends on which API keys you have set in the backend's <code>.env</code> file.
+                    You only need <strong>one provider</strong> to get started.
+                </div>
+
+                <div class="iw-provider-grid">
+                    <!-- OpenAI -->
+                    <div class="iw-provider-card">
+                        <div class="iw-provider-header">
+                            <span class="iw-provider-name">OpenAI</span>
+                        </div>
+                        <div class="iw-provider-models">GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo</div>
+                        <div class="iw-provider-setup">OPENAI_API_KEY=sk-...</div>
+                    </div>
+
+                    <!-- OpenRouter -->
+                    <div class="iw-provider-card">
+                        <div class="iw-provider-header">
+                            <span class="iw-provider-name">OpenRouter</span>
+                        </div>
+                        <div class="iw-provider-models">Llama 3, Mistral, Qwen, Gemma, DeepSeek (15+ open-source models)</div>
+                        <div class="iw-provider-setup">OPENROUTER_API_KEY=sk-or-...</div>
+                    </div>
+
+                    <!-- Vertex AI -->
+                    <div class="iw-provider-card">
+                        <div class="iw-provider-header">
+                            <span class="iw-provider-name">Google Cloud Vertex AI</span>
+                        </div>
+                        <div class="iw-provider-models">Claude 3.5 Sonnet/Opus/Haiku, Gemini 1.5 Pro/Flash</div>
+                        <div class="iw-provider-setup">VERTEX_PROJECT=your-project-id
+gcloud auth application-default login</div>
+                    </div>
+
+                    <!-- Self-Hosted -->
+                    <div class="iw-provider-card">
+                        <div class="iw-provider-header">
+                            <span class="iw-provider-name">Self-Hosted / Local</span>
+                        </div>
+                        <div class="iw-provider-models">Any model served via vLLM or OpenAI-compatible endpoint</div>
+                        <div class="iw-provider-setup">VLLM_BASE_URL=http://localhost:8100/v1</div>
+                    </div>
+                </div>
+
+                <p style="font-size:13px; color:var(--text-tertiary); text-align:center; margin-bottom:20px;">
+                    Add keys to <code>demo_ui/.env</code> and restart the backend server to enable providers.
+                </p>
+
+                <div class="iw-center-actions">
+                    <button class="btn-primary" onclick="iwCheckProviders()">
+                        Check Access &amp; Continue
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Provider Status -->
+            <div id="iwStep2" class="iw-step" style="display: none;">
+                <button class="iw-back-btn" onclick="iwGoBack(1)">← Back</button>
+                <h3 class="iw-step-title">Provider Status</h3>
+                <p class="iw-step-subtitle">Detected credentials and available models</p>
+                <div id="iwProviderStatus"></div>
+                <div id="iwModelList"></div>
+                <div class="iw-center-actions">
+                    <button class="btn-primary" id="iwProceedBtn" disabled onclick="iwShowStep(3)">
+                        Continue to Scenario Selection
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: Scenario Selection -->
+            <div id="iwStep3" class="iw-step" style="display: none;">
+                <button class="iw-back-btn" onclick="iwGoBack(2)">← Back</button>
+                <h3 class="iw-step-title">Choose Your Scenario</h3>
+                <p class="iw-step-subtitle">What do you want to demonstrate?</p>
+                <div class="iw-cards-grid">
+                    <div class="iw-card" data-scenario="improve_performance" onclick="iwSelectScenario('improve_performance')">
+                        <div class="iw-card-icon">📈</div>
+                        <h4>Improve Model Performance</h4>
+                        <p>Compare the same model with and without ITS to see quality improvements</p>
+                    </div>
+                    <div class="iw-card" data-scenario="match_frontier" onclick="iwSelectScenario('match_frontier')">
+                        <div class="iw-card-icon">⚖️</div>
+                        <h4>Match Frontier with Smaller Model</h4>
+                        <p>Show a small model + ITS matching a large frontier model at lower cost</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Configuration -->
+            <div id="iwStep4" class="iw-step" style="display: none;">
+                <button class="iw-back-btn" onclick="iwGoBack(3)">← Back</button>
+                <h3 class="iw-step-title">Configure Your Run</h3>
+                <p class="iw-step-subtitle">Select model, algorithm, and compute budget</p>
+
+                <div class="iw-config-grid" id="iwConfigGrid">
+                    <div class="iw-form-group">
+                        <label id="iwModelLabel" for="iwModelSelect">Model</label>
+                        <select id="iwModelSelect"></select>
+                    </div>
+
+                    <div class="iw-form-group" id="iwFrontierGroup" style="display:none;">
+                        <label for="iwFrontierSelect">Frontier Model</label>
+                        <select id="iwFrontierSelect"></select>
+                    </div>
+
+                    <div class="iw-form-group">
+                        <label for="iwAlgorithm">ITS Algorithm</label>
+                        <select id="iwAlgorithm">
+                            <option value="self_consistency">Self-Consistency</option>
+                            <option value="best_of_n">Best-of-N</option>
+                        </select>
+                    </div>
+
+                    <div class="iw-form-group">
+                        <label for="iwBudget">Budget (candidates)</label>
+                        <div class="iw-budget-display">
+                            <input type="range" id="iwBudget" min="2" max="16" value="4" oninput="iwBudgetChanged(this)">
+                            <span class="iw-budget-value" id="iwBudgetValue">4</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="iw-center-actions">
+                    <button class="btn-primary" onclick="iwProceedToPrompt()">
+                        Continue to Prompt
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 5: Prompt Input -->
+            <div id="iwStep5" class="iw-step" style="display: none;">
+                <button class="iw-back-btn" onclick="iwGoBack(4)">← Back</button>
+                <h3 class="iw-step-title">Your Question</h3>
+                <p class="iw-step-subtitle">Choose a curated question or write your own</p>
+
+                <div class="iw-prompt-section">
+                    <select id="iwCuratedSelect" class="iw-curated-select" onchange="iwCuratedChanged(this)">
+                        <option value="">Select a curated question...</option>
+                    </select>
+
+                    <div class="iw-divider"><span>or write your own</span></div>
+
+                    <textarea id="iwCustomTextarea" class="iw-custom-textarea"
+                              placeholder="Type your question here..."
+                              oninput="iwCustomChanged(this)"></textarea>
+                </div>
+
+                <div class="iw-submit-area">
+                    <button class="btn-primary iw-submit-btn" id="iwSubmitBtn" onclick="iwSubmit()">
+                        <span>▶</span>
+                        <span>Run Comparison</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 6: Results -->
+            <div id="iwStep6" class="iw-step" style="display: none;">
+                <button class="iw-back-btn" onclick="iwGoBack(5)">← Back to Prompt</button>
+                <h3 class="iw-step-title">Results</h3>
+
+                <!-- Expected Answer (for curated prompts) -->
+                <div id="iwExpectedAnswer" class="iw-expected-answer" style="display:none;">
+                    <div class="iw-expected-label">Expected Answer</div>
+                    <div class="iw-expected-content" id="iwExpectedContent"></div>
+                </div>
+
+                <!-- Response panes -->
+                <div id="iwResultsArea"></div>
+
+                <!-- Trace Section -->
+                <div id="iwTraceSection" class="iw-trace-section" style="display:none;">
+                    <h4 class="iw-trace-title">ITS Algorithm Trace</h4>
+                    <p class="iw-trace-subtitle" id="iwTraceSubtitle"></p>
+                    <div id="iwTraceContent"></div>
+                </div>
+
+                <!-- Performance Section -->
+                <div id="iwPerfSection" class="iw-perf-section" style="display:none;">
+                    <h4 class="iw-perf-title">Performance Comparison</h4>
+                    <div id="iwPerfContainer"></div>
+                </div>
+
+                <!-- Restart -->
+                <div class="iw-restart-area">
+                    <button class="btn-secondary" onclick="iwGoBack(5)" style="margin-right:12px;">
+                        Run Another Question
+                    </button>
+                    <button class="btn-secondary" onclick="iwInit()">
+                        Start Over
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Scenario Selector (Guided Mode Only) -->
         <div class="section" id="scenarioSection">
             <div id="scenarioSelectorContainer" class="scenario-selector-container">
@@ -6861,5 +7084,8 @@
 
     <!-- Guided Demo Flow JS -->
     <script src="guided-demo.js"></script>
+
+    <!-- Interactive Demo Flow JS -->
+    <script src="interactive-demo.js"></script>
 </body>
 </html>
