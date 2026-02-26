@@ -113,6 +113,27 @@ function iwInit() {
 }
 
 // ============================================================
+// COPY SETUP SNIPPET
+// ============================================================
+
+function iwCopySetup(card) {
+    const text = card.dataset.copy;
+    if (!text) return;
+
+    navigator.clipboard.writeText(text).then(() => {
+        const hint = card.querySelector('.iw-copy-hint');
+        if (hint) {
+            hint.textContent = 'Copied!';
+            hint.classList.add('copied');
+            setTimeout(() => {
+                hint.textContent = 'Click to copy';
+                hint.classList.remove('copied');
+            }, 2000);
+        }
+    });
+}
+
+// ============================================================
 // STEP NAVIGATION
 // ============================================================
 

@@ -3517,27 +3517,30 @@
 
                 <div class="iw-provider-grid">
                     <!-- OpenAI -->
-                    <div class="iw-provider-card">
+                    <div class="iw-provider-card iw-provider-copyable" onclick="iwCopySetup(this)" data-copy="OPENAI_API_KEY=sk-...">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">OpenAI</span>
+                            <span class="iw-copy-hint">Click to copy</span>
                         </div>
                         <div class="iw-provider-models">GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo</div>
                         <div class="iw-provider-setup">OPENAI_API_KEY=sk-...</div>
                     </div>
 
                     <!-- OpenRouter -->
-                    <div class="iw-provider-card">
+                    <div class="iw-provider-card iw-provider-copyable" onclick="iwCopySetup(this)" data-copy="OPENROUTER_API_KEY=sk-or-...">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">OpenRouter</span>
+                            <span class="iw-copy-hint">Click to copy</span>
                         </div>
                         <div class="iw-provider-models">Llama 3, Mistral, Qwen, Gemma, DeepSeek (15+ open-source models)</div>
                         <div class="iw-provider-setup">OPENROUTER_API_KEY=sk-or-...</div>
                     </div>
 
                     <!-- Vertex AI -->
-                    <div class="iw-provider-card">
+                    <div class="iw-provider-card iw-provider-copyable" onclick="iwCopySetup(this)" data-copy="VERTEX_PROJECT=your-project-id">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">Google Cloud Vertex AI</span>
+                            <span class="iw-copy-hint">Click to copy</span>
                         </div>
                         <div class="iw-provider-models">Claude 3.5 Sonnet/Opus/Haiku, Gemini 1.5 Pro/Flash</div>
                         <div class="iw-provider-setup">VERTEX_PROJECT=your-project-id
@@ -3545,9 +3548,10 @@ gcloud auth application-default login</div>
                     </div>
 
                     <!-- Self-Hosted -->
-                    <div class="iw-provider-card">
+                    <div class="iw-provider-card iw-provider-copyable" onclick="iwCopySetup(this)" data-copy="VLLM_BASE_URL=http://localhost:8100/v1">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">Self-Hosted / Local</span>
+                            <span class="iw-copy-hint">Click to copy</span>
                         </div>
                         <div class="iw-provider-models">Any model served via vLLM or OpenAI-compatible endpoint</div>
                         <div class="iw-provider-setup">VLLM_BASE_URL=http://localhost:8100/v1</div>
@@ -3555,7 +3559,7 @@ gcloud auth application-default login</div>
                 </div>
 
                 <p style="font-size:13px; color:var(--text-tertiary); text-align:center; margin-bottom:20px;">
-                    Add keys to <code>demo_ui/.env</code> and restart the backend server to enable providers.
+                    Click a card to copy its env variable, then paste into <code>demo_ui/.env</code> and restart the backend.
                 </p>
 
                 <div class="iw-center-actions">
