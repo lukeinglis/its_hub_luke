@@ -584,12 +584,14 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
 
     // Badges
     let badges = '';
-    if (data.cost_usd <= minCost) badges += '<span class="iw-pane-badge cheapest">Cheapest</span>';
-    if (data.latency_ms <= minLatency) badges += '<span class="iw-pane-badge fastest">Fastest</span>';
+    const cost = data.cost_usd != null ? data.cost_usd : null;
+    const latency = data.latency_ms != null ? data.latency_ms : null;
+    if (cost != null && cost <= minCost) badges += '<span class="iw-pane-badge cheapest">Cheapest</span>';
+    if (latency != null && latency <= minLatency) badges += '<span class="iw-pane-badge fastest">Fastest</span>';
 
     // Format cost
-    const costFmt = data.cost_usd != null
-        ? (data.cost_usd < 0.0001 ? '$' + data.cost_usd.toExponential(2) : '$' + data.cost_usd.toFixed(4))
+    const costFmt = cost != null
+        ? (cost < 0.0001 ? '$' + cost.toExponential(2) : '$' + cost.toFixed(4))
         : 'N/A';
 
     // Response content
@@ -655,7 +657,7 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
             <div class="iw-pane-body">
                 <div class="iw-pane-response">${responseHtml}</div>
                 <div class="iw-pane-meta">
-                    <span class="iw-meta-tag"><span class="meta-label">Latency:</span><span class="meta-value">${data.latency_ms}ms</span></span>
+                    <span class="iw-meta-tag"><span class="meta-label">Latency:</span><span class="meta-value">${latency != null ? latency + 'ms' : 'N/A'}</span></span>
                     <span class="iw-meta-tag"><span class="meta-label">Cost:</span><span class="meta-value">${costFmt}</span></span>
                     <span class="iw-meta-tag"><span class="meta-label">Tokens:</span><span class="meta-value">${(data.input_tokens || 0) + (data.output_tokens || 0)}</span></span>
                 </div>
@@ -676,7 +678,7 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
                 </button>
                 <div class="iw-expand-content">
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px;">
-                        <span style="color:var(--text-tertiary)">Latency</span><span style="font-family:'IBM Plex Mono',monospace">${data.latency_ms}ms</span>
+                        <span style="color:var(--text-tertiary)">Latency</span><span style="font-family:'IBM Plex Mono',monospace">${latency != null ? latency + 'ms' : 'N/A'}</span>
                         <span style="color:var(--text-tertiary)">Cost</span><span style="font-family:'IBM Plex Mono',monospace">${costFmt}</span>
                         <span style="color:var(--text-tertiary)">Input Tokens</span><span style="font-family:'IBM Plex Mono',monospace">${(data.input_tokens || 0).toLocaleString()}</span>
                         <span style="color:var(--text-tertiary)">Output Tokens</span><span style="font-family:'IBM Plex Mono',monospace">${(data.output_tokens || 0).toLocaleString()}</span>
@@ -754,9 +756,10 @@ function iwRenderPerformance(data) {
     columns.forEach(c => { html += `<th style="text-align:right;padding:8px;border-bottom:2px solid var(--border-color)">${c.label}</th>`; });
     html += '</tr></thead><tbody>';
 
+    const fmtCost = d => d.cost_usd != null ? (d.cost_usd < 0.0001 ? '$' + d.cost_usd.toExponential(2) : '$' + d.cost_usd.toFixed(4)) : 'N/A';
     const rows = [
-        { label: 'Cost', fn: d => d.cost_usd < 0.0001 ? '$' + d.cost_usd.toExponential(2) : '$' + d.cost_usd.toFixed(4) },
-        { label: 'Latency', fn: d => Math.round(d.latency_ms) + 'ms' },
+        { label: 'Cost', fn: fmtCost },
+        { label: 'Latency', fn: d => d.latency_ms != null ? Math.round(d.latency_ms) + 'ms' : 'N/A' },
         { label: 'Total Tokens', fn: d => ((d.input_tokens || 0) + (d.output_tokens || 0)).toLocaleString() },
     ];
 
