@@ -6,11 +6,11 @@ A simple web interface for comparing baseline LLM inference vs Inference-Time Sc
 
 **Interactive Demo Experience (Latest):**
 
-- 🔑 **Provider onboarding page**: Shows setup instructions for OpenAI, OpenRouter, Vertex AI, and self-hosted models
-- 🔍 **Provider detection**: New `/providers` endpoint detects configured API keys; frontend shows status and available model count
-- 🔄 **Dynamic model availability**: Model dropdowns populated only with models from active providers
+- 🔑 **Provider onboarding page**: Clickable cards copy env variable snippets to clipboard; active providers auto-detected and highlighted green on load
+- 🔍 **Provider detection**: `/providers` endpoint detects configured API keys; frontend shows status and available model count
+- 🔄 **Dynamic model availability**: Model dropdowns populated only with models from active providers, grouped by provider
 - 📊 **Visual indicators**: Cheapest/Fastest badges on result panes, extensible for LLM-as-judge correctness evaluation
-- 🧩 **Modular architecture**: New `interactive-demo.js` and `interactive-demo.css` files
+- 🧩 **5-step flow**: Access → Status → Scenario → Configure & Run → Results (config and prompt merged into single step)
 
 **Guided Demo Experience:**
 
@@ -58,25 +58,24 @@ All guided demo data uses placeholders. See [Plugging in Real Data](#plugging-in
 
 ### Interactive Demo Flow
 
-The Interactive Demo follows a 6-step credential-aware flow:
+The Interactive Demo follows a 5-step credential-aware flow:
 
 | Step | Screen | What happens |
 |------|--------|--------------|
-| 1 | **Access** | Provider info page — shows setup instructions for OpenAI, OpenRouter, Vertex AI, and self-hosted models |
-| 2 | **Status** | Calls `/providers` and `/models` to detect which credentials are active and which models are available |
+| 1 | **Access** | Provider info page — clickable cards copy env snippets to clipboard; active providers auto-highlighted green |
+| 2 | **Status** | Calls `/providers` and `/models` to detect which credentials are active and list available models |
 | 3 | **Scenario** | Choose "Improve Model Performance" or "Match Frontier" |
-| 4 | **Configure** | Select model(s), ITS algorithm (Self-Consistency / Best-of-N), and compute budget |
-| 5 | **Prompt** | Choose a curated question or write a custom one, then submit |
-| 6 | **Results** | Live response panes with visual indicators (Cheapest, Fastest), expandable reasoning/trace, and performance charts |
+| 4 | **Configure & Run** | Select model(s), algorithm, budget, choose a curated question or write your own, then submit |
+| 5 | **Results** | Live response panes with Cheapest/Fastest badges, expandable reasoning/trace, and performance charts |
 
 The model dropdowns in step 4 are dynamically populated based on which providers were detected in step 2. See [Plugging in Real Data (Interactive Demo)](#plugging-in-real-data-interactive-demo) below.
 
 ### Interactive Demo Use Cases
 
-- **Two Scenarios**:
-  1. **Improve Model**: Compare same model with/without ITS (2-column view)
-  2. **Match Frontier**: Show small model + ITS matching large frontier model performance (3-column view)
-  3. **Tool Consensus**: Demonstrate agent reliability through tool voting (2-column view)
+- **Two Scenarios** (selected in step 3):
+  1. **Improve Model Performance**: Compare same model with/without ITS (2-column results)
+  2. **Match Frontier**: Show small model + ITS matching large frontier model (3-column results)
+- **Backend also supports**: Tool Consensus use case (agent tool voting via API — available when running comparisons directly through the `/compare` endpoint)
 - **Smart Features**:
   - **Answer Extraction**: Automatically extracts `\boxed{}` answers from math responses for proper consensus voting
   - **Auto-Detection**: Recognizes question types (math, tool_calling, general) and applies optimal configuration
@@ -174,28 +173,24 @@ All 6 ITS algorithms tested and working:
 ```
 demo_ui/
 ├── README.md                                    # This file
-├── DEMO_CHEAT_SHEET.md                         # Quick reference for demos (NEW)
-├── IDEAL_DEMO_CONFIGURATIONS.md                # Detailed demo configurations (NEW)
-├── ANSWER_EXTRACTION_FIX_VERIFICATION.md       # Verification report (NEW)
-├── .gitignore                                  # Git ignore patterns
 ├── .env.example                                # Environment variables template
 ├── backend/
 │   ├── __init__.py
-│   ├── main.py                                 # FastAPI application
-│   ├── config.py                               # Model registry
-│   ├── models.py                               # Pydantic models
-│   ├── tools.py                                # Tool definitions for agent demos (NEW)
-│   ├── example_questions.py                    # Example questions library
+│   ├── main.py                                 # FastAPI app (/compare, /models, /providers, /examples)
+│   ├── config.py                               # Model registry (28 models across 4 providers)
+│   ├── models.py                               # Pydantic request/response models
+│   ├── tools.py                                # Tool definitions for agent demos
+│   ├── example_questions.py                    # Curated example questions library
 │   ├── vertex_lm.py                            # Vertex AI model implementations
 │   ├── llm_prm.py                              # LLM-based process reward model
 │   └── requirements.txt                        # Backend dependencies
 └── frontend/
-    ├── index.html                              # Main web interface (landing page + wizard shells)
-    ├── guided-demo.js                          # Guided Demo flow logic, state, and mock data
+    ├── index.html                              # Landing page, wizard HTML shells, inline shared utilities
+    ├── guided-demo.js                          # Guided Demo: 6-step flow, mock data, trace animation
     ├── guided-demo.css                         # Guided Demo styles
-    ├── interactive-demo.js                     # Interactive Demo flow logic, provider detection, live execution
+    ├── interactive-demo.js                     # Interactive Demo: 5-step flow, provider detection, live execution
     ├── interactive-demo.css                    # Interactive Demo styles
-    ├── performance-viz-v2.js                   # Performance visualization charts
+    ├── performance-viz-v2.js                   # Performance visualization bar charts
     └── performance-viz-v2.css                  # Performance visualization styles
 ```
 
@@ -277,26 +272,13 @@ The backend will be available at `http://localhost:8000`
 
 ### Open the frontend
 
-Open `frontend/index.html` in your web browser:
+The frontend is served automatically by the backend. Open your browser to:
 
-```bash
-# macOS
-open frontend/index.html
-
-# Linux
-xdg-open frontend/index.html
-
-# Windows
-start frontend/index.html
+```
+http://localhost:8000
 ```
 
-Or serve it with a simple HTTP server:
-
-```bash
-cd frontend
-python -m http.server 8080
-# Then open http://localhost:8080 in your browser
-```
+You will see the landing page with two options: **Guided Demo** and **Interactive Demo**.
 
 ## Quick Start Guides 📚
 
@@ -308,123 +290,47 @@ For detailed demo configurations and talking points, see:
 
 ## Using the Demo
 
-### Selecting a Use Case
+### Landing Page
 
-Choose between three use cases at the top of the page:
+Open `http://localhost:8000` to see the landing page with two options:
 
-1. **Improve Model Performance** (default):
-   - Compare the same model with and without ITS
-   - Shows 2-column comparison: Baseline vs ITS
-   - **Best for**: Mathematical reasoning, probability questions
-   - **Recommended models**: GPT-3.5 Turbo, Mistral 7B, Llama 3.1 8B (weak models show dramatic improvement)
-   - **Example**: GPT-3.5 on "Alice & Bob dice probability" - baseline may get wrong answer, ITS achieves consensus on correct answer
+- **Guided Demo** — Walks through pre-built scenarios with mock data. No backend API keys required. Good for presentations.
+- **Interactive Demo** — Runs live API calls against real models. Requires at least one provider configured.
 
-2. **Match Frontier Performance**:
-   - Compare small model + ITS vs large frontier model
-   - Shows 3-column comparison: Small Baseline, Small + ITS, Frontier
-   - **Best for**: Algebra, complex math problems
-   - **Recommended combos**:
-     - GPT-4o Mini + ITS vs GPT-4o (64% cost savings)
-     - Mistral 7B + ITS vs GPT-4o (73% cost savings via OpenRouter)
-   - **Example**: GPT-4o Mini + ITS matches GPT-4o at 64% lower cost
-   - Demonstrates cost savings (64-73% cheaper) while matching quality
+### Guided Demo Walkthrough
 
-3. **Agent Tool Consensus** 🆕:
-   - Compare single tool call vs consensus voting
-   - Shows 2-column comparison: Baseline vs ITS with tool voting
-   - **Best for**: Agent scenarios, financial calculations, data analysis
-   - **Recommended models**: GPT-4o Mini, GPT-3.5 Turbo (OpenAI models only)
-   - **⚠️ Note**: OpenRouter models do NOT support function/tool calling - use OpenAI models for this demo
-   - **Example**: CAGR calculation shows tool consensus (e.g., `{'calculate': 6}`)
-   - Demonstrates agent reliability through democratic voting
+1. Select a **goal** (Improve Performance or Match Frontier)
+2. Choose an **ITS method** (Self-Consistency or Best-of-N)
+3. Pick a **model scenario** (options depend on goal)
+4. Review the pre-populated **question** and click Submit
+5. View side-by-side **responses**, then click "Show ITS Trace" to see the staged animation
+6. Review the **Performance** page with Cost, Quality, Latency, and Token charts
 
-### Running a Comparison
+All data is placeholder/mock — see [Plugging in Real Data (Guided Demo)](#plugging-in-real-data-guided-demo) to replace with real captured results.
 
-1. **Select your model(s)**:
-   - For "Improve Model": Choose one model (e.g., GPT-4o Mini)
-   - For "Match Frontier": Choose small model (e.g., GPT-4o Mini) and frontier model (e.g., GPT-4o)
+### Interactive Demo Walkthrough
 
-2. **Choose an algorithm** (descriptions appear below the dropdown):
-
-   **Outcome-Based Algorithms** (evaluate final responses):
-   - **Best-of-N**: Generates N responses and selects the best using an LLM judge
-   - **Self-Consistency**: Generates N responses and selects the most common answer
-
-   **Process-Based Algorithms** (evaluate step-by-step reasoning):
-   - **Beam Search**: Tree search maintaining top-k paths at each step
-   - **Particle Filtering**: Sequential Monte Carlo sampling with resampling
-   - **Entropic Particle Filtering**: Particle filtering with temperature annealing
-   - **Particle Gibbs**: Iterative particle filtering with Gibbs sampling
-
-3. **Set the budget** (1-32): Computational resources allocated
-   - For outcome-based: Number of complete generations
-   - For process-based: Total inference calls (divided across steps/particles)
-
-4. **Enter a question** or **select an example**:
-   - Type your own question in the text area
-   - Or choose from pre-populated examples optimized for each algorithm
-   - Examples are organized by difficulty (Easy, Medium, Hard)
-   - Examples automatically filter based on the selected algorithm
-
-5. **Click "Run Comparison"**
+1. **Access** — Review which providers are available. Click any card to copy its env variable. Active providers are highlighted green automatically.
+2. **Status** — Click "Check Access & Continue" to detect configured credentials and see available models.
+3. **Scenario** — Choose "Improve Model Performance" (2-column) or "Match Frontier" (3-column).
+4. **Configure & Run** — Select model(s), algorithm, budget, and enter your question (from curated list or custom). Click "Run Comparison".
+5. **Results** — View response panes with Cheapest/Fastest badges, expandable reasoning and algorithm traces, and performance comparison charts.
 
 ### Understanding the Results
 
-Each result card shows:
+Each result pane shows:
 
-- **Response Section** (always visible):
-  - Complete chatbot response - exactly what the user would see
-  - Clean, readable formatting with LaTeX math support
+- **Response** (always visible): The model's chatbot-style answer with LaTeX math support
+- **Latency / Cost / Tokens**: Summary badges below the response
+- **View Full Reasoning** (expandable): Step-by-step reasoning if the response contains structured steps
+- **Performance Details** (expandable): Latency, cost, input/output tokens, model size
+- **Algorithm Trace** (expandable, ITS pane only): Vote counts (Self-Consistency) or score leaderboard (Best-of-N)
 
-- **View Detailed Reasoning** (expandable):
-  - Click to reveal step-by-step reasoning trace
-  - Shows how the model arrived at the answer
-  - Only appears for responses with structured reasoning
+Visual indicator badges:
+- **Cheapest** — pane with the lowest cost
+- **Fastest** — pane with the lowest latency
 
-- **Performance Details** (expandable):
-  - **Latency**: Time taken in milliseconds
-  - **Model Size**: Small or Large
-  - **Input Tokens**: Number of tokens in the prompt
-  - **Output Tokens**: Number of tokens in the response
-  - **Cost**: Calculated cost in USD
-
-### Cost Comparison (Match Frontier Use Case)
-
-When using the "Match Frontier" use case, the demo shows:
-- **Small Baseline**: Cost of small model alone (e.g., $0.000007)
-- **Small + ITS**: Cost of small model with ITS (e.g., $0.000021)
-- **Frontier**: Cost of large frontier model (e.g., $0.000117)
-- **Savings**: ITS typically saves 40-95% vs frontier while matching quality
-
-**Note**: Process-based algorithms work best with step-by-step reasoning tasks (e.g., math problems, logic puzzles) where intermediate steps can be evaluated.
-
-### Example Questions
-
-The demo includes 16 curated example questions inspired by the **MATH500** and **AIME-2024** benchmark datasets used in its_hub research:
-
-**Easy Questions** (3):
-- Basic arithmetic and algebra
-- Simple logical reasoning
-- Good for testing all algorithms quickly
-
-**Medium Questions** (8):
-- Quadratic equations, calculus, number theory
-- Word problems and geometry
-- Demonstrate clear ITS benefits
-
-**Hard Questions** (5):
-- Advanced algebra and optimization
-- Complex combinatorics
-- Best for showcasing advanced algorithms (Particle Gibbs, Entropic PF)
-
-Each example includes:
-- **Category**: Type of problem (Algebra, Calculus, etc.)
-- **Difficulty**: Easy, Medium, or Hard
-- **Expected Answer**: The correct answer for verification
-- **Best for**: Recommended algorithms
-- **Why**: Explanation of why this question suits those algorithms
-
-When you select an example question and run a comparison, the expected answer will be displayed in a green box below the results, making it easy to verify which approach (baseline vs ITS) produced the correct answer.
+For curated questions with a known answer, the **Expected Answer** is shown above the results.
 
 ## Plugging in Real Data (Guided Demo)
 
@@ -800,7 +706,7 @@ For production use with process-based algorithms, consider using a dedicated pro
 ### ✅ Implemented
 
 - ✅ **Guided Demo Flow**: 6-step progressive disclosure with goal → method → scenario → submit → trace → performance
-- ✅ **Interactive Demo Flow**: 6-step credential-aware live experience with provider detection and dynamic model availability
+- ✅ **Interactive Demo Flow**: 5-step credential-aware live experience with provider detection and dynamic model availability
 - ✅ **Provider Detection**: `/providers` endpoint checks configured API keys; frontend shows status and available models
 - ✅ **Visual Indicators**: Cheapest/Fastest badges on result panes, extensible for correctness judge
 - ✅ **Trace Animation**: Staged 3-phase visualization showing Generate → Evaluate → Select
