@@ -109,7 +109,42 @@ function iwInit() {
     const expertToggle = document.getElementById('expertModeToggle');
     if (expertToggle) expertToggle.style.display = 'none';
 
+    // Reset provider card visuals before detection
+    document.querySelectorAll('.iw-provider-card[data-provider]').forEach(card => {
+        card.classList.remove('iw-provider-active');
+        const hint = card.querySelector('.iw-copy-hint');
+        if (hint) { hint.textContent = 'Click to copy'; hint.classList.remove('copied'); }
+    });
+
     iwShowStep(1);
+
+    // Silently detect providers in the background to light up active cards
+    iwDetectProvidersForCards();
+}
+
+// ============================================================
+// SILENT PROVIDER DETECTION (lights up cards on step 1)
+// ============================================================
+
+async function iwDetectProvidersForCards() {
+    try {
+        const resp = await fetch(API_BASE_URL + '/providers', { signal: AbortSignal.timeout(3000) });
+        if (!resp.ok) return;
+        const data = await resp.json();
+
+        for (const [key, prov] of Object.entries(data.providers)) {
+            const card = document.querySelector(`.iw-provider-card[data-provider="${key}"]`);
+            if (!card) continue;
+
+            if (prov.enabled) {
+                card.classList.add('iw-provider-active');
+                const hint = card.querySelector('.iw-copy-hint');
+                if (hint) { hint.textContent = 'Active'; hint.classList.add('active-label'); }
+            }
+        }
+    } catch (_) {
+        // Backend not running — cards stay neutral, no error shown
+    }
 }
 
 // ============================================================

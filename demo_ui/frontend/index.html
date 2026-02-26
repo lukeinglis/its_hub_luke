@@ -3517,7 +3517,7 @@
 
                 <div class="iw-provider-grid">
                     <!-- OpenAI -->
-                    <div class="iw-provider-card iw-provider-copyable" onclick="iwCopySetup(this)" data-copy="OPENAI_API_KEY=sk-...">
+                    <div class="iw-provider-card iw-provider-copyable" data-provider="openai" onclick="iwCopySetup(this)" data-copy="OPENAI_API_KEY=sk-...">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">OpenAI</span>
                             <span class="iw-copy-hint">Click to copy</span>
@@ -3527,7 +3527,7 @@
                     </div>
 
                     <!-- OpenRouter -->
-                    <div class="iw-provider-card iw-provider-copyable" onclick="iwCopySetup(this)" data-copy="OPENROUTER_API_KEY=sk-or-...">
+                    <div class="iw-provider-card iw-provider-copyable" data-provider="openrouter" onclick="iwCopySetup(this)" data-copy="OPENROUTER_API_KEY=sk-or-...">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">OpenRouter</span>
                             <span class="iw-copy-hint">Click to copy</span>
@@ -3537,7 +3537,7 @@
                     </div>
 
                     <!-- Vertex AI -->
-                    <div class="iw-provider-card iw-provider-copyable" onclick="iwCopySetup(this)" data-copy="VERTEX_PROJECT=your-project-id">
+                    <div class="iw-provider-card iw-provider-copyable" data-provider="vertex_ai" onclick="iwCopySetup(this)" data-copy="VERTEX_PROJECT=your-project-id">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">Google Cloud Vertex AI</span>
                             <span class="iw-copy-hint">Click to copy</span>
@@ -3548,7 +3548,7 @@ gcloud auth application-default login</div>
                     </div>
 
                     <!-- Self-Hosted -->
-                    <div class="iw-provider-card iw-provider-copyable" onclick="iwCopySetup(this)" data-copy="VLLM_BASE_URL=http://localhost:8100/v1">
+                    <div class="iw-provider-card iw-provider-copyable" data-provider="local" onclick="iwCopySetup(this)" data-copy="VLLM_BASE_URL=http://localhost:8100/v1">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">Self-Hosted / Local</span>
                             <span class="iw-copy-hint">Click to copy</span>
