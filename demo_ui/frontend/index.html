@@ -3499,11 +3499,9 @@
                 <span class="iw-crumb-sep">/</span>
                 <span class="iw-crumb" data-step="3">Scenario</span>
                 <span class="iw-crumb-sep">/</span>
-                <span class="iw-crumb" data-step="4">Configure</span>
+                <span class="iw-crumb" data-step="4">Configure &amp; Run</span>
                 <span class="iw-crumb-sep">/</span>
-                <span class="iw-crumb" data-step="5">Prompt</span>
-                <span class="iw-crumb-sep">/</span>
-                <span class="iw-crumb" data-step="6">Results</span>
+                <span class="iw-crumb" data-step="5">Results</span>
             </div>
 
             <!-- Step 1: Provider Access Page -->
@@ -3600,11 +3598,11 @@ gcloud auth application-default login</div>
                 </div>
             </div>
 
-            <!-- Step 4: Configuration -->
+            <!-- Step 4: Configure & Run -->
             <div id="iwStep4" class="iw-step" style="display: none;">
                 <button class="iw-back-btn" onclick="iwGoBack(3)">← Back</button>
-                <h3 class="iw-step-title">Configure Your Run</h3>
-                <p class="iw-step-subtitle">Select model, algorithm, and compute budget</p>
+                <h3 class="iw-step-title">Configure &amp; Run</h3>
+                <p class="iw-step-subtitle">Select model, algorithm, and question — then run your comparison</p>
 
                 <div class="iw-config-grid" id="iwConfigGrid">
                     <div class="iw-form-group">
@@ -3619,7 +3617,7 @@ gcloud auth application-default login</div>
 
                     <div class="iw-form-group">
                         <label for="iwAlgorithm">ITS Algorithm</label>
-                        <select id="iwAlgorithm">
+                        <select id="iwAlgorithm" onchange="iwAlgorithmChanged()">
                             <option value="self_consistency">Self-Consistency</option>
                             <option value="best_of_n">Best-of-N</option>
                         </select>
@@ -3634,29 +3632,19 @@ gcloud auth application-default login</div>
                     </div>
                 </div>
 
-                <div class="iw-center-actions">
-                    <button class="btn-primary" onclick="iwProceedToPrompt()">
-                        Continue to Prompt
-                    </button>
-                </div>
-            </div>
+                <div style="border-top: 1px solid var(--border-color); margin-top: 24px; padding-top: 24px;">
+                    <div class="iw-prompt-section">
+                        <label style="display:block; margin-bottom:8px; font-weight:600; font-size:13px; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.03em;">Question</label>
+                        <select id="iwCuratedSelect" class="iw-curated-select" onchange="iwCuratedChanged(this)">
+                            <option value="">Select a curated question...</option>
+                        </select>
 
-            <!-- Step 5: Prompt Input -->
-            <div id="iwStep5" class="iw-step" style="display: none;">
-                <button class="iw-back-btn" onclick="iwGoBack(4)">← Back</button>
-                <h3 class="iw-step-title">Your Question</h3>
-                <p class="iw-step-subtitle">Choose a curated question or write your own</p>
+                        <div class="iw-divider"><span>or write your own</span></div>
 
-                <div class="iw-prompt-section">
-                    <select id="iwCuratedSelect" class="iw-curated-select" onchange="iwCuratedChanged(this)">
-                        <option value="">Select a curated question...</option>
-                    </select>
-
-                    <div class="iw-divider"><span>or write your own</span></div>
-
-                    <textarea id="iwCustomTextarea" class="iw-custom-textarea"
-                              placeholder="Type your question here..."
-                              oninput="iwCustomChanged(this)"></textarea>
+                        <textarea id="iwCustomTextarea" class="iw-custom-textarea"
+                                  placeholder="Type your question here..."
+                                  oninput="iwCustomChanged(this)"></textarea>
+                    </div>
                 </div>
 
                 <div class="iw-submit-area">
@@ -3667,9 +3655,9 @@ gcloud auth application-default login</div>
                 </div>
             </div>
 
-            <!-- Step 6: Results -->
-            <div id="iwStep6" class="iw-step" style="display: none;">
-                <button class="iw-back-btn" onclick="iwGoBack(5)">← Back to Prompt</button>
+            <!-- Step 5: Results -->
+            <div id="iwStep5" class="iw-step" style="display: none;">
+                <button class="iw-back-btn" onclick="iwGoBack(4)">← Back to Configure</button>
                 <h3 class="iw-step-title">Results</h3>
 
                 <!-- Expected Answer (for curated prompts) -->
@@ -3696,7 +3684,7 @@ gcloud auth application-default login</div>
 
                 <!-- Restart -->
                 <div class="iw-restart-area">
-                    <button class="btn-secondary" onclick="iwGoBack(5)" style="margin-right:12px;">
+                    <button class="btn-secondary" onclick="iwGoBack(4)" style="margin-right:12px;">
                         Run Another Question
                     </button>
                     <button class="btn-secondary" onclick="iwInit()">

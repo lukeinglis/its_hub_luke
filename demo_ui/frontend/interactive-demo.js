@@ -1,7 +1,7 @@
 /**
  * Interactive Demo Flow — Live ITS demonstration with provider detection
  *
- * Flow: Provider Access → Detection → Scenario → Config → Prompt → Results
+ * Flow: Provider Access → Detection → Scenario → Configure & Run → Results
  *
  * WHERE TO PLUG IN REAL DATA LATER:
  * ──────────────────────────────────
@@ -118,7 +118,7 @@ function iwInit() {
 
 function iwShowStep(n) {
     iwState.currentStep = n;
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 1; i <= 5; i++) {
         const el = document.getElementById('iwStep' + i);
         if (el) el.style.display = 'none';
     }
@@ -132,7 +132,7 @@ function iwShowStep(n) {
 
     // Progress bar
     const bar = document.getElementById('iwProgressBar');
-    if (bar) bar.style.width = ((n / 6) * 100) + '%';
+    if (bar) bar.style.width = ((n / 5) * 100) + '%';
 
     // Breadcrumbs
     document.querySelectorAll('.iw-crumb').forEach(c => {
@@ -145,8 +145,7 @@ function iwShowStep(n) {
 
 function iwGoBack(toStep) {
     if (toStep <= 3) { iwState.scenario = null; }
-    if (toStep <= 4) { iwState.modelId = null; iwState.frontierModelId = null; }
-    if (toStep <= 5) { iwState.question = null; iwState.expectedAnswer = null; }
+    if (toStep <= 4) { iwState.modelId = null; iwState.frontierModelId = null; iwState.question = null; iwState.expectedAnswer = null; }
     iwShowStep(toStep);
 }
 
@@ -258,6 +257,7 @@ function iwSelectScenario(scenario) {
     });
     setTimeout(() => {
         iwPopulateConfig();
+        iwPopulatePrompts();
         iwShowStep(4);
     }, 250);
 }
@@ -318,22 +318,10 @@ function iwBudgetChanged(slider) {
     document.getElementById('iwBudgetValue').textContent = slider.value;
 }
 
-function iwProceedToPrompt() {
-    iwState.modelId = document.getElementById('iwModelSelect').value;
-    iwState.algorithm = document.getElementById('iwAlgorithm').value;
-    iwState.budget = parseInt(document.getElementById('iwBudget').value);
-
-    if (iwState.scenario === 'match_frontier') {
-        iwState.frontierModelId = document.getElementById('iwFrontierSelect').value;
-    }
-
+// Re-populate curated prompts when algorithm changes
+function iwAlgorithmChanged() {
     iwPopulatePrompts();
-    iwShowStep(5);
 }
-
-// ============================================================
-// STEP 5: PROMPT INPUT
-// ============================================================
 
 function iwPopulatePrompts() {
     const select = document.getElementById('iwCuratedSelect');
@@ -390,12 +378,20 @@ async function iwSubmit() {
     }
     iwState.question = question;
 
+    // Read config from the combined step 4 form
+    iwState.modelId = document.getElementById('iwModelSelect').value;
+    iwState.algorithm = document.getElementById('iwAlgorithm').value;
+    iwState.budget = parseInt(document.getElementById('iwBudget').value);
+    if (iwState.scenario === 'match_frontier') {
+        iwState.frontierModelId = document.getElementById('iwFrontierSelect').value;
+    }
+
     const btn = document.getElementById('iwSubmitBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;margin:0;"></span><span>Running...</span>';
 
-    // Show step 6 with loading
-    iwShowStep(6);
+    // Show step 5 (results) with loading
+    iwShowStep(5);
     const resultsEl = document.getElementById('iwResultsArea');
     resultsEl.innerHTML = '<div class="iw-loading"><div class="spinner"></div><div class="iw-loading-text">Running live comparison... This may take a few seconds.</div></div>';
 
