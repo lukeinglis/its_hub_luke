@@ -4,7 +4,17 @@ A simple web interface for comparing baseline LLM inference vs Inference-Time Sc
 
 ## 🆕 Recent Updates (February 2026)
 
-**Major feature release - Answer Extraction & Tool Consensus:**
+**Guided Demo Experience (Latest):**
+
+- 🎯 **New Guided Demo Flow**: Completely redesigned step-by-step guided experience with 6-stage progressive disclosure
+- 📈 **Goal-first navigation**: Users choose their goal (Improve Performance or Match Frontier) before anything else
+- 🗳️ **ITS Method selection**: Dedicated step for choosing Self-Consistency or Best-of-N
+- 🔀 **Branching scenarios**: Model options change based on the selected goal
+- ⚡ **Trace animation**: Staged 3-phase visualization (Generate → Evaluate → Select) shows how ITS works
+- 📊 **Performance page**: Dedicated bar charts comparing Cost, Quality, Latency, and Tokens
+- 🧩 **Modular architecture**: New `guided-demo.js` and `guided-demo.css` files with clearly marked placeholder data
+
+**Previous: Answer Extraction & Tool Consensus:**
 
 - ✨ **Answer Extraction**: Math questions now extract `\boxed{}` answers for proper consensus voting (fixes Self-Consistency on mathematical reasoning)
 - 🤖 **Tool Consensus**: New demo showing agent reliability through tool voting
@@ -13,11 +23,33 @@ A simple web interface for comparing baseline LLM inference vs Inference-Time Sc
 - 📊 **Algorithm Traces**: Expandable UI showing vote counts, tool distributions, and candidate responses
 - 📚 **Documentation**: Complete demo guides (`DEMO_CHEAT_SHEET.md`, `IDEAL_DEMO_CONFIGURATIONS.md`)
 
-**Impact**: Demo 3 (Improve Model) now works correctly, showing 8/8 vote consensus on extracted answers instead of random selection from varied explanations.
-
 ## Overview
 
-This demo provides:
+This demo provides two entry points from the landing page:
+
+1. **Guided Demo** — A step-by-step walkthrough that walks the user through the ITS experience with pre-populated scenarios and mock data (no backend required)
+2. **Interactive Demo** — Full live experience with real API calls, model selection, and custom questions (requires backend)
+
+### Guided Demo Flow
+
+The Guided Demo follows a 6-step progressive disclosure:
+
+| Step | Screen | What the user does |
+|------|--------|--------------------|
+| 1 | **Goal** | Choose "Improve Model Performance" or "Improve Small Model to Match Frontier" |
+| 2 | **Method** | Choose ITS algorithm: Self-Consistency or Best-of-N |
+| 3 | **Scenario** | Pick a model scenario (options depend on goal selected in step 1) |
+| 4 | **Run** | Review pre-populated question and click Submit |
+| 5 | **Trace** | View responses side-by-side, then trigger a staged trace animation |
+| 6 | **Performance** | Bar charts comparing Cost, Quality, Latency, and Tokens |
+
+**Branching logic in Step 3:**
+- If goal = "Improve Model Performance" → Frontier Model or Open Source Model
+- If goal = "Match Frontier" → Same Family (e.g. GPT-4o mini → GPT-4o) or Cross-Family (e.g. Llama 3 8B → GPT-4o)
+
+All guided demo data uses placeholders. See [Plugging in Real Data](#plugging-in-real-data-guided-demo) below for where to replace them.
+
+### Interactive Demo Use Cases
 
 - **Three Use Cases**:
   1. **Improve Model**: Compare same model with/without ITS (2-column view)
@@ -136,7 +168,11 @@ demo_ui/
 │   ├── llm_prm.py                              # LLM-based process reward model
 │   └── requirements.txt                        # Backend dependencies
 └── frontend/
-    └── index.html                              # Web interface with tool consensus UI
+    ├── index.html                              # Main web interface (landing page + interactive + guided shell)
+    ├── guided-demo.js                          # Guided Demo flow logic, state, and mock data
+    ├── guided-demo.css                         # Guided Demo styles
+    ├── performance-viz-v2.js                   # Performance visualization charts
+    └── performance-viz-v2.css                  # Performance visualization styles
 ```
 
 ## Setup
@@ -365,6 +401,52 @@ Each example includes:
 - **Why**: Explanation of why this question suits those algorithms
 
 When you select an example question and run a comparison, the expected answer will be displayed in a green box below the results, making it easy to verify which approach (baseline vs ITS) produced the correct answer.
+
+## Plugging in Real Data (Guided Demo)
+
+The Guided Demo uses placeholder/mock data throughout. All data lives in `frontend/guided-demo.js` in clearly marked sections:
+
+| What to replace | Where in `guided-demo.js` | Format |
+|-----------------|---------------------------|--------|
+| **Scenario definitions** | `GUIDED_SCENARIOS` object | Add/remove/edit scenario cards (title, icon, model names) |
+| **Demo questions** | `GUIDED_MOCK_QUESTIONS` object | Key = `${scenarioId}_${method}`, value = question string |
+| **Model responses** | `getMockResponse()` function | Return `{ baseline: {...}, its: {...}, frontier?: {...}, trace: {...} }` |
+| **Performance metrics** | `getMockPerformance()` function | Return `{ columns, cost, latency, tokens, quality }` arrays |
+| **Trace data** | Inside `getMockResponse()` return | Self-Consistency: `vote_counts` object; Best-of-N: `scores` array |
+
+### Example: replacing a question
+
+```javascript
+// In GUIDED_MOCK_QUESTIONS, change:
+'improve_frontier_self_consistency': 'What is 144 / 12 + 7 * 3 - 5?',
+// To your real demo question:
+'improve_frontier_self_consistency': 'Your real question here',
+```
+
+### Example: replacing mock responses with captured data
+
+```javascript
+// In getMockResponse(), add a specific key check at the top:
+function getMockResponse(scenarioId, method) {
+    const key = `${scenarioId}_${method}`;
+    // Add your real captured data here:
+    if (key === 'improve_frontier_self_consistency') {
+        return {
+            baseline: { response: '...', latency_ms: 523, input_tokens: 24, output_tokens: 42, cost_usd: 0.000021 },
+            its:      { response: '...', latency_ms: 1022, input_tokens: 192, output_tokens: 48, cost_usd: 0.000168 },
+            trace:    { algorithm: 'self_consistency', candidates: [...], vote_counts: {...}, total_votes: 8 },
+        };
+    }
+    // ... fallback to placeholder data
+}
+```
+
+### Adding a new scenario
+
+1. Add an entry to `GUIDED_SCENARIOS` with a unique `id`
+2. Add a question to `GUIDED_MOCK_QUESTIONS` for each method (`${id}_self_consistency`, `${id}_best_of_n`)
+3. Optionally add specific response data in `getMockResponse()`
+4. The scenario will automatically appear in Step 3 based on its `goal` field
 
 ## API Reference
 
@@ -643,12 +725,15 @@ For production use with process-based algorithms, consider using a dedicated pro
 
 ### ✅ Implemented
 
+- ✅ **Guided Demo Flow**: 6-step progressive disclosure with goal → method → scenario → submit → trace → performance
+- ✅ **Trace Animation**: Staged 3-phase visualization showing Generate → Evaluate → Select
+- ✅ **Performance Page**: Bar charts for Cost, Quality, Latency, and Tokens with best-value highlighting
+- ✅ **Branching Scenarios**: Model options change based on selected goal (Improve vs Match Frontier)
 - ✅ **Three Use Cases**: Improve model performance, match frontier at lower cost, or demonstrate tool consensus
-- ✅ **Answer Extraction** 🆕: Extracts `\boxed{}` answers from math responses for proper consensus voting
-- ✅ **Auto-Detection** 🆕: Recognizes math, tool_calling, and general question types automatically
-- ✅ **Tool Consensus** 🆕: Agent reliability through democratic tool voting
-- ✅ **System Prompts** 🆕: QWEN prompt automatically applied to math questions
-- ✅ **Algorithm Traces** 🆕: Expandable visualization of vote counts, tool distributions, and candidate responses
+- ✅ **Answer Extraction**: Extracts `\boxed{}` answers from math responses for proper consensus voting
+- ✅ **Auto-Detection**: Recognizes math, tool_calling, and general question types automatically
+- ✅ **Tool Consensus**: Agent reliability through democratic tool voting
+- ✅ **Algorithm Traces**: Expandable visualization of vote counts, tool distributions, and candidate responses
 - ✅ **6 ITS Algorithms**: Outcome-based and process-based algorithms
 - ✅ **Cost Tracking**: Real-time token counting and cost calculation
 - ✅ **Performance Metrics**: Latency, model size, tokens, and cost per request
@@ -698,6 +783,12 @@ The frontend uses:
 - Vanilla HTML/CSS/JavaScript (no build step required)
 - Fetch API for HTTP requests
 
+Frontend file responsibilities:
+- `index.html` — Landing page, interactive demo, inline styles/scripts, shared utility functions
+- `guided-demo.js` — Guided Demo flow: state management, step navigation, mock data, trace animation, performance charts
+- `guided-demo.css` — Guided Demo styles: progress bar, cards, response panes, trace phases, performance charts
+- `performance-viz-v2.js` / `.css` — Performance visualization component (used by interactive mode)
+
 To modify the backend, edit files in `backend/` and the server will auto-reload (if started with `--reload` flag).
 
-To modify the frontend, edit `frontend/index.html` and refresh your browser.
+To modify the frontend, edit the relevant file and refresh your browser. The guided demo logic is self-contained in `guided-demo.js` — it overrides the `initGuidedWizard()` function from `index.html` at load time.

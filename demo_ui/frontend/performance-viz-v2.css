@@ -1,0 +1,289 @@
+/**
+ * Performance Visualization V2 - Clear & Visual
+ */
+
+.perf-v2-container {
+    background: var(--bg-secondary, #3b4252);
+    border: 2px solid var(--border-color, #4c566a);
+    border-radius: 8px;
+    padding: 32px;
+    margin: 32px 0;
+}
+
+.perf-v2-title {
+    font-family: 'Public Sans', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary, #eceff4);
+    margin: 0 0 32px 0;
+    text-align: center;
+    border-bottom: 3px solid var(--primary, #88c0d0);
+    padding-bottom: 16px;
+}
+
+/* ===== SAVINGS CALLOUT ===== */
+.perf-v2-savings {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    margin-bottom: 40px;
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+}
+
+.perf-v2-savings-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+}
+
+.perf-v2-savings-amount {
+    font-size: 72px;
+    font-weight: 900;
+    color: white;
+    line-height: 1;
+    margin-bottom: 12px;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.perf-v2-savings-text {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 500;
+}
+
+.perf-v2-savings-text strong {
+    font-weight: 800;
+    color: white;
+}
+
+/* ===== METRICS GRID ===== */
+.perf-v2-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.perf-v2-metric {
+    background: var(--bg-primary, #2e3440);
+    border: 2px solid var(--border-color, #4c566a);
+    border-radius: 8px;
+    padding: 24px;
+}
+
+.perf-v2-metric-title {
+    font-family: 'Azeret Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-secondary, #d8dee9);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-color, #4c566a);
+}
+
+/* ===== COMPARISON BARS ===== */
+.perf-v2-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.perf-v2-bar-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 120px;
+    align-items: center;
+    gap: 12px;
+}
+
+.perf-v2-bar-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary, #d8dee9);
+}
+
+.perf-v2-bar-track {
+    height: 36px;
+    background: var(--bg-secondary, #3b4252);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.perf-v2-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+    color: white;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.perf-v2-bar-fill.best {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+    position: relative;
+}
+
+.perf-v2-bar-fill.best::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.perf-v2-bar-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary, #eceff4);
+    text-align: right;
+}
+
+.perf-v2-bar-value.best {
+    color: #10b981;
+    font-weight: 900;
+}
+
+/* ===== DETAIL TABLE ===== */
+.perf-v2-table-container {
+    background: var(--bg-primary, #2e3440);
+    border: 2px solid var(--border-color, #4c566a);
+    border-radius: 8px;
+    padding: 24px;
+}
+
+.perf-v2-table-title {
+    font-family: 'Public Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary, #eceff4);
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-color, #4c566a);
+}
+
+.perf-v2-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.perf-v2-table thead th {
+    background: var(--bg-secondary, #3b4252);
+    color: var(--text-secondary, #d8dee9);
+    font-family: 'Azeret Mono', monospace;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 12px;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 3px solid var(--primary, #88c0d0);
+}
+
+.perf-v2-table tbody tr {
+    border-bottom: 1px solid var(--border-color, #4c566a);
+}
+
+.perf-v2-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.perf-v2-table tbody tr:hover {
+    background: rgba(136, 192, 208, 0.05);
+}
+
+.perf-v2-table tbody td {
+    padding: 12px 16px;
+    color: var(--text-primary, #eceff4);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.perf-v2-table-label {
+    font-weight: 600;
+    color: var(--text-secondary, #d8dee9) !important;
+    font-family: 'Public Sans', sans-serif !important;
+}
+
+.perf-v2-table tbody td strong {
+    color: var(--primary, #88c0d0);
+    font-weight: 700;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .perf-v2-container {
+        padding: 20px;
+    }
+
+    .perf-v2-title {
+        font-size: 24px;
+    }
+
+    .perf-v2-savings {
+        padding: 24px;
+    }
+
+    .perf-v2-savings-amount {
+        font-size: 56px;
+    }
+
+    .perf-v2-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .perf-v2-bar-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .perf-v2-bar-value {
+        text-align: left;
+        margin-bottom: 8px;
+    }
+
+    .perf-v2-table {
+        font-size: 12px;
+    }
+
+    .perf-v2-table thead th,
+    .perf-v2-table tbody td {
+        padding: 8px 12px;
+    }
+}
+
+/* Animation on load */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.perf-v2-metric {
+    animation: slideInUp 0.5s ease-out backwards;
+}
+
+.perf-v2-metric:nth-child(1) { animation-delay: 0.1s; }
+.perf-v2-metric:nth-child(2) { animation-delay: 0.2s; }
+.perf-v2-metric:nth-child(3) { animation-delay: 0.3s; }
