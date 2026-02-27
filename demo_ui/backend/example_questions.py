@@ -12,9 +12,6 @@ All expected answers verified computationally.
 """
 
 from typing import List, Dict
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 CURATED_QUESTIONS: List[Dict] = [

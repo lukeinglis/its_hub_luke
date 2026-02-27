@@ -7,6 +7,7 @@ Uses the official google-cloud-aiplatform and anthropic[vertex] packages.
 import asyncio
 import concurrent.futures
 import logging
+from abc import abstractmethod
 from typing import List, Dict
 
 from anthropic import AnthropicVertex
@@ -18,12 +19,8 @@ from its_hub.types import ChatMessage
 logger = logging.getLogger(__name__)
 
 
-class VertexAIClaudeModel(AbstractLanguageModel):
-    """
-    Wrapper for Claude models on Vertex AI using the Anthropic Vertex SDK.
-
-    Implements AbstractLanguageModel interface for compatibility with its_hub.
-    """
+class _VertexAIBaseModel(AbstractLanguageModel):
+    """Shared base for Vertex AI model wrappers."""
 
     def __init__(
         self,
@@ -33,28 +30,91 @@ class VertexAIClaudeModel(AbstractLanguageModel):
         max_tokens: int = 4096,
         temperature: float = 1.0,
     ):
-        """
-        Initialize Vertex AI Claude model.
-
-        Args:
-            project_id: Google Cloud project ID
-            location: Vertex AI location (e.g., 'us-central1')
-            model_name: Model name (e.g., 'claude-3-5-sonnet@20240620')
-            max_tokens: Maximum tokens to generate
-            temperature: Sampling temperature
-        """
         self.project_id = project_id
         self.location = location
         self.model_name = model_name
         self.max_tokens = max_tokens
         self.temperature = temperature
 
-        # Initialize Anthropic Vertex client
-        self.client = AnthropicVertex(
-            project_id=project_id,
-            region=location,
+    @abstractmethod
+    async def _generate_single(
+        self, messages: List[ChatMessage], max_tok: int, temp: float, stop: str | None
+    ) -> Dict:
+        """Generate a single response via the provider-specific API."""
+
+    async def agenerate(
+        self,
+        messages_or_messages_lst: List[ChatMessage] | List[List[ChatMessage]],
+        stop: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | List[float] | None = None,
+        include_stop_str_in_output: bool | None = None,
+        tools: List[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> Dict | List[Dict]:
+        """Generate response(s) asynchronously."""
+        is_single = not isinstance(messages_or_messages_lst[0], list)
+        messages_lst = (
+            [messages_or_messages_lst] if is_single else messages_or_messages_lst
         )
 
+        max_tok = max_tokens if max_tokens is not None else self.max_tokens
+        temp = temperature if temperature is not None else self.temperature
+        temps = temp if isinstance(temp, list) else [temp] * len(messages_lst)
+
+        responses = await asyncio.gather(
+            *(self._generate_single(msgs, max_tok, t, stop)
+              for msgs, t in zip(messages_lst, temps))
+        )
+
+        return responses[0] if is_single else responses
+
+    def generate(
+        self,
+        messages_or_messages_lst: List[ChatMessage] | List[List[ChatMessage]],
+        stop: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | List[float] | None = None,
+        include_stop_str_in_output: bool | None = None,
+        tools: List[dict] | None = None,
+        tool_choice: str | dict | None = None,
+    ) -> Dict | List[Dict]:
+        """Generate response(s) synchronously."""
+        coro = self.agenerate(
+            messages_or_messages_lst,
+            stop,
+            max_tokens,
+            temperature,
+            include_stop_str_in_output,
+            tools,
+            tool_choice,
+        )
+        try:
+            asyncio.get_running_loop()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                return executor.submit(asyncio.run, coro).result()
+        except RuntimeError:
+            return asyncio.run(coro)
+
+    def evaluate(self, prompt: str, generation: str) -> List[float]:
+        raise NotImplementedError(
+            f"Evaluate not implemented for {self.__class__.__name__}"
+        )
+
+
+class VertexAIClaudeModel(_VertexAIBaseModel):
+    """Wrapper for Claude models on Vertex AI using the Anthropic Vertex SDK."""
+
+    def __init__(
+        self,
+        project_id: str,
+        location: str,
+        model_name: str,
+        max_tokens: int = 4096,
+        temperature: float = 1.0,
+    ):
+        super().__init__(project_id, location, model_name, max_tokens, temperature)
+        self.client = AnthropicVertex(project_id=project_id, region=location)
         logger.info(
             f"Initialized VertexAI Claude model: {model_name} "
             f"(project: {project_id}, location: {location})"
@@ -63,125 +123,36 @@ class VertexAIClaudeModel(AbstractLanguageModel):
     def _convert_messages(self, messages: List[ChatMessage]) -> List[Dict]:
         """Convert ChatMessage list to Anthropic API format."""
         anthropic_messages = []
-
         for msg in messages:
-            role = msg.role
-            # Anthropic uses 'user' and 'assistant', not 'system'
-            if role == "system":
-                # System messages need special handling - prepend to first user message
-                # For now, we'll convert to user message
-                role = "user"
-
+            role = "user" if msg.role == "system" else msg.role
             anthropic_messages.append({
                 "role": role,
                 "content": msg.extract_text_content(),
             })
-
         return anthropic_messages
 
-    async def agenerate(
-        self,
-        messages_or_messages_lst: List[ChatMessage] | List[List[ChatMessage]],
-        stop: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | List[float] | None = None,
-        include_stop_str_in_output: bool | None = None,
-        tools: List[dict] | None = None,
-        tool_choice: str | dict | None = None,
-    ) -> Dict | List[Dict]:
-        """Generate response(s) asynchronously."""
-        is_single = not isinstance(messages_or_messages_lst[0], list)
-        messages_lst = (
-            [messages_or_messages_lst] if is_single else messages_or_messages_lst
-        )
+    async def _generate_single(
+        self, messages: List[ChatMessage], max_tok: int, temp: float, stop: str | None
+    ) -> Dict:
+        anthropic_messages = self._convert_messages(messages)
 
-        # Prepare parameters
-        max_tok = max_tokens if max_tokens is not None else self.max_tokens
-        temp = temperature if temperature is not None else self.temperature
-
-        # Handle list of temperatures
-        if isinstance(temp, list):
-            temps = temp
-        else:
-            temps = [temp] * len(messages_lst)
-
-        async def generate_single(messages: List[ChatMessage], temp: float) -> Dict:
-            """Generate a single response."""
-            anthropic_messages = self._convert_messages(messages)
-
-            # Run in thread pool to avoid blocking
-            def sync_call():
-                # Only include stop_sequences if stop is a non-empty string
-                kwargs = {
-                    "model": self.model_name,
-                    "max_tokens": max_tok,
-                    "temperature": temp,
-                    "messages": anthropic_messages,
-                }
-
-                # Claude API requires stop sequences to be non-whitespace strings
-                if stop and stop.strip():
-                    kwargs["stop_sequences"] = [stop]
-
-                response = self.client.messages.create(**kwargs)
-                return response
-
-            # Execute synchronous call in thread pool
-            response = await asyncio.to_thread(sync_call)
-
-            # Convert to OpenAI-compatible format
-            return {
-                "role": "assistant",
-                "content": response.content[0].text,
+        def sync_call():
+            kwargs = {
+                "model": self.model_name,
+                "max_tokens": max_tok,
+                "temperature": temp,
+                "messages": anthropic_messages,
             }
+            if stop and stop.strip():
+                kwargs["stop_sequences"] = [stop]
+            return self.client.messages.create(**kwargs)
 
-        # Generate all responses in parallel
-        responses = await asyncio.gather(
-            *(generate_single(msgs, temp) for msgs, temp in zip(messages_lst, temps))
-        )
-
-        return responses[0] if is_single else responses
-
-    def generate(
-        self,
-        messages_or_messages_lst: List[ChatMessage] | List[List[ChatMessage]],
-        stop: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | List[float] | None = None,
-        include_stop_str_in_output: bool | None = None,
-        tools: List[dict] | None = None,
-        tool_choice: str | dict | None = None,
-    ) -> Dict | List[Dict]:
-        """Generate response(s) synchronously."""
-        coro = self.agenerate(
-            messages_or_messages_lst,
-            stop,
-            max_tokens,
-            temperature,
-            include_stop_str_in_output,
-            tools,
-            tool_choice,
-        )
-        try:
-            asyncio.get_running_loop()
-            # Already in an async context (e.g. FastAPI endpoint) —
-            # run in a separate thread to avoid "event loop already running" error
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                return executor.submit(asyncio.run, coro).result()
-        except RuntimeError:
-            return asyncio.run(coro)
-
-    def evaluate(self, prompt: str, generation: str) -> List[float]:
-        """Evaluate method (not implemented for Claude)."""
-        raise NotImplementedError("Evaluate method not implemented for Vertex AI Claude")
+        response = await asyncio.to_thread(sync_call)
+        return {"role": "assistant", "content": response.content[0].text}
 
 
-class VertexAIGeminiModel(AbstractLanguageModel):
-    """
-    Wrapper for Gemini models on Vertex AI.
-
-    Implements AbstractLanguageModel interface for compatibility with its_hub.
-    """
+class VertexAIGeminiModel(_VertexAIBaseModel):
+    """Wrapper for Gemini models on Vertex AI."""
 
     def __init__(
         self,
@@ -191,28 +162,9 @@ class VertexAIGeminiModel(AbstractLanguageModel):
         max_tokens: int = 4096,
         temperature: float = 1.0,
     ):
-        """
-        Initialize Vertex AI Gemini model.
-
-        Args:
-            project_id: Google Cloud project ID
-            location: Vertex AI location (e.g., 'us-central1')
-            model_name: Model name (e.g., 'gemini-1.5-pro-002')
-            max_tokens: Maximum tokens to generate
-            temperature: Sampling temperature
-        """
-        self.project_id = project_id
-        self.location = location
-        self.model_name = model_name
-        self.max_tokens = max_tokens
-        self.temperature = temperature
-
-        # Initialize Vertex AI
+        super().__init__(project_id, location, model_name, max_tokens, temperature)
         vertexai.init(project=project_id, location=location)
-
-        # Initialize Gemini model
         self.model = GenerativeModel(model_name)
-
         logger.info(
             f"Initialized VertexAI Gemini model: {model_name} "
             f"(project: {project_id}, location: {location})"
@@ -220,113 +172,32 @@ class VertexAIGeminiModel(AbstractLanguageModel):
 
     def _convert_messages(self, messages: List[ChatMessage]) -> str:
         """Convert ChatMessage list to prompt string for Gemini."""
-        # Gemini uses a simpler format - we'll concatenate messages
         prompt_parts = []
         for msg in messages:
-            role = msg.role
             content = msg.extract_text_content()
-            if role == "system":
+            if msg.role == "system":
                 prompt_parts.append(f"System: {content}")
-            elif role == "user":
+            elif msg.role == "user":
                 prompt_parts.append(f"User: {content}")
-            elif role == "assistant":
+            elif msg.role == "assistant":
                 prompt_parts.append(f"Assistant: {content}")
             else:
                 prompt_parts.append(content)
-
         return "\n\n".join(prompt_parts)
 
-    async def agenerate(
-        self,
-        messages_or_messages_lst: List[ChatMessage] | List[List[ChatMessage]],
-        stop: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | List[float] | None = None,
-        include_stop_str_in_output: bool | None = None,
-        tools: List[dict] | None = None,
-        tool_choice: str | dict | None = None,
-    ) -> Dict | List[Dict]:
-        """Generate response(s) asynchronously."""
-        is_single = not isinstance(messages_or_messages_lst[0], list)
-        messages_lst = (
-            [messages_or_messages_lst] if is_single else messages_or_messages_lst
-        )
+    async def _generate_single(
+        self, messages: List[ChatMessage], max_tok: int, temp: float, stop: str | None
+    ) -> Dict:
+        prompt = self._convert_messages(messages)
 
-        # Prepare parameters
-        max_tok = max_tokens if max_tokens is not None else self.max_tokens
-        temp = temperature if temperature is not None else self.temperature
-
-        # Handle list of temperatures
-        if isinstance(temp, list):
-            temps = temp
-        else:
-            temps = [temp] * len(messages_lst)
-
-        async def generate_single(messages: List[ChatMessage], temp: float) -> Dict:
-            """Generate a single response."""
-            prompt = self._convert_messages(messages)
-
-            # Run in thread pool to avoid blocking
-            def sync_call():
-                # Build generation config
-                gen_config = {
-                    "max_output_tokens": max_tok,
-                    "temperature": temp,
-                }
-
-                # Only include stop_sequences if stop is a non-empty string
-                if stop and stop.strip():
-                    gen_config["stop_sequences"] = [stop]
-
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=gen_config
-                )
-                return response
-
-            # Execute synchronous call in thread pool
-            response = await asyncio.to_thread(sync_call)
-
-            # Convert to OpenAI-compatible format
-            return {
-                "role": "assistant",
-                "content": response.text,
+        def sync_call():
+            gen_config = {
+                "max_output_tokens": max_tok,
+                "temperature": temp,
             }
+            if stop and stop.strip():
+                gen_config["stop_sequences"] = [stop]
+            return self.model.generate_content(prompt, generation_config=gen_config)
 
-        # Generate all responses in parallel
-        responses = await asyncio.gather(
-            *(generate_single(msgs, temp) for msgs, temp in zip(messages_lst, temps))
-        )
-
-        return responses[0] if is_single else responses
-
-    def generate(
-        self,
-        messages_or_messages_lst: List[ChatMessage] | List[List[ChatMessage]],
-        stop: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | List[float] | None = None,
-        include_stop_str_in_output: bool | None = None,
-        tools: List[dict] | None = None,
-        tool_choice: str | dict | None = None,
-    ) -> Dict | List[Dict]:
-        """Generate response(s) synchronously."""
-        coro = self.agenerate(
-            messages_or_messages_lst,
-            stop,
-            max_tokens,
-            temperature,
-            include_stop_str_in_output,
-            tools,
-            tool_choice,
-        )
-        try:
-            asyncio.get_running_loop()
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                return executor.submit(asyncio.run, coro).result()
-        except RuntimeError:
-            return asyncio.run(coro)
-
-    def evaluate(self, prompt: str, generation: str) -> List[float]:
-        """Evaluate method (not implemented for Gemini)."""
-        raise NotImplementedError("Evaluate method not implemented for Vertex AI Gemini")
+        response = await asyncio.to_thread(sync_call)
+        return {"role": "assistant", "content": response.text}

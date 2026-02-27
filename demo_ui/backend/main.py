@@ -10,11 +10,17 @@ import asyncio
 import json
 import logging
 import os
+import re
+import socket
 import time
+import traceback
 import uuid
 from pathlib import Path
 from typing import Dict
+from urllib.parse import urlparse
 
+import litellm
+import numpy as np
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,6 +65,29 @@ from its_hub.algorithms.self_consistency import create_regex_projection_function
 from .config import get_model_config, get_api_key, MODEL_REGISTRY, ModelConfig
 from .vertex_lm import VertexAIClaudeModel, VertexAIGeminiModel
 from .llm_prm import LLMProcessRewardModel
+
+# ── Algorithm / model defaults ────────────────────────────────────────
+DEFAULT_JUDGE_MODEL = "gpt-4o-mini"
+DEFAULT_PRM_MODEL = "gpt-4o-mini"
+DEFAULT_STEP_GEN_MAX_STEPS = 8
+DEFAULT_STEP_GEN_TEMPERATURE = 0.8
+DEFAULT_STEP_GEN_TOKEN = "\n\n"
+DEFAULT_PRM_TEMPERATURE = 0.3
+BEAM_WIDTH_MIN = 2
+BEAM_WIDTH_MAX = 4
+GIBBS_ITERATIONS_MIN = 2
+GIBBS_ITERATIONS_MAX = 3
+GIBBS_ITERATIONS_DIVISOR = 4
+
+
+def parse_tool_args(tool_args):
+    """Parse tool arguments, handling JSON string encoding."""
+    if isinstance(tool_args, str):
+        try:
+            return json.loads(tool_args)
+        except json.JSONDecodeError:
+            return {}
+    return tool_args
 
 
 def calculate_cost(
@@ -111,7 +140,6 @@ def detect_question_type(
         return "tool_calling"
 
     # Check for math patterns
-    import re
     math_indicators = [
         r'\$', r'\\frac', r'\\boxed', r'\^',
         r'probability', r'calculate', r'solve',
@@ -195,9 +223,6 @@ async def health_check():
 
 def check_server_available(base_url: str, timeout: float = 1.0) -> bool:
     """Check if a server is available by attempting to connect to it."""
-    import socket
-    from urllib.parse import urlparse
-
     try:
         parsed = urlparse(base_url)
         host = parsed.hostname or 'localhost'
@@ -484,7 +509,6 @@ async def run_baseline(
 
     # For OpenAI-compatible models, try to get usage directly via litellm
     if isinstance(lm, OpenAICompatibleLanguageModel):
-        import litellm
         try:
             request_data = lm._prepare_request_data(
                 messages,
@@ -519,17 +543,7 @@ async def run_baseline(
         tool_calls_list = []
         for tc in response["tool_calls"]:
             tool_name = tc.get("function", {}).get("name", "")
-            tool_args = tc.get("function", {}).get("arguments", {})
-
-            # Parse arguments if they're a JSON string
-            if isinstance(tool_args, str):
-                import json
-                try:
-                    tool_args = json.loads(tool_args)
-                except json.JSONDecodeError:
-                    tool_args = {}
-
-            # Execute the tool
+            tool_args = parse_tool_args(tc.get("function", {}).get("arguments", {}))
             tool_result = execute_tool(tool_name, tool_args)
 
             tool_calls_list.append(ToolCall(
@@ -538,7 +552,6 @@ async def run_baseline(
                 result=tool_result
             ))
 
-            # Append tool result to answer for display
             if tool_result:
                 answer += f"\n\n**Tool Used:** {tool_name}\n**Result:** {tool_result}"
 
@@ -549,8 +562,6 @@ async def run_baseline(
 
 def _build_pf_trace(result: ParticleFilteringResult) -> ParticleFilteringTrace:
     """Build a ParticleFilteringTrace from a ParticleFilteringResult."""
-    import numpy as np
-
     log_w = result.log_weights_lst
     # Normalize log-weights to probabilities
     max_lw = max(log_w) if log_w else 0.0
@@ -589,20 +600,11 @@ def build_trace(algorithm: str, result, tool_vote: str | None = None) -> dict | 
                     tool_calls_data = []
                     for tc in resp["tool_calls"]:
                         tool_name = tc.get("function", {}).get("name", "unknown")
-                        tool_args = tc.get("function", {}).get("arguments", {})
-
-                        # Parse arguments if they're a JSON string
-                        if isinstance(tool_args, str):
-                            try:
-                                tool_args = json.loads(tool_args)
-                            except json.JSONDecodeError:
-                                logger.warning(f"Failed to parse tool arguments: {tool_args}")
-                                tool_args = {}
-
+                        tool_args = parse_tool_args(tc.get("function", {}).get("arguments", {}))
                         tool_calls_data.append(ToolCall(
                             name=tool_name,
                             arguments=tool_args,
-                            result=None  # We'll execute tools separately
+                            result=None,
                         ))
 
                 candidates.append(CandidateResponse(
@@ -706,8 +708,6 @@ def build_trace(algorithm: str, result, tool_vote: str | None = None) -> dict | 
 
     except Exception as e:
         logger.error(f"Failed to build trace for {algorithm}: {e}", exc_info=True)
-        import traceback
-        traceback.print_exc()
         return None
 
 
@@ -753,7 +753,7 @@ async def run_its(
     if algorithm == "best_of_n":
         # Use LLM judge for Best-of-N
         judge = LLMJudgeRewardModel(
-            model="gpt-4o-mini",
+            model=DEFAULT_JUDGE_MODEL,
             criterion="overall_quality",
             judge_type="pointwise",
             api_key=api_key,
@@ -792,24 +792,21 @@ async def run_its(
         # Create StepGeneration with step-by-step reasoning
         # Using "\n\n" as step delimiter for reasoning steps
         step_gen = StepGeneration(
-            max_steps=8,  # Maximum reasoning steps
-            step_token="\n\n",  # Step delimiter
-            stop_token=None,  # No explicit stop token
-            temperature=0.8,
+            max_steps=DEFAULT_STEP_GEN_MAX_STEPS,
+            step_token=DEFAULT_STEP_GEN_TOKEN,
+            stop_token=None,
+            temperature=DEFAULT_STEP_GEN_TEMPERATURE,
             include_stop_str_in_output=False,
         )
 
-        # Create LLM-based process reward model
         prm = LLMProcessRewardModel(
-            model="gpt-4o-mini",
+            model=DEFAULT_PRM_MODEL,
             api_key=api_key,
-            temperature=0.3,
+            temperature=DEFAULT_PRM_TEMPERATURE,
         )
 
         if algorithm == "beam_search":
-            # BeamSearch with beam_width (use budget/2 for reasonable beam width)
-            beam_width = max(2, min(4, budget // 2))
-            # Adjust budget to be divisible by beam_width, minimum beam_width
+            beam_width = max(BEAM_WIDTH_MIN, min(BEAM_WIDTH_MAX, budget // 2))
             adjusted_budget = max(beam_width, (budget // beam_width) * beam_width)
             alg = BeamSearch(sg=step_gen, prm=prm, beam_width=beam_width)
             budget = adjusted_budget
@@ -831,7 +828,7 @@ async def run_its(
         elif algorithm == "particle_gibbs":
             # Particle Gibbs with multiple iterations
             # Use smaller budget for iterations to avoid timeout
-            num_iterations = max(2, min(3, budget // 4))
+            num_iterations = max(GIBBS_ITERATIONS_MIN, min(GIBBS_ITERATIONS_MAX, budget // GIBBS_ITERATIONS_DIVISOR))
             alg = ParticleGibbs(
                 sg=step_gen,
                 prm=prm,
@@ -857,17 +854,7 @@ async def run_its(
         tool_calls_list = []
         for tc in result.the_one["tool_calls"]:
             tool_name = tc.get("function", {}).get("name", "")
-            tool_args = tc.get("function", {}).get("arguments", {})
-
-            # Parse arguments if they're a JSON string
-            if isinstance(tool_args, str):
-                import json
-                try:
-                    tool_args = json.loads(tool_args)
-                except json.JSONDecodeError:
-                    tool_args = {}
-
-            # Execute the tool
+            tool_args = parse_tool_args(tc.get("function", {}).get("arguments", {}))
             tool_result = execute_tool(tool_name, tool_args)
 
             tool_calls_list.append(ToolCall(
@@ -876,7 +863,6 @@ async def run_its(
                 result=tool_result
             ))
 
-            # Append tool result to answer for display
             if tool_result:
                 answer += f"\n\n**Tool Used:** {tool_name}\n**Result:** {tool_result}"
 
