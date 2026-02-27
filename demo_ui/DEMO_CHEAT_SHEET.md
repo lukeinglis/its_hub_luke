@@ -223,7 +223,7 @@ A box contains 3 red balls, 4 blue balls, and 5 green balls. Two balls are drawn
 Before starting your demo:
 
 1. ✅ Backend running: `cd demo_ui && uvicorn backend.main:app --port 8000`
-2. ✅ Frontend open: `open frontend/index.html`
+2. ✅ Frontend open: `open http://localhost:8000`
 3. ✅ Browser hard refresh: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows)
 4. ✅ Test connection: Click "Improve Model Performance" tab, select GPT-4o Mini, run "What is 2+2?"
 5. ✅ If test works, you're ready!

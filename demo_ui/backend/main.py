@@ -165,7 +165,10 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For local development; restrict in production
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1151,7 +1154,7 @@ async def compare(request: CompareRequest):
                 detail="OpenRouter API timeout or connection error. This model may be temporarily unavailable. Try: (1) Using an OpenAI model (GPT-4o Mini recommended), or (2) Trying a different OpenRouter model like Llama 3.1 8B"
             )
 
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error. Check server logs for details.")
 
 
 if __name__ == "__main__":

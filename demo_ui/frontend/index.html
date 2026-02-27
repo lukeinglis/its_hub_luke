@@ -3236,10 +3236,10 @@
                 <span class="choice-icon">📚</span>
                 <h2 class="choice-title">Guided Demo</h2>
                 <p class="choice-description">
-                    Explore curated examples showing real ITS improvements across different algorithms and providers.
+                    Explore pre-loaded scenarios showing representative ITS improvements across different algorithms and providers.
                 </p>
                 <ul class="choice-features">
-                    <li>Pre-loaded scenarios with real results</li>
+                    <li>Pre-loaded scenarios with representative results</li>
                     <li>Compare baseline vs ITS side-by-side</li>
                     <li>View algorithm traces and metrics</li>
                     <li>No backend required - instant loading</li>
@@ -3253,13 +3253,13 @@
                 <span class="choice-icon">⚡</span>
                 <h2 class="choice-title">Interactive Demo</h2>
                 <p class="choice-description">
-                    Run live comparisons with your own questions and configurations using real models.
+                    Run live comparisons with your own questions and configurations against hosted models.
                 </p>
                 <ul class="choice-features">
                     <li>Ask your own questions</li>
                     <li>Choose models and algorithms</li>
                     <li>Adjust compute budgets</li>
-                    <li>See real-time ITS improvements</li>
+                    <li>See ITS improvements in real time</li>
                     <li>Compare use cases (improve, match frontier)</li>
                 </ul>
                 <div class="choice-cta">Start Experimenting →</div>
@@ -3444,7 +3444,7 @@
                 <button class="guided-back-btn" onclick="guidedGoBack(3)">← Back</button>
                 <div class="guided-scenario-summary" id="guidedScenarioSummary"></div>
                 <h3 class="guided-step-title">Ready to Run</h3>
-                <p class="guided-step-subtitle">Review the question and submit to see ITS in action</p>
+                <p class="guided-step-subtitle">Review the question and submit to see the pre-loaded scenario</p>
                 <div class="guided-prompt-area">
                     <div class="guided-prompt-label">Question</div>
                     <div class="guided-prompt-text" id="guidedPromptText"></div>
@@ -5158,7 +5158,7 @@ gcloud auth application-default login</div>
 
                 // Update headers for guided mode
                 if (headerSubtitle) {
-                    headerSubtitle.textContent = 'Explore curated examples showing how ITS improves model responses';
+                    headerSubtitle.textContent = 'Explore pre-loaded scenarios showing how ITS can improve model responses';
                 }
                 if (questionSectionTitle) {
                     questionSectionTitle.textContent = 'Scenario Prompt';

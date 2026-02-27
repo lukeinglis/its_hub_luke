@@ -1,5 +1,6 @@
 # Environment variables
 .env
+.env.*
 
 # Python
 __pycache__/
@@ -15,6 +16,7 @@ build/
 venv/
 env/
 ENV/
+demo_venv/
 
 # IDE
 .vscode/
@@ -26,3 +28,18 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Backup files
+*.backup*
+*.bak*
+
+# Generated outputs
+test_scenarios.js
+test_capture.js
+comprehensive_scenarios.js
+
+# Logs
+logs/
+
+# Node
+node_modules/
