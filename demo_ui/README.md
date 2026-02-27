@@ -2,34 +2,6 @@
 
 A simple web interface for comparing baseline LLM inference vs Inference-Time Scaling (ITS) side by side.
 
-## 🆕 Recent Updates (February 2026)
-
-**Interactive Demo Experience (Latest):**
-
-- 🔑 **Provider onboarding page**: Clickable cards copy env variable snippets to clipboard; active providers auto-detected and highlighted green on load
-- 🔍 **Provider detection**: `/providers` endpoint detects configured API keys; frontend shows status and available model count
-- 🔄 **Dynamic model availability**: Model dropdowns populated only with models from active providers, grouped by provider
-- 📊 **Visual indicators**: Cheapest/Fastest badges on result panes, extensible for LLM-as-judge correctness evaluation
-- 🧩 **5-step flow**: Access → Status → Scenario → Configure & Run → Results (config and prompt merged into single step)
-
-**Guided Demo Experience:**
-
-- 🎯 **New Guided Demo Flow**: Completely redesigned step-by-step guided experience with 6-stage progressive disclosure
-- 📈 **Goal-first navigation**: Users choose their goal (Improve Performance or Match Frontier) before anything else
-- 🗳️ **ITS Method selection**: Dedicated step for choosing Self-Consistency or Best-of-N
-- 🔀 **Branching scenarios**: Model options change based on the selected goal
-- ⚡ **Trace animation**: Staged 3-phase visualization (Generate → Evaluate → Select) shows how ITS works
-- 📊 **Performance page**: Dedicated bar charts comparing Cost, Quality, Latency, and Tokens
-
-**Previous: Answer Extraction & Tool Consensus:**
-
-- ✨ **Answer Extraction**: Math questions now extract `\boxed{}` answers for proper consensus voting (fixes Self-Consistency on mathematical reasoning)
-- 🤖 **Tool Consensus**: New demo showing agent reliability through tool voting
-- 🧠 **Auto-Detection**: Automatically recognizes question types (math, tool_calling, general)
-- 📝 **System Prompts**: QWEN prompt applied to math questions for consistent formatting
-- 📊 **Algorithm Traces**: Expandable UI showing vote counts, tool distributions, and candidate responses
-- 📚 **Documentation**: Complete demo guides (`DEMO_CHEAT_SHEET.md`, `IDEAL_DEMO_CONFIGURATIONS.md`)
-
 ## Overview
 
 This demo provides two entry points from the landing page:
@@ -173,6 +145,7 @@ All 6 ITS algorithms tested and working:
 ```
 demo_ui/
 ├── README.md                                    # This file
+├── DEMO_GUIDE.md                               # Presenter's guide with configurations and talking points
 ├── .env.example                                # Environment variables template
 ├── backend/
 │   ├── __init__.py
@@ -184,6 +157,13 @@ demo_ui/
 │   ├── vertex_lm.py                            # Vertex AI model implementations
 │   ├── llm_prm.py                              # LLM-based process reward model
 │   └── requirements.txt                        # Backend dependencies
+├── tests/
+│   ├── conftest.py                             # Shared test fixtures
+│   ├── test_config.py                          # Model registry and API key tests
+│   ├── test_models.py                          # Pydantic model validation tests
+│   ├── test_main_functions.py                  # detect_question_type, calculate_cost tests
+│   ├── test_example_questions.py               # Example question query tests
+│   └── test_tools.py                           # Safe expression evaluator and tool tests
 └── frontend/
     ├── index.html                              # Landing page, wizard HTML shells, inline shared utilities
     ├── guided-demo.js                          # Guided Demo: 6-step flow, mock data, trace animation
@@ -280,13 +260,9 @@ http://localhost:8000
 
 You will see the landing page with two options: **Guided Demo** and **Interactive Demo**.
 
-## Quick Start Guides 📚
+## Demo Guide
 
-For detailed demo configurations and talking points, see:
-
-- **`DEMO_CHEAT_SHEET.md`** - Quick reference with exact settings, questions, and a 5-minute demo flow
-- **`IDEAL_DEMO_CONFIGURATIONS.md`** - Comprehensive guide with recommended configurations for each use case
-- **`ANSWER_EXTRACTION_FIX_VERIFICATION.md`** - Technical verification of answer extraction implementation
+For recommended configurations, talking points, and a 5-minute demo flow, see **[DEMO_GUIDE.md](DEMO_GUIDE.md)**.
 
 ## Using the Demo
 
