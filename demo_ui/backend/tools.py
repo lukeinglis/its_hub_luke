@@ -8,9 +8,62 @@ These tools simulate real-world agent capabilities:
 - code_executor: Execute Python code for analysis
 """
 
+import ast
 import json
+import math
+import operator
 import random
 from datetime import datetime
+
+
+_SAFE_OPS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.Pow: operator.pow,
+    ast.USub: operator.neg,
+    ast.UAdd: operator.pos,
+    ast.Mod: operator.mod,
+    ast.FloorDiv: operator.floordiv,
+}
+
+_SAFE_FUNCS = {
+    'sqrt': math.sqrt,
+    'log': math.log,
+    'exp': math.exp,
+    'sin': math.sin,
+    'cos': math.cos,
+    'abs': abs,
+}
+
+_SAFE_CONSTS = {
+    'pi': math.pi,
+    'e': math.e,
+}
+
+
+def _safe_eval_expr(expr: str) -> float:
+    """Evaluate a math expression safely using AST parsing (no eval/exec)."""
+    tree = ast.parse(expr, mode='eval')
+
+    def _eval(node):
+        if isinstance(node, ast.Expression):
+            return _eval(node.body)
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
+        if isinstance(node, ast.Name) and node.id in _SAFE_CONSTS:
+            return _SAFE_CONSTS[node.id]
+        if isinstance(node, ast.BinOp) and type(node.op) in _SAFE_OPS:
+            return _SAFE_OPS[type(node.op)](_eval(node.left), _eval(node.right))
+        if isinstance(node, ast.UnaryOp) and type(node.op) in _SAFE_OPS:
+            return _SAFE_OPS[type(node.op)](_eval(node.operand))
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            if node.func.id in _SAFE_FUNCS and len(node.args) == 1 and not node.keywords:
+                return _SAFE_FUNCS[node.func.id](_eval(node.args[0]))
+        raise ValueError(f"Unsupported expression: {ast.dump(node)}")
+
+    return _eval(tree)
 
 
 # Tool schemas in OpenAI function calling format
@@ -200,22 +253,10 @@ def _mock_calculate(args: dict) -> str:
             "note": "Calculated using algebraic identity: x³ + y³ = (x + y)³ - 3xy(x + y)"
         })
 
-    # Try simple evaluation for basic arithmetic
+    # Try simple evaluation for basic arithmetic using safe AST walker
     try:
         # Replace common math notation
         expr = expression.replace("^", "**").replace("×", "*").replace("÷", "/")
-
-        # Handle common functions
-        import math
-        safe_dict = {
-            'sqrt': math.sqrt,
-            'log': math.log,
-            'exp': math.exp,
-            'sin': math.sin,
-            'cos': math.cos,
-            'pi': math.pi,
-            'e': math.e
-        }
 
         # Only evaluate if it's a simple numeric expression
         if any(c.isalpha() and c not in 'epi' for c in expr):
@@ -227,8 +268,8 @@ def _mock_calculate(args: dict) -> str:
                 "note": "Symbolic expression - requires numeric values for evaluation"
             })
 
-        # Attempt evaluation (simplified for demo)
-        result = eval(expr, {"__builtins__": {}}, safe_dict)
+        # Safe AST-based evaluation (no eval/exec)
+        result = _safe_eval_expr(expr)
 
         return json.dumps({
             "result": result,
@@ -338,45 +379,12 @@ def _mock_code_executor(args: dict) -> str:
             "note": "Demo mode: Code executed in simulated environment"
         })
 
-    # For any other code, simulate execution
-    try:
-        # Very limited safe execution for simple cases
-        if len(code) < 200 and "import" not in code and "open" not in code:
-            local_vars = {}
-            safe_builtins = {
-                "print": print,
-                "range": range,
-                "len": len,
-                "sum": sum,
-                "abs": abs,
-                "min": min,
-                "max": max,
-            }
-            exec(code, {"__builtins__": safe_builtins}, local_vars)
-
-            # Extract result
-            result = local_vars.get('result', local_vars.get('answer', 'Code executed'))
-
-            return json.dumps({
-                "output": str(result),
-                "purpose": purpose,
-                "status": "success"
-            })
-        else:
-            # Return simulated result for complex code
-            return json.dumps({
-                "output": "Execution completed",
-                "purpose": purpose,
-                "status": "success",
-                "note": "Demo mode: Complex code simulated"
-            })
-    except Exception as e:
-        # Even on error, return a helpful simulated response
-        return json.dumps({
-            "output": "Code execution simulated",
-            "purpose": purpose,
-            "status": "success",
-            "note": "Demo mode: Would execute in sandboxed environment in production"
+    # Simulate execution for all code (no actual code execution in demo mode)
+    return json.dumps({
+        "output": "Execution completed",
+        "purpose": purpose or "Code execution",
+        "status": "success",
+        "note": "Demo mode: code execution simulated"
         })
 
 

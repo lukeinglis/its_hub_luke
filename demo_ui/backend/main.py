@@ -170,19 +170,17 @@ app.add_middleware(
         "http://127.0.0.1:8000",
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
-# Mount frontend static files (for logo and other assets)
 frontend_dir = Path(__file__).parent.parent / "frontend"
-app.mount("/frontend", StaticFiles(directory=str(frontend_dir)), name="frontend")
 
 
 @app.get("/")
 async def serve_frontend():
     """Serve the frontend HTML."""
-    frontend_path = Path(__file__).parent.parent / "frontend" / "index.html"
+    frontend_path = frontend_dir / "index.html"
     return FileResponse(frontend_path)
 
 
@@ -1146,15 +1144,21 @@ async def compare(request: CompareRequest):
     except Exception as e:
         logger.error(f"[{run_id}] Error during comparison: {e}", exc_info=True)
 
-        # Provide helpful error message for OpenRouter timeout issues
+        # Return generic error messages — details are logged server-side above
         error_msg = str(e)
-        if "Response payload is not completed" in error_msg or "ClientPayloadError" in error_msg:
+        if "timeout" in error_msg.lower() or "payload" in error_msg.lower() or "ClientPayloadError" in error_msg:
             raise HTTPException(
-                status_code=500,
-                detail="OpenRouter API timeout or connection error. This model may be temporarily unavailable. Try: (1) Using an OpenAI model (GPT-4o Mini recommended), or (2) Trying a different OpenRouter model like Llama 3.1 8B"
+                status_code=504,
+                detail="The model is temporarily unavailable. Please try again or select a different model."
             )
 
         raise HTTPException(status_code=500, detail="Internal server error. Check server logs for details.")
+
+
+# Mount frontend static files at root so relative paths in index.html resolve
+# correctly. This must come after all API route definitions because FastAPI
+# mounts are greedy — a "/" mount placed before routes would shadow them.
+app.mount("/", StaticFiles(directory=str(frontend_dir)), name="frontend")
 
 
 if __name__ == "__main__":

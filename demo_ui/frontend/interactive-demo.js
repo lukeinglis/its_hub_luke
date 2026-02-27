@@ -12,6 +12,12 @@
  * 5. iwRenderPerformance()  — Add real quality/judge scores
  */
 
+function iwEscapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
 // ============================================================
 // STATE
 // ============================================================
@@ -258,7 +264,7 @@ async function iwCheckProviders() {
             statusHtml += `
                 <div class="iw-status-item">
                     <span class="iw-status-icon" style="color: var(--${prov.enabled ? 'success' : 'text-tertiary'})">${icon}</span>
-                    <span>${prov.name}</span>
+                    <span>${iwEscapeHtml(prov.name)}</span>
                     <span class="iw-provider-badge ${cls}">${prov.enabled ? 'Active' : 'Not configured'}</span>
                 </div>
             `;
@@ -276,9 +282,9 @@ async function iwCheckProviders() {
                 const pLabel = providerLabels[m.provider] || m.provider;
                 modelsHtml += `
                     <div class="iw-model-chip">
-                        <span class="iw-model-chip-provider">${pLabel}</span>
-                        <span class="iw-model-chip-name">${m.description}</span>
-                        <span class="iw-model-chip-size">${m.size}</span>
+                        <span class="iw-model-chip-provider">${iwEscapeHtml(pLabel)}</span>
+                        <span class="iw-model-chip-name">${iwEscapeHtml(m.description)}</span>
+                        <span class="iw-model-chip-size">${iwEscapeHtml(m.size)}</span>
                     </div>
                 `;
             });
@@ -295,7 +301,7 @@ async function iwCheckProviders() {
                 <strong>Could not connect to the backend.</strong><br>
                 Make sure the backend server is running:<br>
                 <code style="display:block;margin-top:8px;padding:8px;background:var(--bg-tertiary);">cd demo_ui && uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload</code>
-                <br>Error: ${err.message}
+                <br>Error: ${iwEscapeHtml(err.message)}
             </div>
         `;
         modelListEl.innerHTML = '';
@@ -341,8 +347,8 @@ function iwPopulateConfig() {
     for (const [group, models] of Object.entries(grouped)) {
         modelHtml += `<optgroup label="${group}">`;
         models.forEach(m => {
-            const sizeLabel = m.size ? ` [${m.size}]` : '';
-            modelHtml += `<option value="${m.id}">${m.description}${sizeLabel}</option>`;
+            const sizeLabel = m.size ? ` [${iwEscapeHtml(m.size)}]` : '';
+            modelHtml += `<option value="${iwEscapeHtml(m.id)}">${iwEscapeHtml(m.description)}${sizeLabel}</option>`;
         });
         modelHtml += '</optgroup>';
     }
@@ -485,7 +491,7 @@ async function iwSubmit() {
         iwRenderResults(data);
 
     } catch (err) {
-        resultsEl.innerHTML = `<div class="iw-error"><strong>Error:</strong> ${err.message}</div>`;
+        resultsEl.innerHTML = `<div class="iw-error"><strong>Error:</strong> ${iwEscapeHtml(err.message)}</div>`;
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<span>▶</span><span>Run Comparison</span>';
@@ -684,7 +690,7 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
                         <span style="color:var(--text-tertiary)">Cost</span><span style="font-family:'IBM Plex Mono',monospace">${costFmt}</span>
                         <span style="color:var(--text-tertiary)">Input Tokens</span><span style="font-family:'IBM Plex Mono',monospace">${(data.input_tokens || 0).toLocaleString()}</span>
                         <span style="color:var(--text-tertiary)">Output Tokens</span><span style="font-family:'IBM Plex Mono',monospace">${(data.output_tokens || 0).toLocaleString()}</span>
-                        ${data.model_size ? `<span style="color:var(--text-tertiary)">Model Size</span><span>${data.model_size}</span>` : ''}
+                        ${data.model_size ? `<span style="color:var(--text-tertiary)">Model Size</span><span>${iwEscapeHtml(data.model_size)}</span>` : ''}
                     </div>
                 </div>
             </div>
