@@ -5,6 +5,7 @@ Uses the official google-cloud-aiplatform and anthropic[vertex] packages.
 """
 
 import asyncio
+import concurrent.futures
 import logging
 from typing import List, Dict
 
@@ -152,17 +153,23 @@ class VertexAIClaudeModel(AbstractLanguageModel):
         tool_choice: str | dict | None = None,
     ) -> Dict | List[Dict]:
         """Generate response(s) synchronously."""
-        return asyncio.run(
-            self.agenerate(
-                messages_or_messages_lst,
-                stop,
-                max_tokens,
-                temperature,
-                include_stop_str_in_output,
-                tools,
-                tool_choice,
-            )
+        coro = self.agenerate(
+            messages_or_messages_lst,
+            stop,
+            max_tokens,
+            temperature,
+            include_stop_str_in_output,
+            tools,
+            tool_choice,
         )
+        try:
+            asyncio.get_running_loop()
+            # Already in an async context (e.g. FastAPI endpoint) —
+            # run in a separate thread to avoid "event loop already running" error
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                return executor.submit(asyncio.run, coro).result()
+        except RuntimeError:
+            return asyncio.run(coro)
 
     def evaluate(self, prompt: str, generation: str) -> List[float]:
         """Evaluate method (not implemented for Claude)."""
@@ -304,17 +311,21 @@ class VertexAIGeminiModel(AbstractLanguageModel):
         tool_choice: str | dict | None = None,
     ) -> Dict | List[Dict]:
         """Generate response(s) synchronously."""
-        return asyncio.run(
-            self.agenerate(
-                messages_or_messages_lst,
-                stop,
-                max_tokens,
-                temperature,
-                include_stop_str_in_output,
-                tools,
-                tool_choice,
-            )
+        coro = self.agenerate(
+            messages_or_messages_lst,
+            stop,
+            max_tokens,
+            temperature,
+            include_stop_str_in_output,
+            tools,
+            tool_choice,
         )
+        try:
+            asyncio.get_running_loop()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                return executor.submit(asyncio.run, coro).result()
+        except RuntimeError:
+            return asyncio.run(coro)
 
     def evaluate(self, prompt: str, generation: str) -> List[float]:
         """Evaluate method (not implemented for Gemini)."""

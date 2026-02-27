@@ -127,5 +127,12 @@ Respond with ONLY a single number between 0.0 and 1.0, nothing else."""
     ) -> float | list[float]:
         """Score response(s) synchronously."""
         import asyncio
+        import concurrent.futures
 
-        return asyncio.run(self.ascore(prompt_or_messages, response_or_responses))
+        coro = self.ascore(prompt_or_messages, response_or_responses)
+        try:
+            asyncio.get_running_loop()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                return executor.submit(asyncio.run, coro).result()
+        except RuntimeError:
+            return asyncio.run(coro)
