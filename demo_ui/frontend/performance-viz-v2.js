@@ -103,6 +103,7 @@ class PerformanceVizV2 {
     }
 
     renderSavingsCallout(smallBaseline, its, frontier) {
+        if (frontier.cost_usd == null || its.cost_usd == null || frontier.cost_usd === 0) return '';
         const savings = ((frontier.cost_usd - its.cost_usd) / frontier.cost_usd * 100).toFixed(0);
         return `
             <div class="perf-v2-savings">
@@ -127,9 +128,11 @@ class PerformanceVizV2 {
         `;
 
         items.forEach(item => {
-            const percentage = maxValue > 0 ? (item.value / maxValue * 100) : 0;
-            const isBest = betterWhen === 'lower' ? item.value === minValue : item.value === maxValue;
-            const displayValue = unit === '$' ? this.formatCost(item.value) :
+            const val = item.value != null ? item.value : 0;
+            const percentage = maxValue > 0 ? (val / maxValue * 100) : 0;
+            const isBest = betterWhen === 'lower' ? val === minValue : val === maxValue;
+            const displayValue = item.value == null ? 'N/A' :
+                                unit === '$' ? this.formatCost(item.value) :
                                 unit === 'ms' ? Math.round(item.value).toLocaleString() :
                                 item.value.toLocaleString();
 
@@ -197,7 +200,7 @@ class PerformanceVizV2 {
         // Latency row
         html += '<tr><td class="perf-v2-table-label">Latency</td>';
         models.forEach(model => {
-            html += `<td>${Math.round(model.data.latency_ms).toLocaleString()}ms</td>`;
+            html += `<td>${model.data.latency_ms != null ? Math.round(model.data.latency_ms).toLocaleString() + 'ms' : 'N/A'}</td>`;
         });
         html += '</tr>';
 
@@ -236,8 +239,8 @@ class PerformanceVizV2 {
         html += '<tr><td class="perf-v2-table-label">Cost per Token</td>';
         models.forEach(model => {
             const total = (model.data.input_tokens || 0) + (model.data.output_tokens || 0);
-            const costPerToken = total > 0 ? (model.data.cost_usd / total).toFixed(6) : '0';
-            html += `<td>$${costPerToken}</td>`;
+            const costPerToken = (total > 0 && model.data.cost_usd != null) ? '$' + (model.data.cost_usd / total).toFixed(6) : 'N/A';
+            html += `<td>${costPerToken}</td>`;
         });
         html += '</tr>';
 
@@ -251,6 +254,7 @@ class PerformanceVizV2 {
     }
 
     formatCost(cost) {
+        if (cost == null) return 'N/A';
         if (cost < 0.0001) return `$${cost.toExponential(2)}`;
         if (cost < 0.01) return `$${cost.toFixed(4)}`;
         if (cost < 1) return `$${cost.toFixed(3)}`;

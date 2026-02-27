@@ -579,13 +579,15 @@ function iwGetModelDesc(modelId) {
 }
 
 function iwBuildResultPane(data, type, title, minCost, minLatency) {
+    if (!data) return `<div class="iw-result-pane"><div class="iw-pane-body"><p>No data available</p></div></div>`;
+
     const indicatorClass = type;
     const paneClass = type === 'its' ? ' its-pane' : type === 'frontier' ? ' frontier-pane' : '';
 
-    // Badges
+    // Badges — guard against null/undefined values
     let badges = '';
-    const cost = data.cost_usd != null ? data.cost_usd : null;
-    const latency = data.latency_ms != null ? data.latency_ms : null;
+    const cost = (data.cost_usd !== null && data.cost_usd !== undefined) ? Number(data.cost_usd) : null;
+    const latency = (data.latency_ms !== null && data.latency_ms !== undefined) ? Number(data.latency_ms) : null;
     if (cost != null && cost <= minCost) badges += '<span class="iw-pane-badge cheapest">Cheapest</span>';
     if (latency != null && latency <= minLatency) badges += '<span class="iw-pane-badge fastest">Fastest</span>';
 
