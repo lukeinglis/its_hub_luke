@@ -183,6 +183,15 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# Environment file variants
+.env.*
+.env.local
+.env.production
+!.env.example
+
+# Node
+node_modules/
+
 # local dev
 notebooks/dev.ipynb
 results/
