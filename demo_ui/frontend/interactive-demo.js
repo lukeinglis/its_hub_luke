@@ -97,6 +97,7 @@ function iwInit() {
     iwState.budget = 4;
     iwState.question = null;
     iwState.expectedAnswer = null;
+    iwState.questionType = null;
     iwState.isRunning = false;
     iwState.lastResults = null;
 
@@ -460,7 +461,6 @@ async function iwSubmit() {
     // Hide trace/perf sections
     document.getElementById('iwTraceSection').style.display = 'none';
     document.getElementById('iwPerfSection').style.display = 'none';
-    document.getElementById('iwExpectedAnswer').style.display = 'none';
 
     try {
         const requestBody = {
@@ -507,6 +507,11 @@ function iwRenderResults(data) {
     const isMatch = iwState.scenario === 'match_frontier' && data.small_baseline;
     const resultsEl = document.getElementById('iwResultsArea');
 
+    // Store question_type from response meta
+    if (data.meta && data.meta.question_type) {
+        iwState.questionType = data.meta.question_type;
+    }
+
     try {
         // Determine visual indicator badges
         const allPanes = [];
@@ -526,8 +531,25 @@ function iwRenderResults(data) {
             if (p.data && p.data.latency_ms != null && p.data.latency_ms < minLatency) minLatency = p.data.latency_ms;
         });
 
+        // Build question display block
+        let questionHtml = '';
+        if (iwState.question) {
+            questionHtml = `
+                <div class="iw-question-display">
+                    <div class="iw-question-label">Question</div>
+                    <div class="iw-question-text">${iwEscapeHtml(iwState.question)}</div>
+                    ${iwState.expectedAnswer ? `
+                        <div class="iw-expected-inline">
+                            <span class="iw-expected-label">Expected Answer:</span>
+                            <span class="iw-expected-value">${iwEscapeHtml(iwState.expectedAnswer)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
         const colClass = isMatch ? 'three-col' : 'two-col';
-        let html = `<div class="iw-results-grid ${colClass}">`;
+        let html = questionHtml + `<div class="iw-results-grid ${colClass}">`;
 
         if (isMatch) {
             html += iwBuildResultPaneSafe(data.small_baseline, 'baseline', iwGetModelDesc(iwState.modelId) + ' (Baseline)', minCost, minLatency);
@@ -541,19 +563,12 @@ function iwRenderResults(data) {
         html += '</div>';
         resultsEl.innerHTML = html;
 
-        // Render math in results
+        // Render math in results (including question display)
         if (typeof renderMath === 'function') renderMath(resultsEl);
 
     } catch (err) {
         console.error('iwRenderResults error:', err);
         resultsEl.innerHTML = `<div class="iw-error">Error rendering results: ${err.message}</div>`;
-    }
-
-    // Show expected answer if applicable
-    if (iwState.expectedAnswer) {
-        const expEl = document.getElementById('iwExpectedAnswer');
-        expEl.style.display = 'block';
-        document.getElementById('iwExpectedContent').textContent = iwState.expectedAnswer;
     }
 
     // Show trace section if ITS result has trace
@@ -604,12 +619,41 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
 
     // Response content
     const fullResponse = data.answer || data.response || '';
-    const conclusion = typeof extractConclusion === 'function' ? extractConclusion(fullResponse) : fullResponse;
-    const responseHtml = typeof formatAsHTML === 'function' ? formatAsHTML(conclusion) : '<p>' + fullResponse + '</p>';
+    const questionType = iwState.questionType || 'general';
+
+    // Try to extract a concise final answer (works best for math)
+    let finalAnswer = null;
+    if (questionType === 'math' && typeof extractFinalAnswer === 'function') {
+        finalAnswer = extractFinalAnswer(fullResponse);
+    }
+
+    // Build final answer callout if we found one
+    let finalAnswerHtml = '';
+    if (finalAnswer) {
+        const hasLatex = finalAnswer.includes('$') || /[\\{}_^]/.test(finalAnswer);
+        const displayAnswer = hasLatex
+            ? finalAnswer
+            : (finalAnswer.includes('=') || /^[-+]?\d/.test(finalAnswer))
+                ? '$' + finalAnswer + '$'
+                : iwEscapeHtml(finalAnswer);
+        finalAnswerHtml = `
+            <div class="iw-final-answer">
+                <div class="iw-final-answer-label">Final Answer</div>
+                <div class="iw-final-answer-content">${displayAnswer}</div>
+            </div>
+        `;
+    }
+
+    // Build response content (conclusion for long responses, full for short)
+    const conclusion = typeof extractConclusion === 'function'
+        ? extractConclusion(fullResponse) : fullResponse;
+    const responseHtml = typeof formatAsHTML === 'function'
+        ? formatAsHTML(finalAnswer ? conclusion : fullResponse)
+        : '<p>' + fullResponse + '</p>';
 
     // Full reasoning (for expandable section)
     const fullHtml = typeof formatReasoningSteps === 'function' ? formatReasoningSteps(fullResponse) : '';
-    const hasFullReasoning = conclusion !== fullResponse && fullHtml;
+    const hasFullReasoning = (finalAnswer || conclusion !== fullResponse) && fullHtml;
 
     // Trace expandable (for ITS results)
     let traceExpandable = '';
@@ -663,6 +707,7 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
                 <div class="iw-pane-badges">${badges}</div>
             </div>
             <div class="iw-pane-body">
+                ${finalAnswerHtml}
                 <div class="iw-pane-response">${responseHtml}</div>
                 <div class="iw-pane-meta">
                     <span class="iw-meta-tag"><span class="meta-label">Latency:</span><span class="meta-value">${latency != null ? latency + 'ms' : 'N/A'}</span></span>
