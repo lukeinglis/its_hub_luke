@@ -678,14 +678,6 @@
 }
 
 /* ===== EXPECTED ANSWER ===== */
-.iw-expected-answer {
-    padding: 16px 20px;
-    background: var(--bg-primary);
-    border: 2px solid var(--success);
-    border-left: 4px solid var(--success);
-    margin-bottom: 24px;
-}
-
 .iw-expected-label {
     font-size: 11px;
     font-weight: 700;
@@ -693,12 +685,6 @@
     letter-spacing: 0.06em;
     color: var(--success);
     margin-bottom: 8px;
-}
-
-.iw-expected-content {
-    font-size: 14px;
-    color: var(--text-primary);
-    line-height: 1.6;
 }
 
 /* ===== EXPANDABLE SECTIONS ===== */
@@ -743,6 +729,8 @@
 
 .iw-expandable.expanded .iw-expand-content {
     display: block;
+    max-height: 300px;
+    overflow-y: auto;
     animation: iwFadeIn 0.3s ease-out;
 }
 
@@ -815,6 +803,75 @@
     margin-bottom: 20px;
     color: var(--danger);
     font-size: 14px;
+}
+
+/* ===== QUESTION DISPLAY ===== */
+.iw-question-display {
+    padding: 16px 20px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--primary);
+    margin-bottom: 20px;
+}
+
+.iw-question-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+
+.iw-question-text {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.iw-expected-inline {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    font-size: 13px;
+}
+
+.iw-expected-inline .iw-expected-label {
+    font-weight: 700;
+    color: var(--success);
+    margin-right: 6px;
+    margin-bottom: 0;
+}
+
+.iw-expected-inline .iw-expected-value {
+    color: var(--text-primary);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ===== FINAL ANSWER CALLOUT ===== */
+.iw-final-answer {
+    padding: 14px 18px;
+    background: rgba(163, 190, 140, 0.08);
+    border: 1px solid rgba(163, 190, 140, 0.3);
+    border-left: 4px solid var(--success);
+    margin-bottom: 14px;
+}
+
+.iw-final-answer-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--success);
+    margin-bottom: 6px;
+}
+
+.iw-final-answer-content {
+    font-size: 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.5;
 }
 
 /* ===== RESTART AREA ===== */

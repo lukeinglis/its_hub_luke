@@ -1103,6 +1103,7 @@ async def compare(request: CompareRequest):
                 "budget": request.budget,
                 "run_id": run_id,
                 "use_case": request.use_case,
+                "question_type": question_type,
             }
         }
 
