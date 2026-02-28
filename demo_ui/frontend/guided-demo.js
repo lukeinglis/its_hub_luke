@@ -233,6 +233,7 @@ function initGuidedWizard() {
 
     // Show wizard
     const wizard = document.getElementById('guidedWizard');
+    wizard.classList.remove('hidden');
     wizard.style.display = 'block';
 
     // Hide all other sections
@@ -273,12 +274,13 @@ function guidedShowStep(stepNumber) {
     // Hide all steps
     for (let i = 1; i <= 6; i++) {
         const el = document.getElementById('guidedStep' + i);
-        if (el) el.style.display = 'none';
+        if (el) { el.classList.add('hidden'); el.style.display = ''; }
     }
 
     // Show current step
     const currentEl = document.getElementById('guidedStep' + stepNumber);
     if (currentEl) {
+        currentEl.classList.remove('hidden');
         currentEl.style.display = 'block';
         // Re-trigger animation
         currentEl.style.animation = 'none';
@@ -550,6 +552,7 @@ function guidedRenderResponses() {
 
     // Show trace button area
     const traceArea = document.getElementById('guidedTraceArea');
+    traceArea.classList.remove('hidden');
     traceArea.style.display = 'block';
 
     // Render the trace button
@@ -563,7 +566,8 @@ function guidedRenderResponses() {
     `;
 
     // Hide the performance button until trace is shown
-    document.getElementById('guidedNextArea').style.display = 'none';
+    document.getElementById('guidedNextArea').classList.add('hidden');
+    document.getElementById('guidedNextArea').style.display = '';
 }
 
 function guidedBuildResponsePane(title, type, data) {
@@ -718,7 +722,9 @@ function guidedRunTraceAnimation() {
             // After last phase, show the performance button
             if (i === phases.length - 1) {
                 setTimeout(() => {
-                    document.getElementById('guidedNextArea').style.display = 'block';
+                    const nextArea = document.getElementById('guidedNextArea');
+                    nextArea.classList.remove('hidden');
+                    nextArea.style.display = 'block';
                 }, 600);
             }
         }, (i + 1) * 800);

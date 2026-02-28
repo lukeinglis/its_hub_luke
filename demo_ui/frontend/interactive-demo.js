@@ -102,7 +102,7 @@ function iwInit() {
     iwState.lastResults = null;
 
     const wizard = document.getElementById('interactiveWizard');
-    if (wizard) wizard.style.display = 'block';
+    if (wizard) { wizard.classList.remove('hidden'); wizard.style.display = 'block'; }
 
     // Hide all other sections — the wizard is the entire experience
     ['useCaseSection', 'scenarioSection', 'configSection', 'questionSection',
@@ -183,10 +183,11 @@ function iwShowStep(n) {
     iwState.currentStep = n;
     for (let i = 1; i <= 5; i++) {
         const el = document.getElementById('iwStep' + i);
-        if (el) el.style.display = 'none';
+        if (el) { el.classList.add('hidden'); el.style.display = ''; }
     }
     const cur = document.getElementById('iwStep' + n);
     if (cur) {
+        cur.classList.remove('hidden');
         cur.style.display = 'block';
         cur.style.animation = 'none';
         cur.offsetHeight;
@@ -357,13 +358,15 @@ function iwPopulateConfig() {
 
     // For match_frontier, show frontier model dropdown
     if (isMatch) {
+        frontierGroup.classList.remove('hidden');
         frontierGroup.style.display = 'block';
         frontierSelect.innerHTML = modelHtml;
         // Pre-select a large model if available
         const gpt4o = Array.from(frontierSelect.options).find(o => o.value === 'gpt-4o');
         if (gpt4o) frontierSelect.value = 'gpt-4o';
     } else {
-        frontierGroup.style.display = 'none';
+        frontierGroup.classList.add('hidden');
+        frontierGroup.style.display = '';
     }
 
     // Set labels
@@ -459,8 +462,8 @@ async function iwSubmit() {
     resultsEl.innerHTML = '<div class="iw-loading"><div class="spinner"></div><div class="iw-loading-text">Running live comparison... This may take a few seconds.</div></div>';
 
     // Hide trace/perf sections
-    document.getElementById('iwTraceSection').style.display = 'none';
-    document.getElementById('iwPerfSection').style.display = 'none';
+    document.getElementById('iwTraceSection').classList.add('hidden');
+    document.getElementById('iwPerfSection').classList.add('hidden');
 
     try {
         const requestBody = {
@@ -759,8 +762,9 @@ function iwRenderTrace(traceRaw) {
         if (typeof trace === 'string') trace = JSON.parse(trace);
     } catch (_) {}
 
-    if (!trace || !trace.algorithm) { section.style.display = 'none'; return; }
+    if (!trace || !trace.algorithm) { section.classList.add('hidden'); return; }
 
+    section.classList.remove('hidden');
     section.style.display = 'block';
     const algName = trace.algorithm === 'self_consistency' ? 'Self-Consistency' :
                     trace.algorithm === 'best_of_n' ? 'Best-of-N' : trace.algorithm;
@@ -785,6 +789,7 @@ function iwRenderTrace(traceRaw) {
 function iwRenderPerformance(data) {
     const section = document.getElementById('iwPerfSection');
     const container = document.getElementById('iwPerfContainer');
+    section.classList.remove('hidden');
     section.style.display = 'block';
 
     // Use PerformanceVizV2 if available
@@ -844,7 +849,7 @@ document.addEventListener('DOMContentLoaded', function() {
             iwState.lastResults = null;
 
             const wizard = document.getElementById('interactiveWizard');
-            if (wizard) wizard.style.display = 'none';
+            if (wizard) { wizard.classList.add('hidden'); wizard.style.display = ''; }
 
             original();
         };

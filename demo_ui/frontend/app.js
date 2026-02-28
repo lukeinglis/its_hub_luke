@@ -898,7 +898,7 @@ function returnToLanding() {
 
     // Hide wizard UI
     const wizard = document.getElementById('guidedWizard');
-    if (wizard) wizard.style.display = 'none';
+    if (wizard) { wizard.classList.add('hidden'); wizard.style.display = ''; }
     const backBtn = document.getElementById('wizardBackBtn');
     if (backBtn) backBtn.style.display = 'none';
     const promptDisplay = document.getElementById('wizardPromptDisplay');
@@ -1081,6 +1081,7 @@ function updateUIForExpertMode() {
 
         // Show guided demo badge
         if (guidedDemoBadge) {
+            guidedDemoBadge.classList.remove('hidden');
             guidedDemoBadge.style.display = 'block';
         }
 
@@ -1121,7 +1122,8 @@ function updateUIForExpertMode() {
             scenarioSelectorContainer.classList.remove('visible');
         }
         if (guidedDemoBadge) {
-            guidedDemoBadge.style.display = 'none';
+            guidedDemoBadge.classList.add('hidden');
+            guidedDemoBadge.style.display = '';
         }
 
         // Expert Mode: Show all controls (original behavior)
