@@ -63,6 +63,23 @@
     box-sizing: border-box;
 }
 
+/* ===== FOCUS-VISIBLE — Keyboard-only focus ring ===== */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+[role="button"]:focus-visible,
+.wizard-card:focus-visible,
+.choice-card:focus-visible,
+.iw-provider-card:focus-visible,
+.theme-toggle:focus-visible,
+.expert-mode-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px var(--primary-light);
+}
+
 body {
     font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg-primary);
@@ -1225,7 +1242,7 @@ button {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Public Sans', sans-serif;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1383,6 +1400,7 @@ button:disabled {
 }
 
 .size-badge {
+    display: inline-block;
     padding: 3px 8px;
     border-radius: var(--radius-sm);
     font-size: 11px;
@@ -1902,65 +1920,8 @@ button:disabled {
     box-shadow: var(--shadow-sm);
 }
 
-.wizard-step {
-    animation: fadeInUp 0.4s ease-out;
-}
-
-.wizard-step-title {
-    font-size: 18px;
-    margin-bottom: 24px;
-    color: var(--primary);
-    text-align: center;
-}
-
-/* Wizard Use Case Cards */
-.wizard-use-case-cards {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-}
-
-.wizard-card {
-    padding: 32px 24px;
-    background: var(--bg-primary);
-    border: 2px solid var(--border-color);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-align: center;
-    border-radius: var(--radius-lg);
-}
-
-.wizard-card:hover {
-    border-color: var(--primary);
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-}
-
-.wizard-card.selected {
-    border-color: var(--primary);
-    background: var(--primary-light);
-    transform: scale(0.97);
-    box-shadow: inset 0 0 0 2px var(--primary);
-}
-
-.wizard-card-icon {
-    font-size: 48px;
-    margin-bottom: 16px;
-}
-
-.wizard-card h4 {
-    font-size: 18px;
-    margin-bottom: 12px;
-    color: var(--text-primary);
-}
-
-.wizard-card p {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin-bottom: 16px;
-    line-height: 1.6;
-}
-
+/* Old wizard-step / wizard-card rules removed — now in shared wizard section below.
+   .scenario-count kept as it's used by the old wizard JS (populateModelSelection). */
 .scenario-count {
     display: inline-block;
     font-size: 12px;
@@ -3195,5 +3156,175 @@ button:disabled {
     padding: 0 20px 60px 20px;
 }
 
+/* ============================================================
+   SHARED WIZARD STYLES
+   Common UI shared between guided-demo and interactive-demo.
+   Demo-specific CSS files extend these with overrides.
+   ============================================================ */
+
+/* --- Progress Bar --- */
+.wizard-progress {
+    height: 4px;
+    background: var(--bg-tertiary);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.wizard-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Breadcrumbs --- */
+.wizard-breadcrumbs {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+}
+
+.wizard-crumb {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    padding: 4px 10px;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.wizard-crumb.active {
+    color: var(--primary);
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.wizard-crumb.completed {
+    color: var(--success);
+    cursor: pointer;
+}
+
+.wizard-crumb.completed:hover {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.wizard-crumb-sep {
+    color: var(--border-color);
+    font-size: 10px;
+    user-select: none;
+}
+
+/* --- Step Container --- */
+.wizard-step {
+    animation: wizardFadeIn 0.4s ease-out;
+}
+
+@keyframes wizardFadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.wizard-step-title {
+    font-size: 22px;
+    text-align: center;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.wizard-step-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 28px;
+    font-weight: 400;
+}
+
+/* --- Back Button --- */
+.wizard-back-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 6px 14px;
+    margin-bottom: 20px;
+    transition: all 0.2s ease;
+}
+
+.wizard-back-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* --- Cards Grid --- */
+.wizard-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .wizard-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.wizard-card {
+    padding: 28px 24px;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    border-radius: var(--radius-lg);
+    position: relative;
+}
+
+.wizard-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.wizard-card.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    transform: scale(0.97);
+    box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+.wizard-card-icon {
+    font-size: 40px;
+    margin-bottom: 14px;
+}
+
+.wizard-card h4 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.wizard-card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+/* --- Success color variables for performance viz --- */
+:root {
+    --success-shadow: rgba(163, 190, 140, 0.3);
+    --success-glow: rgba(163, 190, 140, 0.6);
+}
+
 /* Utility class to replace inline display:none */
+/* !important is required — compound selectors like .foo.bar .baz { display:block }
+   have higher specificity than a single class and would override .hidden without it. */
 .hidden { display: none !important; }

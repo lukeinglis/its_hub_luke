@@ -18,11 +18,8 @@
 // STATE
 // ============================================================
 
-function guidedFormatLatency(ms) {
-    if (ms == null) return 'N/A';
-    if (ms >= 1000) return (ms / 1000).toFixed(1) + 's';
-    return ms + 'ms';
-}
+// guidedFormatLatency is now the global formatLatency() in app.js
+function guidedFormatLatency(ms) { return formatLatency(ms); }
 
 const guidedDemoState = {
     goal: null,        // 'improve_performance' or 'match_frontier'
@@ -239,32 +236,30 @@ function initGuidedWizard() {
 
     // Show wizard
     const wizard = document.getElementById('guidedWizard');
-    wizard.classList.remove('hidden');
-    wizard.style.display = 'block';
+    setVisible(wizard, true);
 
     // Hide all other sections
     ['useCaseSection', 'scenarioSection', 'configSection', 'questionSection',
      'errorContainer', 'expectedAnswerContainer', 'resultsContainer',
      'performance-visualization-container'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
+        setVisible(document.getElementById(id), false);
     });
 
     // Clean up dynamic elements from previous runs
     ['performanceDetailsContainer', 'wizardResultsHeadline', 'wizardPromptDisplay'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            if (id === 'wizardPromptDisplay') el.style.display = 'none';
+            if (id === 'wizardPromptDisplay') setVisible(el, false);
             else el.remove();
         }
     });
 
     // Hide old guided badge and back button (new wizard has its own UI)
     const badge = document.getElementById('guidedDemoBadge');
-    if (badge) { badge.classList.add('hidden'); badge.style.display = ''; }
+    setVisible(badge, false);
 
     const backBtn = document.getElementById('wizardBackBtn');
-    if (backBtn) backBtn.style.display = 'none';
+    setVisible(backBtn, false);
 
     // Show step 1
     guidedShowStep(1);
@@ -280,14 +275,13 @@ function guidedShowStep(stepNumber) {
     // Hide all steps
     for (let i = 1; i <= 6; i++) {
         const el = document.getElementById('guidedStep' + i);
-        if (el) { el.classList.add('hidden'); el.style.display = ''; }
+        setVisible(el, false);
     }
 
     // Show current step
     const currentEl = document.getElementById('guidedStep' + stepNumber);
     if (currentEl) {
-        currentEl.classList.remove('hidden');
-        currentEl.style.display = 'block';
+        setVisible(currentEl, true);
         // Re-trigger animation
         currentEl.style.animation = 'none';
         currentEl.offsetHeight; // force reflow
@@ -298,6 +292,7 @@ function guidedShowStep(stepNumber) {
     const progressBar = document.getElementById('guidedProgressBar');
     if (progressBar) {
         progressBar.style.width = ((stepNumber / 6) * 100) + '%';
+        progressBar.setAttribute('aria-valuenow', stepNumber);
     }
 
     // Update breadcrumbs
@@ -558,8 +553,7 @@ function guidedRenderResponses() {
 
     // Show trace button area
     const traceArea = document.getElementById('guidedTraceArea');
-    traceArea.classList.remove('hidden');
-    traceArea.style.display = 'block';
+    setVisible(traceArea, true);
 
     // Render the trace button
     const traceContent = document.getElementById('guidedTraceContent');
@@ -572,8 +566,7 @@ function guidedRenderResponses() {
     `;
 
     // Hide the performance button until trace is shown
-    document.getElementById('guidedNextArea').classList.add('hidden');
-    document.getElementById('guidedNextArea').style.display = '';
+    setVisible(document.getElementById('guidedNextArea'), false);
 }
 
 function guidedBuildResponsePane(title, type, data) {
@@ -729,8 +722,7 @@ function guidedRunTraceAnimation() {
             if (i === phases.length - 1) {
                 setTimeout(() => {
                     const nextArea = document.getElementById('guidedNextArea');
-                    nextArea.classList.remove('hidden');
-                    nextArea.style.display = 'block';
+                    setVisible(nextArea, true);
                 }, 600);
             }
         }, (i + 1) * 800);
@@ -857,25 +849,20 @@ function guidedBuildChart(title, columns, values, betterWhen, formatter) {
 }
 
 // ============================================================
-// CLEANUP for returnToLanding — patch the existing function
+// LIFECYCLE EVENT LISTENERS — replaces function patching
 // ============================================================
 
-const _originalReturnToLanding = typeof returnToLanding === 'function' ? returnToLanding : null;
+// Reset guided demo state when returning to landing
+document.addEventListener('experience:teardown', function() {
+    guidedDemoState.goal = null;
+    guidedDemoState.method = null;
+    guidedDemoState.scenario = null;
+    guidedDemoState.currentStep = 1;
+});
 
-// We'll patch returnToLanding after the inline script has defined it.
-// This is done in the DOMContentLoaded handler below.
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof window.returnToLanding === 'function') {
-        const original = window.returnToLanding;
-        window.returnToLanding = function() {
-            // Reset guided demo state
-            guidedDemoState.goal = null;
-            guidedDemoState.method = null;
-            guidedDemoState.scenario = null;
-            guidedDemoState.currentStep = 1;
-
-            // Call original cleanup
-            original();
-        };
+// Initialize guided wizard when guided mode is selected
+document.addEventListener('experience:selected', function(e) {
+    if (e.detail && e.detail.experience === 'guided') {
+        initGuidedWizard();
     }
 });

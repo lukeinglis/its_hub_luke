@@ -23,12 +23,12 @@
 
 /* ===== SAVINGS CALLOUT ===== */
 .perf-v2-savings {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, var(--success) 0%, var(--success) 100%);
     border-radius: 12px;
     padding: 32px;
     text-align: center;
     margin-bottom: 40px;
-    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 8px 24px var(--success-shadow);
 }
 
 .perf-v2-savings-badge {
@@ -132,7 +132,7 @@
 }
 
 .perf-v2-bar-fill.best {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+    box-shadow: 0 0 20px var(--success-glow);
     position: relative;
 }
 
@@ -156,7 +156,7 @@
 }
 
 .perf-v2-bar-value.best {
-    color: #10b981;
+    color: var(--success);
     font-weight: 900;
 }
 

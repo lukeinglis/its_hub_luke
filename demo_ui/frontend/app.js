@@ -1,4 +1,50 @@
+/**
+ * app.js — Core state management for the ITS Demo
+ *
+ * ARCHITECTURE
+ * ────────────
+ * State ownership:
+ *   - app.js owns global state (selectedExperience, currentUseCase, isExpertMode)
+ *   - guided-demo.js owns guidedDemoState
+ *   - interactive-demo.js owns iwState
+ *
+ * Lifecycle events (dispatched on document):
+ *   - 'experience:selected'  — detail: { experience: 'guided'|'interactive' }
+ *     Fired after selectExperience() configures the main UI.
+ *     Demo modules listen to initialize when their mode is selected.
+ *
+ *   - 'experience:teardown'  — no detail
+ *     Fired at the start of returnToLanding().
+ *     Demo modules listen to reset their state before the main UI tears down.
+ *
+ * Visibility contract:
+ *   All show/hide uses setVisible(el, bool) which toggles the .hidden CSS class.
+ *   No code should set el.style.display directly.
+ */
+
 const API_BASE_URL = 'http://localhost:8000';
+
+// Unified visibility utility — replaces all style.display assignments.
+// Uses the .hidden CSS class for consistent show/hide behavior.
+function setVisible(el, show) {
+    if (!el) return;
+    if (show) el.classList.remove('hidden');
+    else el.classList.add('hidden');
+}
+
+// Global formatting utilities — used by app.js, guided-demo.js, and interactive-demo.js.
+function formatLatency(ms) {
+    if (ms == null) return 'N/A';
+    if (ms >= 1000) return (ms / 1000).toFixed(1) + 's';
+    return ms + 'ms';
+}
+
+function formatCost(cost_usd) {
+    if (cost_usd == null || cost_usd === undefined) return 'N/A';
+    if (cost_usd < 0.0001) return '$' + cost_usd.toExponential(2);
+    return '$' + cost_usd.toFixed(4);
+}
+
 let currentExpectedAnswer = null;
 let selectedAlgorithm = 'best_of_n';
 let lastResults = null;
@@ -111,6 +157,17 @@ function toggleTheme() {
 const savedTheme = localStorage.getItem('theme') || 'dark';
 document.documentElement.setAttribute('data-theme', savedTheme);
 
+// Delegated keyboard handler — Enter/Space triggers click on [role="button"] elements
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+        const target = e.target;
+        if (target.getAttribute('role') === 'button' && target.tagName !== 'BUTTON') {
+            e.preventDefault();
+            target.click();
+        }
+    }
+});
+
 // GUIDED WIZARD STATE & FUNCTIONS
 
 // Guided Wizard State
@@ -160,7 +217,7 @@ function initGuidedWizard() {
     currentWizardScenario = null;
 
     // Show wizard
-    document.getElementById('guidedWizard').style.display = 'block';
+    setVisible(document.getElementById('guidedWizard'), true);
 
     // Hide all other sections - wizard replaces the entire flow
     const sectionsToHide = [
@@ -174,8 +231,7 @@ function initGuidedWizard() {
         'performance-visualization-container'
     ];
     sectionsToHide.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
+        setVisible(document.getElementById(id), false);
     });
 
     // Clean up dynamic elements from previous runs
@@ -184,15 +240,15 @@ function initGuidedWizard() {
     const headlineBanner = document.getElementById('wizardResultsHeadline');
     if (headlineBanner) headlineBanner.remove();
     const promptDisplay = document.getElementById('wizardPromptDisplay');
-    if (promptDisplay) promptDisplay.style.display = 'none';
+    setVisible(promptDisplay, false);
 
     // Also hide guided demo badge (wizard is self-explanatory)
     const badge = document.getElementById('guidedDemoBadge');
-    if (badge) badge.style.display = 'none';
+    setVisible(badge, false);
 
     // Hide back button if it exists
     const backBtn = document.getElementById('wizardBackBtn');
-    if (backBtn) backBtn.style.display = 'none';
+    setVisible(backBtn, false);
 
     // Reset question textarea and restore hidden form elements
     const questionEl = document.getElementById('question');
@@ -200,11 +256,11 @@ function initGuidedWizard() {
     const questionSection = document.getElementById('questionSection');
     if (questionSection) {
         const formGroup = questionSection.querySelector('.form-group');
-        if (formGroup) formGroup.style.display = '';
+        setVisible(formGroup, true);
         const actionBtns = questionSection.querySelector('.action-buttons');
-        if (actionBtns) actionBtns.style.display = '';
+        setVisible(actionBtns, true);
         const exampleQs = questionSection.querySelector('.example-questions-container');
-        if (exampleQs) exampleQs.style.display = '';
+        setVisible(exampleQs, true);
     }
 
     // Reset card selections
@@ -228,14 +284,12 @@ function showWizardStep(stepNumber) {
 
     // Hide all steps
     document.querySelectorAll('.wizard-step').forEach(step => {
-        step.style.display = 'none';
+        setVisible(step, false);
     });
 
     // Show current step
     const currentStepEl = document.getElementById(`step${stepNumber}Container`);
-    if (currentStepEl) {
-        currentStepEl.style.display = 'block';
-    }
+    setVisible(currentStepEl, true);
 
     // Update breadcrumbs
     updateBreadcrumbs();
@@ -276,15 +330,15 @@ function navigateToStep(stepNumber) {
         const headlineBanner = document.getElementById('wizardResultsHeadline');
         if (headlineBanner) headlineBanner.remove();
         const resultsContainer = document.getElementById('resultsContainer');
-        if (resultsContainer) resultsContainer.style.display = 'none';
+        setVisible(resultsContainer, false);
         const questionSection = document.getElementById('questionSection');
-        if (questionSection) questionSection.style.display = 'none';
+        setVisible(questionSection, false);
         const backBtn = document.getElementById('wizardBackBtn');
-        if (backBtn) backBtn.style.display = 'none';
+        setVisible(backBtn, false);
         const promptDisplay = document.getElementById('wizardPromptDisplay');
-        if (promptDisplay) promptDisplay.style.display = 'none';
+        setVisible(promptDisplay, false);
         const formGroup = document.querySelector('#questionSection .form-group');
-        if (formGroup) formGroup.style.display = '';
+        setVisible(formGroup, true);
         const q = document.getElementById('question');
         if (q) q.disabled = false;
         currentWizardScenario = null;
@@ -449,7 +503,7 @@ function loadWizardScenario() {
 
     // Hide wizard step containers but keep breadcrumbs visible
     document.querySelectorAll('.wizard-step').forEach(step => {
-        step.style.display = 'none';
+        setVisible(step, false);
     });
 
     // Update breadcrumbs to show step 4 as active
@@ -458,13 +512,13 @@ function loadWizardScenario() {
 
     // Show the question section with styled prompt display
     const questionSection = document.getElementById('questionSection');
-    questionSection.style.display = 'block';
+    setVisible(questionSection, true);
 
     // Hide form elements (textarea, buttons, examples)
     const formGroup = questionSection.querySelector('.form-group');
-    if (formGroup) formGroup.style.display = 'none';
+    setVisible(formGroup, false);
     const actionButtons = questionSection.querySelector('.action-buttons');
-    if (actionButtons) actionButtons.style.display = 'none';
+    setVisible(actionButtons, false);
 
     // Show styled prompt display
     let promptDisplay = document.getElementById('wizardPromptDisplay');
@@ -474,7 +528,7 @@ function loadWizardScenario() {
         promptDisplay.className = 'wizard-prompt-display';
         questionSection.appendChild(promptDisplay);
     }
-    promptDisplay.style.display = 'block';
+    setVisible(promptDisplay, true);
     promptDisplay.innerHTML = `
         <div class="wizard-prompt-label">Prompt</div>
         <div class="wizard-prompt-text">${scenario.prompt.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
@@ -494,7 +548,7 @@ function loadWizardScenario() {
         });
         wizardEl.insertBefore(backBtn, wizardEl.querySelector('.wizard-breadcrumbs'));
     }
-    backBtn.style.display = 'flex';
+    setVisible(backBtn, true);
 
     // Update algorithm selector to match
     selectedAlgorithm = scenario.algorithm;
@@ -553,7 +607,7 @@ function renderWizardResults(scenario) {
         const resultsContainer = document.getElementById('resultsContainer');
         resultsContainer.parentNode.insertBefore(headlineBanner, resultsContainer);
     }
-    headlineBanner.style.display = 'block';
+    setVisible(headlineBanner, true);
     headlineBanner.innerHTML = `
         <div class="headline-text">${headline}</div>
         <button id="copySummaryBtn" class="btn-secondary copy-summary-btn" onclick="copyWizardSummary()">Copy Summary</button>
@@ -561,7 +615,7 @@ function renderWizardResults(scenario) {
 
     // Show the results container
     const resultsContainer = document.getElementById('resultsContainer');
-    resultsContainer.style.display = '';
+    setVisible(resultsContainer, true);
 
     // Get actual pane elements
     const smallBaselinePane = document.getElementById('smallBaselinePane');
@@ -572,7 +626,7 @@ function renderWizardResults(scenario) {
 
     // For match_frontier, show 3-column layout
     if (wizardState.useCase === 'match_frontier') {
-        smallBaselinePane.style.display = 'block';
+        setVisible(smallBaselinePane, true);
 
         // Small model baseline (left pane)
         const smallBaselineTitle = document.getElementById('smallBaselineTitle');
@@ -592,7 +646,7 @@ function renderWizardResults(scenario) {
         renderITSPane(scenario, rightPaneContent);
     } else {
         // improve_model: 2-column layout
-        smallBaselinePane.style.display = 'none';
+        setVisible(smallBaselinePane, false);
 
         // Baseline (middle pane)
         middlePaneTitle.textContent = `${scenario.model} (Baseline)`;
@@ -740,15 +794,10 @@ function toggleTraceVisibility() {
     const toggle = document.querySelector('.trace-toggle');
     const icon = document.querySelector('.trace-toggle-icon');
 
-    if (content.style.display === 'none') {
-        content.style.display = 'block';
-        icon.textContent = '▲';
-        toggle.classList.add('active');
-    } else {
-        content.style.display = 'none';
-        icon.textContent = '▼';
-        toggle.classList.remove('active');
-    }
+    const isHidden = content.classList.contains('hidden');
+    setVisible(content, isHidden);
+    icon.textContent = isHidden ? '▲' : '▼';
+    toggle.classList.toggle('active', isHidden);
 }
 
 function renderPerformanceDetails(scenario) {
@@ -765,7 +814,7 @@ function renderPerformanceDetails(scenario) {
             resultsContainer.parentNode.insertBefore(perfContainer, resultsContainer.nextSibling);
         }
     }
-    perfContainer.style.display = 'block';
+    setVisible(perfContainer, true);
 
     // Calculate comparisons
     const baseline = scenario.baseline;
@@ -853,10 +902,10 @@ function selectExperience(experience) {
     localStorage.setItem('selectedExperience', experience);
 
     // Hide landing page
-    document.getElementById('landingPage').classList.add('hidden');
+    setVisible(document.getElementById('landingPage'), false);
 
     // Show demo container
-    document.getElementById('demoContainer').classList.remove('hidden');
+    setVisible(document.getElementById('demoContainer'), true);
 
     // Show back to home button
     document.getElementById('backToHomeBtn').classList.add('visible');
@@ -866,22 +915,26 @@ function selectExperience(experience) {
         // Set to guided mode (non-expert)
         isExpertMode = false;
         localStorage.setItem('expertMode', 'false');
-        document.getElementById('expertModeToggle').style.display = 'none';
+        setVisible(document.getElementById('expertModeToggle'), false);
 
-        // Initialize wizard instead of scenario selector
-        initGuidedWizard();
+        // Wizard initialization is handled by experience:selected event in guided-demo.js
     } else {
         // Interactive mode - show expert toggle, default to non-expert
         isExpertMode = false;
         localStorage.setItem('expertMode', 'false');
-        document.getElementById('expertModeToggle').style.display = 'flex';
+        setVisible(document.getElementById('expertModeToggle'), true);
     }
 
     // Initialize the demo
     initializeDemo();
+
+    // Notify demo modules
+    document.dispatchEvent(new CustomEvent('experience:selected', { detail: { experience } }));
 }
 
 function returnToLanding() {
+    // Notify demo modules to tear down before we reset
+    document.dispatchEvent(new CustomEvent('experience:teardown'));
     // Clear selection
     selectedExperience = null;
     localStorage.removeItem('selectedExperience');
@@ -898,11 +951,11 @@ function returnToLanding() {
 
     // Hide wizard UI
     const wizard = document.getElementById('guidedWizard');
-    if (wizard) { wizard.classList.add('hidden'); wizard.style.display = ''; }
+    setVisible(wizard, false);
     const backBtn = document.getElementById('wizardBackBtn');
-    if (backBtn) backBtn.style.display = 'none';
+    setVisible(backBtn, false);
     const promptDisplay = document.getElementById('wizardPromptDisplay');
-    if (promptDisplay) promptDisplay.style.display = 'none';
+    setVisible(promptDisplay, false);
 
     // Re-enable question textarea
     const questionEl = document.getElementById('question');
@@ -912,22 +965,22 @@ function returnToLanding() {
     const questionSection = document.getElementById('questionSection');
     if (questionSection) {
         const formGroup = questionSection.querySelector('.form-group');
-        if (formGroup) formGroup.style.display = '';
+        setVisible(formGroup, true);
         const actionButtons = questionSection.querySelector('.action-buttons');
-        if (actionButtons) actionButtons.style.display = '';
+        setVisible(actionButtons, true);
         const exampleQuestions = questionSection.querySelector('.example-questions-container');
-        if (exampleQuestions) exampleQuestions.style.display = '';
+        setVisible(exampleQuestions, true);
     }
 
     // Hide results
     const resultsContainer = document.getElementById('resultsContainer');
-    if (resultsContainer) resultsContainer.style.display = 'none';
+    setVisible(resultsContainer, false);
 
     // Hide demo container
-    document.getElementById('demoContainer').classList.add('hidden');
+    setVisible(document.getElementById('demoContainer'), false);
 
     // Show landing page
-    document.getElementById('landingPage').classList.remove('hidden');
+    setVisible(document.getElementById('landingPage'), true);
 
     // Hide back button
     document.getElementById('backToHomeBtn').classList.remove('visible');
@@ -1028,37 +1081,25 @@ function updateUIForExpertMode() {
     // GUIDED DEMO: Always offline scenarios, no expert mode
     if (selectedExperience === 'guided') {
         // Hide use case selection entirely
-        if (useCaseSection) {
-            useCaseSection.style.display = 'none';
-        }
+        setVisible(useCaseSection, false);
 
         // Hide budget slider
-        budgetGroup.style.display = 'none';
+        setVisible(budgetGroup, false);
 
         // Hide algorithm info cards
-        if (algorithmInfo) {
-            algorithmInfo.style.display = 'none';
-        }
+        setVisible(algorithmInfo, false);
 
         // Hide example questions
-        if (exampleQuestionsContainer) {
-            exampleQuestionsContainer.style.display = 'none';
-        }
+        setVisible(exampleQuestionsContainer, false);
 
         // Hide config description
-        if (configDescription) {
-            configDescription.style.display = 'none';
-        }
+        setVisible(configDescription, false);
 
         // Hide clear button
-        if (clearButton) {
-            clearButton.style.display = 'none';
-        }
+        setVisible(clearButton, false);
 
         // Hide frontier model group
-        if (frontierModelGroup) {
-            frontierModelGroup.style.display = 'none';
-        }
+        setVisible(frontierModelGroup, false);
 
         // Disable use case radio buttons
         document.querySelectorAll('input[name="useCase"]').forEach(radio => {
@@ -1080,20 +1121,13 @@ function updateUIForExpertMode() {
         }
 
         // Show guided demo badge
-        if (guidedDemoBadge) {
-            guidedDemoBadge.classList.remove('hidden');
-            guidedDemoBadge.style.display = 'block';
-        }
+        setVisible(guidedDemoBadge, true);
 
         // Hide Run button (scenarios are pre-loaded)
-        if (runButton) {
-            runButton.style.display = 'none';
-        }
+        setVisible(runButton, false);
 
         // Hide configuration section (scenarios are pre-configured)
-        if (configSection) {
-            configSection.style.display = 'none';
-        }
+        setVisible(configSection, false);
 
         // Make question textarea read-only
         if (questionTextarea) {
@@ -1108,9 +1142,7 @@ function updateUIForExpertMode() {
         if (questionSectionTitle) {
             questionSectionTitle.textContent = 'Scenario Prompt';
         }
-        if (questionSectionDescription) {
-            questionSectionDescription.style.display = 'none';
-        }
+        setVisible(questionSectionDescription, false);
         if (configSectionTitle) {
             configSectionTitle.textContent = 'Setup';
         }
@@ -1121,39 +1153,26 @@ function updateUIForExpertMode() {
         if (scenarioSelectorContainer) {
             scenarioSelectorContainer.classList.remove('visible');
         }
-        if (guidedDemoBadge) {
-            guidedDemoBadge.classList.add('hidden');
-            guidedDemoBadge.style.display = '';
-        }
+        setVisible(guidedDemoBadge, false);
 
         // Expert Mode: Show all controls (original behavior)
         if (isExpertMode) {
-            if (useCaseSection) {
-                useCaseSection.style.display = 'block';
-            }
+            setVisible(useCaseSection, true);
 
             // Show budget slider
-            budgetGroup.style.display = 'block';
+            setVisible(budgetGroup, true);
 
             // Show algorithm info
-            if (algorithmInfo) {
-                algorithmInfo.style.display = 'block';
-            }
+            setVisible(algorithmInfo, true);
 
             // Show example questions
-            if (exampleQuestionsContainer) {
-                exampleQuestionsContainer.style.display = 'block';
-            }
+            setVisible(exampleQuestionsContainer, true);
 
             // Show config description
-            if (configDescription) {
-                configDescription.style.display = 'block';
-            }
+            setVisible(configDescription, true);
 
             // Show clear button
-            if (clearButton) {
-                clearButton.style.display = 'inline-flex';
-            }
+            setVisible(clearButton, true);
 
             // Enable algorithm selection
             algorithmSelect.disabled = false;
@@ -1174,7 +1193,7 @@ function updateUIForExpertMode() {
                 questionSectionTitle.textContent = 'Your Question';
             }
             if (questionSectionDescription) {
-                questionSectionDescription.style.display = 'block';
+                setVisible(questionSectionDescription, true);
                 questionSectionDescription.textContent = 'Ask anything or try an example';
             }
             if (headerSubtitle) {
@@ -1187,14 +1206,10 @@ function updateUIForExpertMode() {
             }
 
             // Show Run button
-            if (runButton) {
-                runButton.style.display = 'inline-flex';
-            }
+            setVisible(runButton, true);
 
             // Show configuration section
-            if (configSection) {
-                configSection.style.display = 'block';
-            }
+            setVisible(configSection, true);
 
             // Restore placeholder
             if (questionTextarea) {
@@ -1211,45 +1226,31 @@ function updateUIForExpertMode() {
             if (questionSectionTitle) {
                 questionSectionTitle.textContent = 'Your Question';
             }
-            if (questionSectionDescription) {
-                questionSectionDescription.style.display = 'none';
-            }
+            setVisible(questionSectionDescription, false);
             if (headerSubtitle) {
                 headerSubtitle.textContent = 'Compare model responses with different ITS algorithms';
             }
 
             // Hide use case selection
-            if (useCaseSection) {
-                useCaseSection.style.display = 'none';
-            }
+            setVisible(useCaseSection, false);
 
             // Hide budget slider
-            budgetGroup.style.display = 'none';
+            setVisible(budgetGroup, false);
 
             // Hide algorithm info cards
-            if (algorithmInfo) {
-                algorithmInfo.style.display = 'none';
-            }
+            setVisible(algorithmInfo, false);
 
             // Hide example questions
-            if (exampleQuestionsContainer) {
-                exampleQuestionsContainer.style.display = 'none';
-            }
+            setVisible(exampleQuestionsContainer, false);
 
             // Hide config description
-            if (configDescription) {
-                configDescription.style.display = 'none';
-            }
+            setVisible(configDescription, false);
 
             // Hide clear button
-            if (clearButton) {
-                clearButton.style.display = 'none';
-            }
+            setVisible(clearButton, false);
 
             // Hide frontier model group if visible
-            if (frontierModelGroup) {
-                frontierModelGroup.style.display = 'none';
-            }
+            setVisible(frontierModelGroup, false);
 
             // Set default budget
             budgetSlider.value = 16;
@@ -1261,14 +1262,10 @@ function updateUIForExpertMode() {
             }
 
             // Show Run button (live API calls)
-            if (runButton) {
-                runButton.style.display = 'inline-flex';
-            }
+            setVisible(runButton, true);
 
             // Show configuration section
-            if (configSection) {
-                configSection.style.display = 'block';
-            }
+            setVisible(configSection, true);
 
             // Enable question textarea
             if (questionTextarea) {
@@ -1333,13 +1330,13 @@ function updateUIForUseCase() {
     if (currentUseCase === 'match_frontier') {
         // Use Case 2: 3-column layout - Small, Small+ITS, Frontier
         modelLabel.textContent = 'Small Model';
-        frontierModelGroup.style.display = 'block';
+        setVisible(frontierModelGroup, true);
         configDescription.textContent = 'Choose a small model to enhance with ITS and a frontier model to compare against';
         headerSubtitle.textContent = 'Demonstrate how ITS can make smaller models competitive with large frontier models';
 
         // Show 3-column layout
         resultsContainer.classList.add('three-column');
-        smallBaselinePane.style.display = 'block';
+        setVisible(smallBaselinePane, true);
 
         // Update pane titles and indicators for 3-column layout
         // Left: Small Model baseline (gray)
@@ -1358,13 +1355,13 @@ function updateUIForUseCase() {
     } else if (currentUseCase === 'tool_consensus') {
         // Use Case 3: 2-column layout - Single Tool Call, Tool Voting
         modelLabel.textContent = 'Model';
-        frontierModelGroup.style.display = 'none';
+        setVisible(frontierModelGroup, false);
         configDescription.textContent = 'Compare single agent call vs ITS with tool voting for reliable tool selection';
         headerSubtitle.textContent = 'Demonstrate how ITS creates consensus on tool selection for reliable agent behavior';
 
         // Show 2-column layout
         resultsContainer.classList.remove('three-column');
-        smallBaselinePane.style.display = 'none';
+        setVisible(smallBaselinePane, false);
 
         // Update pane titles and indicators for 2-column layout
         // Middle: Single Call (gray)
@@ -1382,13 +1379,13 @@ function updateUIForUseCase() {
     } else {
         // Use Case 1: 2-column layout - Baseline, ITS
         modelLabel.textContent = 'Model';
-        frontierModelGroup.style.display = 'none';
+        setVisible(frontierModelGroup, false);
         configDescription.textContent = 'Choose your model, algorithm, and compute budget';
         headerSubtitle.textContent = 'Compare baseline inference with ITS algorithms side by side';
 
         // Show 2-column layout
         resultsContainer.classList.remove('three-column');
-        smallBaselinePane.style.display = 'none';
+        setVisible(smallBaselinePane, false);
 
         // Update pane titles and indicators for 2-column layout
         // Middle: Baseline (gray)
@@ -1495,7 +1492,7 @@ function renderScenarioResults(scenario) {
     // Show latency badge
     const middlePaneLatency = document.getElementById('middlePaneLatency');
     middlePaneLatency.textContent = `${scenario.baseline.latency_ms}ms`;
-    middlePaneLatency.style.display = 'block';
+    setVisible(middlePaneLatency, true);
 
     // Show cost badge if available
     if (scenario.baseline.cost_usd > 0) {
@@ -1504,11 +1501,11 @@ function renderScenarioResults(scenario) {
             ? `$${scenario.baseline.cost_usd.toExponential(2)}`
             : `$${scenario.baseline.cost_usd.toFixed(4)}`;
         middlePaneCost.textContent = costFormatted;
-        middlePaneCost.style.display = 'block';
+        setVisible(middlePaneCost, true);
     }
 
     // Show actions
-    document.getElementById('middlePaneActions').style.display = 'flex';
+    setVisible(document.getElementById('middlePaneActions'), true);
 
     // Right pane: ITS result
     const rightPaneContent = document.getElementById('rightPaneContent');
@@ -1544,7 +1541,7 @@ function renderScenarioResults(scenario) {
     // Show latency badge
     const rightPaneLatency = document.getElementById('rightPaneLatency');
     rightPaneLatency.textContent = `${scenario.its.latency_ms}ms`;
-    rightPaneLatency.style.display = 'block';
+    setVisible(rightPaneLatency, true);
 
     // Show cost badge if available
     if (scenario.its.cost_usd > 0) {
@@ -1553,7 +1550,7 @@ function renderScenarioResults(scenario) {
             ? `$${scenario.its.cost_usd.toExponential(2)}`
             : `$${scenario.its.cost_usd.toFixed(4)}`;
         rightPaneCost.textContent = costFormatted;
-        rightPaneCost.style.display = 'block';
+        setVisible(rightPaneCost, true);
 
         // Add cost comparison badge
         const costMultiple = (scenario.its.cost_usd / scenario.baseline.cost_usd).toFixed(1);
@@ -1563,10 +1560,10 @@ function renderScenarioResults(scenario) {
     }
 
     // Show actions
-    document.getElementById('rightPaneActions').style.display = 'flex';
+    setVisible(document.getElementById('rightPaneActions'), true);
 
     // Hide performance visualization for now
-    document.getElementById('performance-visualization-container').style.display = 'none';
+    setVisible(document.getElementById('performance-visualization-container'), false);
 }
 
 // Helper function to render response HTML (simplified version)
@@ -1760,10 +1757,10 @@ function clearResults() {
             <div>Run a comparison to see results</div>
         </div>
     `;
-    document.getElementById('smallBaselineLatency').style.display = 'none';
-    document.getElementById('smallBaselineActions').style.display = 'none';
-    document.getElementById('smallBaselineSize').style.display = 'none';
-    document.getElementById('smallBaselineCost').style.display = 'none';
+    setVisible(document.getElementById('smallBaselineLatency'), false);
+    setVisible(document.getElementById('smallBaselineActions'), false);
+    setVisible(document.getElementById('smallBaselineSize'), false);
+    setVisible(document.getElementById('smallBaselineCost'), false);
 
     // Clear middle pane
     document.getElementById('middlePaneContent').innerHTML = `
@@ -1772,10 +1769,10 @@ function clearResults() {
             <div>Run a comparison to see results</div>
         </div>
     `;
-    document.getElementById('middlePaneLatency').style.display = 'none';
-    document.getElementById('middlePaneActions').style.display = 'none';
-    document.getElementById('middlePaneSize').style.display = 'none';
-    document.getElementById('middlePaneCost').style.display = 'none';
+    setVisible(document.getElementById('middlePaneLatency'), false);
+    setVisible(document.getElementById('middlePaneActions'), false);
+    setVisible(document.getElementById('middlePaneSize'), false);
+    setVisible(document.getElementById('middlePaneCost'), false);
 
     // Clear right pane
     document.getElementById('rightPaneContent').innerHTML = `
@@ -1784,15 +1781,15 @@ function clearResults() {
             <div>Run a comparison to see results</div>
         </div>
     `;
-    document.getElementById('rightPaneLatency').style.display = 'none';
-    document.getElementById('rightPaneActions').style.display = 'none';
-    document.getElementById('rightPaneSize').style.display = 'none';
-    document.getElementById('rightPaneCost').style.display = 'none';
+    setVisible(document.getElementById('rightPaneLatency'), false);
+    setVisible(document.getElementById('rightPaneActions'), false);
+    setVisible(document.getElementById('rightPaneSize'), false);
+    setVisible(document.getElementById('rightPaneCost'), false);
 
     document.getElementById('expectedAnswerContainer').classList.remove('visible');
 
     // Hide performance visualization
-    document.getElementById('performance-visualization-container').style.display = 'none';
+    setVisible(document.getElementById('performance-visualization-container'), false);
 }
 
 // Update budget value and slider gradient
@@ -1936,20 +1933,20 @@ function showLoading() {
     // Show loading in all visible panes
     if (currentUseCase === 'match_frontier') {
         document.getElementById('smallBaselineContent').innerHTML = loadingHTML;
-        document.getElementById('smallBaselineLatency').style.display = 'none';
-        document.getElementById('smallBaselineActions').style.display = 'none';
-        document.getElementById('smallBaselineCost').style.display = 'none';
+        setVisible(document.getElementById('smallBaselineLatency'), false);
+        setVisible(document.getElementById('smallBaselineActions'), false);
+        setVisible(document.getElementById('smallBaselineCost'), false);
     }
 
     document.getElementById('middlePaneContent').innerHTML = loadingHTML;
-    document.getElementById('middlePaneLatency').style.display = 'none';
-    document.getElementById('middlePaneActions').style.display = 'none';
-    document.getElementById('middlePaneCost').style.display = 'none';
+    setVisible(document.getElementById('middlePaneLatency'), false);
+    setVisible(document.getElementById('middlePaneActions'), false);
+    setVisible(document.getElementById('middlePaneCost'), false);
 
     document.getElementById('rightPaneContent').innerHTML = loadingHTML;
-    document.getElementById('rightPaneLatency').style.display = 'none';
-    document.getElementById('rightPaneActions').style.display = 'none';
-    document.getElementById('rightPaneCost').style.display = 'none';
+    setVisible(document.getElementById('rightPaneLatency'), false);
+    setVisible(document.getElementById('rightPaneActions'), false);
+    setVisible(document.getElementById('rightPaneCost'), false);
 }
 
 // Metrics moved to Performance Details within each result pane
@@ -2234,9 +2231,9 @@ function setSizeBadge(elementId, size) {
     if (size) {
         badge.textContent = size;
         badge.className = 'size-badge ' + size.toLowerCase();
-        badge.style.display = 'inline-block';
+        setVisible(badge, true);
     } else {
-        badge.style.display = 'none';
+        setVisible(badge, false);
     }
 }
 
@@ -2257,9 +2254,9 @@ function setCostBadge(elementId, cost_usd, threshold = 0.01) {
         badge.textContent = costText;
         // Mark as expensive if above threshold
         badge.className = cost_usd > threshold ? 'cost-badge expensive' : 'cost-badge';
-        badge.style.display = 'inline-block';
+        setVisible(badge, true);
     } else {
-        badge.style.display = 'none';
+        setVisible(badge, false);
     }
 }
 
@@ -2839,8 +2836,8 @@ function renderAnswerBox(containerId, data, comparisonData = null) {
     const paneId = containerId.replace('Content', '');
     const latencyEl = document.getElementById(paneId + 'Latency');
     const actionsEl = document.getElementById(paneId + 'Actions');
-    if (latencyEl) latencyEl.style.display = 'none';
-    if (actionsEl) actionsEl.style.display = 'none';
+    setVisible(latencyEl, false);
+    setVisible(actionsEl, false);
 
     setTimeout(() => {
         container.classList.remove('fade-in');
@@ -2901,7 +2898,7 @@ function renderPerformanceVisualization(data) {
     }
 
     // Show the container
-    container.style.display = 'block';
+    setVisible(container, true);
     console.log('✅ Container display set to block');
 
     // Initialize and render the visualization with V2

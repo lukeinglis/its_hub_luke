@@ -35,7 +35,7 @@
 
         <div class="landing-choices">
             <!-- Guided Demo Option -->
-            <div class="choice-card guided" onclick="selectExperience('guided')">
+            <div class="choice-card guided" role="button" tabindex="0" onclick="selectExperience('guided')">
                 <span class="choice-icon">📚</span>
                 <h2 class="choice-title">Guided Demo</h2>
                 <p class="choice-description">
@@ -52,7 +52,7 @@
             </div>
 
             <!-- Interactive Demo Option -->
-            <div class="choice-card interactive" onclick="selectExperience('interactive')">
+            <div class="choice-card interactive" role="button" tabindex="0" onclick="selectExperience('interactive')">
                 <span class="choice-icon">⚡</span>
                 <h2 class="choice-title">Interactive Demo</h2>
                 <p class="choice-description">
@@ -83,13 +83,13 @@
         </button>
 
         <!-- Theme Toggle (Floating) -->
-        <div class="theme-toggle" onclick="toggleTheme()">
+        <div class="theme-toggle" role="button" tabindex="0" aria-label="Toggle theme" onclick="toggleTheme()">
             <span class="theme-icon sun-icon">☀️</span>
             <span class="theme-icon moon-icon">🌙</span>
         </div>
 
         <!-- Expert Mode Toggle (Floating) - only show in interactive mode -->
-        <div class="expert-mode-toggle" id="expertModeToggle" onclick="toggleExpertMode()">
+        <div class="expert-mode-toggle" id="expertModeToggle" role="button" tabindex="0" aria-label="Toggle expert mode" onclick="toggleExpertMode()">
             <span class="expert-mode-icon">🎓</span>
             <span class="expert-mode-label">Expert Mode</span>
         </div>
@@ -176,35 +176,35 @@
         <!-- Guided Demo Wizard -->
         <div id="guidedWizard" class="guided-wizard hidden">
             <!-- Progress Bar -->
-            <div class="guided-progress">
-                <div class="guided-progress-bar" id="guidedProgressBar" style="width: 0%"></div>
+            <div class="wizard-progress guided-progress">
+                <div class="wizard-progress-bar guided-progress-bar" id="guidedProgressBar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="6" style="width: 0%"></div>
             </div>
-            <div class="guided-breadcrumbs" id="guidedBreadcrumbs">
-                <span class="g-crumb active" data-step="1">Goal</span>
-                <span class="g-crumb-sep">/</span>
-                <span class="g-crumb" data-step="2">Method</span>
-                <span class="g-crumb-sep">/</span>
-                <span class="g-crumb" data-step="3">Scenario</span>
-                <span class="g-crumb-sep">/</span>
-                <span class="g-crumb" data-step="4">Run</span>
-                <span class="g-crumb-sep">/</span>
-                <span class="g-crumb" data-step="5">Trace</span>
-                <span class="g-crumb-sep">/</span>
-                <span class="g-crumb" data-step="6">Performance</span>
+            <div class="wizard-breadcrumbs guided-breadcrumbs" id="guidedBreadcrumbs">
+                <span class="wizard-crumb g-crumb active" data-step="1">Goal</span>
+                <span class="wizard-crumb-sep g-crumb-sep">/</span>
+                <span class="wizard-crumb g-crumb" data-step="2">Method</span>
+                <span class="wizard-crumb-sep g-crumb-sep">/</span>
+                <span class="wizard-crumb g-crumb" data-step="3">Scenario</span>
+                <span class="wizard-crumb-sep g-crumb-sep">/</span>
+                <span class="wizard-crumb g-crumb" data-step="4">Run</span>
+                <span class="wizard-crumb-sep g-crumb-sep">/</span>
+                <span class="wizard-crumb g-crumb" data-step="5">Trace</span>
+                <span class="wizard-crumb-sep g-crumb-sep">/</span>
+                <span class="wizard-crumb g-crumb" data-step="6">Performance</span>
             </div>
 
             <!-- Step 1: Goal Selection -->
-            <div id="guidedStep1" class="guided-step">
-                <h3 class="guided-step-title">What would you like to explore?</h3>
-                <p class="guided-step-subtitle">Select your goal to see how ITS can help</p>
-                <div class="guided-cards-grid">
-                    <div class="guided-card" data-goal="improve_performance" onclick="guidedSelectGoal('improve_performance')">
-                        <div class="guided-card-icon">📈</div>
+            <div id="guidedStep1" class="wizard-step guided-step">
+                <h3 class="wizard-step-title guided-step-title">What would you like to explore?</h3>
+                <p class="wizard-step-subtitle guided-step-subtitle">Select your goal to see how ITS can help</p>
+                <div class="wizard-cards-grid guided-cards-grid">
+                    <div class="wizard-card guided-card" role="button" tabindex="0" data-goal="improve_performance" onclick="guidedSelectGoal('improve_performance')">
+                        <div class="wizard-card-icon guided-card-icon">📈</div>
                         <h4>Improve Model Performance</h4>
                         <p>Use ITS to enhance any model's output quality on the same task</p>
                     </div>
-                    <div class="guided-card" data-goal="match_frontier" onclick="guidedSelectGoal('match_frontier')">
-                        <div class="guided-card-icon">⚖️</div>
+                    <div class="wizard-card guided-card" role="button" tabindex="0" data-goal="match_frontier" onclick="guidedSelectGoal('match_frontier')">
+                        <div class="wizard-card-icon guided-card-icon">⚖️</div>
                         <h4>Improve Small Model to Match Frontier</h4>
                         <p>Make a smaller, cheaper model perform as well as a large frontier model</p>
                     </div>
@@ -212,19 +212,19 @@
             </div>
 
             <!-- Step 2: ITS Method Selection -->
-            <div id="guidedStep2" class="guided-step hidden">
-                <button class="guided-back-btn" onclick="guidedGoBack(1)">← Back</button>
-                <h3 class="guided-step-title">Choose an ITS Method</h3>
-                <p class="guided-step-subtitle">Each method uses a different strategy to improve results</p>
-                <div class="guided-cards-grid">
-                    <div class="guided-card" data-method="self_consistency" onclick="guidedSelectMethod('self_consistency')">
-                        <div class="guided-card-icon">🗳️</div>
+            <div id="guidedStep2" class="wizard-step guided-step hidden">
+                <button class="wizard-back-btn guided-back-btn" onclick="guidedGoBack(1)">← Back</button>
+                <h3 class="wizard-step-title guided-step-title">Choose an ITS Method</h3>
+                <p class="wizard-step-subtitle guided-step-subtitle">Each method uses a different strategy to improve results</p>
+                <div class="wizard-cards-grid guided-cards-grid">
+                    <div class="wizard-card guided-card" role="button" tabindex="0" data-method="self_consistency" onclick="guidedSelectMethod('self_consistency')">
+                        <div class="wizard-card-icon guided-card-icon">🗳️</div>
                         <h4>Self-Consistency</h4>
                         <p>Generate multiple responses and select the most common answer via majority voting</p>
                         <span class="guided-card-tag">Best for: factual questions, math</span>
                     </div>
-                    <div class="guided-card" data-method="best_of_n" onclick="guidedSelectMethod('best_of_n')">
-                        <div class="guided-card-icon">🏆</div>
+                    <div class="wizard-card guided-card" role="button" tabindex="0" data-method="best_of_n" onclick="guidedSelectMethod('best_of_n')">
+                        <div class="wizard-card-icon guided-card-icon">🏆</div>
                         <h4>Best-of-N</h4>
                         <p>Generate multiple responses and use an LLM judge to select the highest quality answer</p>
                         <span class="guided-card-tag">Best for: open-ended, creative tasks</span>
@@ -233,18 +233,18 @@
             </div>
 
             <!-- Step 3: Model Scenario Selection -->
-            <div id="guidedStep3" class="guided-step hidden">
-                <button class="guided-back-btn" onclick="guidedGoBack(2)">← Back</button>
-                <h3 class="guided-step-title">Choose a Scenario</h3>
-                <p class="guided-step-subtitle" id="guidedStep3Subtitle">Select a model configuration</p>
-                <div id="guidedScenarioCards" class="guided-cards-grid">
+            <div id="guidedStep3" class="wizard-step guided-step hidden">
+                <button class="wizard-back-btn guided-back-btn" onclick="guidedGoBack(2)">← Back</button>
+                <h3 class="wizard-step-title guided-step-title">Choose a Scenario</h3>
+                <p class="wizard-step-subtitle guided-step-subtitle" id="guidedStep3Subtitle">Select a model configuration</p>
+                <div id="guidedScenarioCards" class="wizard-cards-grid guided-cards-grid">
                     <!-- Populated dynamically by guided-demo.js -->
                 </div>
             </div>
 
             <!-- Step 4: Prompt + Submit -->
-            <div id="guidedStep4" class="guided-step hidden">
-                <button class="guided-back-btn" onclick="guidedGoBack(3)">← Back</button>
+            <div id="guidedStep4" class="wizard-step guided-step hidden">
+                <button class="wizard-back-btn guided-back-btn" onclick="guidedGoBack(3)">← Back</button>
                 <div class="guided-scenario-summary" id="guidedScenarioSummary"></div>
                 <h3 class="guided-step-title">Ready to Run</h3>
                 <p class="guided-step-subtitle">Review the question and submit to see the pre-loaded scenario</p>
@@ -261,10 +261,10 @@
             </div>
 
             <!-- Step 5: Responses + Trace -->
-            <div id="guidedStep5" class="guided-step hidden">
-                <button class="guided-back-btn" onclick="guidedGoBack(4)">← Back</button>
+            <div id="guidedStep5" class="wizard-step guided-step hidden">
+                <button class="wizard-back-btn guided-back-btn" onclick="guidedGoBack(4)">← Back</button>
                 <h3 class="guided-step-title">Results</h3>
-                <div class="guided-responses" id="guidedResponses"></div>
+                <div class="guided-responses" id="guidedResponses" aria-live="polite"></div>
                 <div class="guided-trace-area hidden" id="guidedTraceArea">
                     <div class="guided-trace-header">
                         <h4>ITS Trace Visualization</h4>
@@ -280,8 +280,8 @@
             </div>
 
             <!-- Step 6: Performance Page -->
-            <div id="guidedStep6" class="guided-step hidden">
-                <button class="guided-back-btn" onclick="guidedGoBack(5)">← Back to Results</button>
+            <div id="guidedStep6" class="wizard-step guided-step hidden">
+                <button class="wizard-back-btn guided-back-btn" onclick="guidedGoBack(5)">← Back to Results</button>
                 <h3 class="guided-step-title">Performance Analysis</h3>
                 <p class="guided-step-subtitle">Cost, quality, latency, and token comparison</p>
                 <div class="guided-perf-summary" id="guidedPerfSummary"></div>
@@ -292,23 +292,23 @@
         <!-- Interactive Demo Wizard -->
         <div id="interactiveWizard" class="interactive-wizard hidden">
             <!-- Progress Bar -->
-            <div class="iw-progress">
-                <div class="iw-progress-bar" id="iwProgressBar" style="width: 0%"></div>
+            <div class="wizard-progress iw-progress">
+                <div class="wizard-progress-bar iw-progress-bar" id="iwProgressBar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="5" style="width: 0%"></div>
             </div>
-            <div class="iw-breadcrumbs">
-                <span class="iw-crumb active" data-step="1">Access</span>
-                <span class="iw-crumb-sep">/</span>
-                <span class="iw-crumb" data-step="2">Status</span>
-                <span class="iw-crumb-sep">/</span>
-                <span class="iw-crumb" data-step="3">Scenario</span>
-                <span class="iw-crumb-sep">/</span>
-                <span class="iw-crumb" data-step="4">Configure &amp; Run</span>
-                <span class="iw-crumb-sep">/</span>
-                <span class="iw-crumb" data-step="5">Results</span>
+            <div class="wizard-breadcrumbs iw-breadcrumbs">
+                <span class="wizard-crumb iw-crumb active" data-step="1">Access</span>
+                <span class="wizard-crumb-sep iw-crumb-sep">/</span>
+                <span class="wizard-crumb iw-crumb" data-step="2">Status</span>
+                <span class="wizard-crumb-sep iw-crumb-sep">/</span>
+                <span class="wizard-crumb iw-crumb" data-step="3">Scenario</span>
+                <span class="wizard-crumb-sep iw-crumb-sep">/</span>
+                <span class="wizard-crumb iw-crumb" data-step="4">Configure &amp; Run</span>
+                <span class="wizard-crumb-sep iw-crumb-sep">/</span>
+                <span class="wizard-crumb iw-crumb" data-step="5">Results</span>
             </div>
 
             <!-- Step 1: Provider Access Page -->
-            <div id="iwStep1" class="iw-step">
+            <div id="iwStep1" class="wizard-step iw-step">
                 <h3 class="iw-step-title">Live Model Access</h3>
                 <p class="iw-step-subtitle">This demo runs live API calls against real models. You need at least one provider configured.</p>
 
@@ -320,7 +320,7 @@
 
                 <div class="iw-provider-grid">
                     <!-- OpenAI -->
-                    <div class="iw-provider-card iw-provider-copyable" data-provider="openai" onclick="iwCopySetup(this)" data-copy="OPENAI_API_KEY=sk-...">
+                    <div class="iw-provider-card iw-provider-copyable" role="button" tabindex="0" data-provider="openai" onclick="iwCopySetup(this)" data-copy="OPENAI_API_KEY=sk-...">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">OpenAI</span>
                             <span class="iw-copy-hint">Click to copy</span>
@@ -330,7 +330,7 @@
                     </div>
 
                     <!-- OpenRouter -->
-                    <div class="iw-provider-card iw-provider-copyable" data-provider="openrouter" onclick="iwCopySetup(this)" data-copy="OPENROUTER_API_KEY=sk-or-...">
+                    <div class="iw-provider-card iw-provider-copyable" role="button" tabindex="0" data-provider="openrouter" onclick="iwCopySetup(this)" data-copy="OPENROUTER_API_KEY=sk-or-...">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">OpenRouter</span>
                             <span class="iw-copy-hint">Click to copy</span>
@@ -340,7 +340,7 @@
                     </div>
 
                     <!-- Vertex AI -->
-                    <div class="iw-provider-card iw-provider-copyable" data-provider="vertex_ai" onclick="iwCopySetup(this)" data-copy="VERTEX_PROJECT=your-project-id">
+                    <div class="iw-provider-card iw-provider-copyable" role="button" tabindex="0" data-provider="vertex_ai" onclick="iwCopySetup(this)" data-copy="VERTEX_PROJECT=your-project-id">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">Google Cloud Vertex AI</span>
                             <span class="iw-copy-hint">Click to copy</span>
@@ -351,7 +351,7 @@ gcloud auth application-default login</div>
                     </div>
 
                     <!-- Self-Hosted -->
-                    <div class="iw-provider-card iw-provider-copyable" data-provider="local" onclick="iwCopySetup(this)" data-copy="VLLM_BASE_URL=http://localhost:8100/v1">
+                    <div class="iw-provider-card iw-provider-copyable" role="button" tabindex="0" data-provider="local" onclick="iwCopySetup(this)" data-copy="VLLM_BASE_URL=http://localhost:8100/v1">
                         <div class="iw-provider-header">
                             <span class="iw-provider-name">Self-Hosted / Local</span>
                             <span class="iw-copy-hint">Click to copy</span>
@@ -373,8 +373,8 @@ gcloud auth application-default login</div>
             </div>
 
             <!-- Step 2: Provider Status -->
-            <div id="iwStep2" class="iw-step hidden">
-                <button class="iw-back-btn" onclick="iwGoBack(1)">← Back</button>
+            <div id="iwStep2" class="wizard-step iw-step hidden">
+                <button class="wizard-back-btn iw-back-btn" onclick="iwGoBack(1)">← Back</button>
                 <h3 class="iw-step-title">Provider Status</h3>
                 <p class="iw-step-subtitle">Detected credentials and available models</p>
                 <div id="iwProviderStatus"></div>
@@ -387,18 +387,18 @@ gcloud auth application-default login</div>
             </div>
 
             <!-- Step 3: Scenario Selection -->
-            <div id="iwStep3" class="iw-step hidden">
-                <button class="iw-back-btn" onclick="iwGoBack(2)">← Back</button>
-                <h3 class="iw-step-title">Choose Your Scenario</h3>
-                <p class="iw-step-subtitle">What do you want to demonstrate?</p>
-                <div class="iw-cards-grid">
-                    <div class="iw-card" data-scenario="improve_performance" onclick="iwSelectScenario('improve_performance')">
-                        <div class="iw-card-icon">📈</div>
+            <div id="iwStep3" class="wizard-step iw-step hidden">
+                <button class="wizard-back-btn iw-back-btn" onclick="iwGoBack(2)">← Back</button>
+                <h3 class="wizard-step-title iw-step-title">Choose Your Scenario</h3>
+                <p class="wizard-step-subtitle iw-step-subtitle">What do you want to demonstrate?</p>
+                <div class="wizard-cards-grid iw-cards-grid">
+                    <div class="wizard-card iw-card" role="button" tabindex="0" data-scenario="improve_performance" onclick="iwSelectScenario('improve_performance')">
+                        <div class="wizard-card-icon iw-card-icon">📈</div>
                         <h4>Improve Model Performance</h4>
                         <p>Compare the same model with and without ITS to see quality improvements</p>
                     </div>
-                    <div class="iw-card" data-scenario="match_frontier" onclick="iwSelectScenario('match_frontier')">
-                        <div class="iw-card-icon">⚖️</div>
+                    <div class="wizard-card iw-card" role="button" tabindex="0" data-scenario="match_frontier" onclick="iwSelectScenario('match_frontier')">
+                        <div class="wizard-card-icon iw-card-icon">⚖️</div>
                         <h4>Match Frontier with Smaller Model</h4>
                         <p>Show a small model + ITS matching a large frontier model at lower cost</p>
                     </div>
@@ -406,8 +406,8 @@ gcloud auth application-default login</div>
             </div>
 
             <!-- Step 4: Configure & Run -->
-            <div id="iwStep4" class="iw-step hidden">
-                <button class="iw-back-btn" onclick="iwGoBack(3)">← Back</button>
+            <div id="iwStep4" class="wizard-step iw-step hidden">
+                <button class="wizard-back-btn iw-back-btn" onclick="iwGoBack(3)">← Back</button>
                 <h3 class="iw-step-title">Configure &amp; Run</h3>
                 <p class="iw-step-subtitle">Select model, algorithm, and question — then run your comparison</p>
 
@@ -463,12 +463,12 @@ gcloud auth application-default login</div>
             </div>
 
             <!-- Step 5: Results -->
-            <div id="iwStep5" class="iw-step hidden">
-                <button class="iw-back-btn" onclick="iwGoBack(4)">← Back to Configure</button>
+            <div id="iwStep5" class="wizard-step iw-step hidden">
+                <button class="wizard-back-btn iw-back-btn" onclick="iwGoBack(4)">← Back to Configure</button>
                 <h3 class="iw-step-title">Results</h3>
 
                 <!-- Response panes -->
-                <div id="iwResultsArea"></div>
+                <div id="iwResultsArea" aria-live="polite"></div>
 
                 <!-- Trace Section -->
                 <div id="iwTraceSection" class="iw-trace-section hidden">
@@ -613,7 +613,7 @@ gcloud auth application-default login</div>
             </div>
         </div>
 
-        <div id="errorContainer"></div>
+        <div id="errorContainer" aria-live="assertive"></div>
 
         <!-- Expected Answer -->
         <div id="expectedAnswerContainer" class="expected-answer-container">

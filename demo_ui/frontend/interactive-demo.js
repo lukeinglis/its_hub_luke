@@ -18,11 +18,8 @@ function iwEscapeHtml(text) {
     return div.innerHTML;
 }
 
-function iwFormatLatency(ms) {
-    if (ms == null) return 'N/A';
-    if (ms >= 1000) return (ms / 1000).toFixed(1) + 's';
-    return ms + 'ms';
-}
+// iwFormatLatency is now the global formatLatency() in app.js
+function iwFormatLatency(ms) { return formatLatency(ms); }
 
 // ============================================================
 // STATE
@@ -72,21 +69,15 @@ const IW_CURATED_PROMPTS = {
 };
 
 // ============================================================
-// PATCH selectExperience — intercept interactive mode
-// This runs immediately (before DOMContentLoaded) since the
-// inline script has already defined selectExperience by now.
+// LIFECYCLE EVENT LISTENERS — replaces function patching
 // ============================================================
 
-(function patchSelectExperience() {
-    const orig = window.selectExperience;
-    if (!orig) return;
-    window.selectExperience = function(experience) {
-        orig(experience);
-        if (experience === 'interactive') {
-            iwInit();
-        }
-    };
-})();
+// Initialize interactive wizard when interactive mode is selected
+document.addEventListener('experience:selected', function(e) {
+    if (e.detail && e.detail.experience === 'interactive') {
+        iwInit();
+    }
+});
 
 // ============================================================
 // INITIALIZATION
@@ -108,19 +99,17 @@ function iwInit() {
     iwState.lastResults = null;
 
     const wizard = document.getElementById('interactiveWizard');
-    if (wizard) { wizard.classList.remove('hidden'); wizard.style.display = 'block'; }
+    setVisible(wizard, true);
 
     // Hide all other sections — the wizard is the entire experience
     ['useCaseSection', 'scenarioSection', 'configSection', 'questionSection',
      'errorContainer', 'expectedAnswerContainer', 'resultsContainer',
      'performance-visualization-container'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
+        setVisible(document.getElementById(id), false);
     });
 
     // Hide elements from the original interactive UI
-    const expertToggle = document.getElementById('expertModeToggle');
-    if (expertToggle) expertToggle.style.display = 'none';
+    setVisible(document.getElementById('expertModeToggle'), false);
 
     // Reset provider card visuals before detection
     document.querySelectorAll('.iw-provider-card[data-provider]').forEach(card => {
@@ -189,12 +178,11 @@ function iwShowStep(n) {
     iwState.currentStep = n;
     for (let i = 1; i <= 5; i++) {
         const el = document.getElementById('iwStep' + i);
-        if (el) { el.classList.add('hidden'); el.style.display = ''; }
+        setVisible(el, false);
     }
     const cur = document.getElementById('iwStep' + n);
     if (cur) {
-        cur.classList.remove('hidden');
-        cur.style.display = 'block';
+        setVisible(cur, true);
         cur.style.animation = 'none';
         cur.offsetHeight;
         cur.style.animation = '';
@@ -202,7 +190,10 @@ function iwShowStep(n) {
 
     // Progress bar
     const bar = document.getElementById('iwProgressBar');
-    if (bar) bar.style.width = ((n / 5) * 100) + '%';
+    if (bar) {
+        bar.style.width = ((n / 5) * 100) + '%';
+        bar.setAttribute('aria-valuenow', n);
+    }
 
     // Breadcrumbs
     document.querySelectorAll('.iw-crumb').forEach(c => {
@@ -364,15 +355,13 @@ function iwPopulateConfig() {
 
     // For match_frontier, show frontier model dropdown
     if (isMatch) {
-        frontierGroup.classList.remove('hidden');
-        frontierGroup.style.display = 'block';
+        setVisible(frontierGroup, true);
         frontierSelect.innerHTML = modelHtml;
         // Pre-select a large model if available
         const gpt4o = Array.from(frontierSelect.options).find(o => o.value === 'gpt-4o');
         if (gpt4o) frontierSelect.value = 'gpt-4o';
     } else {
-        frontierGroup.classList.add('hidden');
-        frontierGroup.style.display = '';
+        setVisible(frontierGroup, false);
     }
 
     // Set labels
@@ -468,8 +457,8 @@ async function iwSubmit() {
     resultsEl.innerHTML = '<div class="iw-loading"><div class="spinner"></div><div class="iw-loading-text">Running live comparison... This may take a few seconds.</div></div>';
 
     // Hide trace/perf sections
-    document.getElementById('iwTraceSection').classList.add('hidden');
-    document.getElementById('iwPerfSection').classList.add('hidden');
+    setVisible(document.getElementById('iwTraceSection'), false);
+    setVisible(document.getElementById('iwPerfSection'), false);
 
     try {
         const requestBody = {
@@ -675,7 +664,7 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
                 const traceHtml = renderAlgorithmTrace(trace, true);
                 const count = trace.candidates ? trace.candidates.length + ' candidates' : 'details';
                 traceExpandable = `
-                    <div class="iw-expandable" onclick="this.classList.toggle('expanded')">
+                    <div class="iw-expandable" aria-expanded="false" onclick="this.classList.toggle('expanded'); this.setAttribute('aria-expanded', this.classList.contains('expanded'))">
                         <button class="iw-expand-btn">
                             <span class="iw-expand-icon">▶</span>
                             Algorithm Trace (${count})
@@ -694,7 +683,7 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
     if (data.tool_calls && data.tool_calls.length > 0 && typeof renderToolCalls === 'function') {
         try {
             toolsExpandable = `
-                <div class="iw-expandable" onclick="this.classList.toggle('expanded')">
+                <div class="iw-expandable" aria-expanded="false" onclick="this.classList.toggle('expanded'); this.setAttribute('aria-expanded', this.classList.contains('expanded'))">
                     <button class="iw-expand-btn">
                         <span class="iw-expand-icon">▶</span>
                         Tool Calls (${data.tool_calls.length})
@@ -730,7 +719,7 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
                 </div>
             </div>
             ${hasFullReasoning ? `
-                <div class="iw-expandable" onclick="this.classList.toggle('expanded')">
+                <div class="iw-expandable" aria-expanded="false" onclick="this.classList.toggle('expanded'); this.setAttribute('aria-expanded', this.classList.contains('expanded'))">
                     <button class="iw-expand-btn">
                         <span class="iw-expand-icon">▶</span>
                         View Full Reasoning
@@ -738,7 +727,7 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
                     <div class="iw-expand-content">${fullHtml}</div>
                 </div>
             ` : ''}
-            <div class="iw-expandable" onclick="this.classList.toggle('expanded')">
+            <div class="iw-expandable" aria-expanded="false" onclick="this.classList.toggle('expanded'); this.setAttribute('aria-expanded', this.classList.contains('expanded'))">
                 <button class="iw-expand-btn">
                     <span class="iw-expand-icon">▶</span>
                     Performance Details
@@ -774,10 +763,9 @@ function iwRenderTrace(traceRaw) {
         if (typeof trace === 'string') trace = JSON.parse(trace);
     } catch (_) {}
 
-    if (!trace || !trace.algorithm) { section.classList.add('hidden'); return; }
+    if (!trace || !trace.algorithm) { setVisible(section, false); return; }
 
-    section.classList.remove('hidden');
-    section.style.display = 'block';
+    setVisible(section, true);
     const algName = trace.algorithm === 'self_consistency' ? 'Self-Consistency' :
                     trace.algorithm === 'best_of_n' ? 'Best-of-N' : trace.algorithm;
 
@@ -801,8 +789,7 @@ function iwRenderTrace(traceRaw) {
 function iwRenderPerformance(data) {
     const section = document.getElementById('iwPerfSection');
     const container = document.getElementById('iwPerfContainer');
-    section.classList.remove('hidden');
-    section.style.display = 'block';
+    setVisible(section, true);
 
     // Use PerformanceVizV2 if available
     if (typeof PerformanceVizV2 !== 'undefined') {
@@ -845,25 +832,14 @@ function iwRenderPerformance(data) {
     container.innerHTML = html;
 }
 
-// ============================================================
-// CLEANUP — patch returnToLanding
-// ============================================================
+// Reset interactive wizard state when returning to landing
+document.addEventListener('experience:teardown', function() {
+    iwState.currentStep = 1;
+    iwState.providers = {};
+    iwState.models = [];
+    iwState.scenario = null;
+    iwState.lastResults = null;
 
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof window.returnToLanding === 'function') {
-        const original = window.returnToLanding;
-        window.returnToLanding = function() {
-            // Reset interactive wizard state
-            iwState.currentStep = 1;
-            iwState.providers = {};
-            iwState.models = [];
-            iwState.scenario = null;
-            iwState.lastResults = null;
-
-            const wizard = document.getElementById('interactiveWizard');
-            if (wizard) { wizard.classList.add('hidden'); wizard.style.display = ''; }
-
-            original();
-        };
-    }
+    const wizard = document.getElementById('interactiveWizard');
+    setVisible(wizard, false);
 });
