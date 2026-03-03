@@ -521,6 +521,12 @@ async def run_baseline(
                 tools=tools,
                 tool_choice=tool_choice,
             )
+            # _prepare_request_data is designed for aiohttp (auth via headers),
+            # but litellm needs api_key and api_base as explicit kwargs.
+            # Without these, litellm can't authenticate with non-OpenAI
+            # providers (e.g. OpenRouter) and the call fails silently.
+            request_data["api_key"] = lm.api_key
+            request_data["api_base"] = lm.endpoint
             full_response = await litellm.acompletion(**request_data)
 
             # Extract usage from full response

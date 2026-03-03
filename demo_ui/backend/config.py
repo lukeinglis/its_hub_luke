@@ -228,7 +228,31 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "output_cost_per_1m": 0.15,
     },
 
+    # === Weak/Small Models (OpenAI Open Source) 🎯 ===
+    "gpt-oss-20b": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env_var": "OPENROUTER_API_KEY",
+        "model_name": "openai/gpt-oss-20b",
+        "description": "🧠🎯 GPT-OSS 20B MoE (Reasoning, 3.6B active - great for ITS demo)",
+        "provider": "openai",
+        "size": "3.6B active",
+        "input_cost_per_1m": 0.02,
+        "output_cost_per_1m": 0.10,
+        "is_reasoning": True,
+    },
+
     # === Frontier Models 🏆 ===
+    "gpt-oss-120b": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env_var": "OPENROUTER_API_KEY",
+        "model_name": "openai/gpt-oss-120b",
+        "description": "🧠🏆 GPT-OSS 120B MoE (Frontier - reasoning, 5.1B active)",
+        "provider": "openai",
+        "size": "5.1B active",
+        "input_cost_per_1m": 0.50,
+        "output_cost_per_1m": 2.00,
+        "is_reasoning": True,
+    },
     "deepseek-r1": {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key_env_var": "OPENROUTER_API_KEY",

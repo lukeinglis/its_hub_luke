@@ -193,6 +193,7 @@ const FRONTIER_MODEL_MAP = {
     'Qwen 2.5 7B': 'Qwen 2.5 72B',
     'Gemma 3 4B': 'Gemma 3 27B',
     'DeepSeek R1 Distill 7B': 'DeepSeek R1',
+    'GPT-OSS 20B': 'GPT-OSS 120B',
 };
 
 let currentWizardScenario = null;
