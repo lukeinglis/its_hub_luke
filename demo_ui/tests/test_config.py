@@ -14,7 +14,7 @@ class TestGetModelConfig:
         assert config["provider"] == "openai"
 
     def test_valid_model_has_required_fields(self):
-        config = get_model_config("gpt-4o-mini")
+        config = get_model_config("gpt-4.1-mini")
         assert "base_url" in config
         assert "api_key_env_var" in config
         assert "model_name" in config

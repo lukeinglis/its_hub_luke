@@ -21,11 +21,26 @@ class ModelConfig(TypedDict, total=False):
     input_cost_per_1m: float  # Optional: Cost per 1M input tokens in USD
     output_cost_per_1m: float  # Optional: Cost per 1M output tokens in USD
     supports_tools: bool  # Optional: Whether model supports function/tool calling (defaults to True for OpenAI)
+    is_reasoning: bool  # Optional: Whether model is a reasoning/thinking model (defaults to False)
 
 
 # Model registry
-# Maps model_id -> { base_url, api_key_env_var, model_name }
+# Maps model_id -> { base_url, api_key_env_var, model_name, ... }
+#
+# Tier legend:
+#   🎯 Weak/Very Small  — best for demonstrating ITS gains
+#   ⚡ Small/Fast        — cost-effective, good ITS candidates
+#   ⚖️ Medium            — comparison baselines
+#   🏆 Frontier          — ceiling for "Match Frontier" use case
+#   🧠 Reasoning         — chain-of-thought / thinking models (is_reasoning=True)
+#   🏢 IBM Granite       — enterprise open-source
+#
+# NOTE: OpenRouter model availability changes over time. If a model fails with
+# "No endpoints found", check https://openrouter.ai/models for current list.
+# Pricing last verified: March 2026.
+
 MODEL_REGISTRY: Dict[str, ModelConfig] = {
+
     # ========================================================================
     # OPENAI MODELS (Native OpenAI API)
     # ========================================================================
@@ -42,28 +57,28 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "output_cost_per_1m": 10.00,
         "supports_tools": True,
     },
-    "gpt-4-turbo": {
+    "gpt-4.1": {
         "base_url": "https://api.openai.com/v1",
         "api_key_env_var": "OPENAI_API_KEY",
-        "model_name": "gpt-4-turbo",
-        "description": "🏆 GPT-4 Turbo (Frontier)",
+        "model_name": "gpt-4.1",
+        "description": "🏆 GPT-4.1 (Frontier)",
         "provider": "openai",
         "size": "Large",
-        "input_cost_per_1m": 10.00,
-        "output_cost_per_1m": 30.00,
+        "input_cost_per_1m": 2.00,
+        "output_cost_per_1m": 8.00,
         "supports_tools": True,
     },
 
     # === Small/Fast Models ⚡ ===
-    "gpt-4o-mini": {
+    "gpt-4.1-mini": {
         "base_url": "https://api.openai.com/v1",
         "api_key_env_var": "OPENAI_API_KEY",
-        "model_name": "gpt-4o-mini",
-        "description": "⚡ GPT-4o Mini (Small, fast)",
+        "model_name": "gpt-4.1-mini",
+        "description": "⚡ GPT-4.1 Mini (Small, fast)",
         "provider": "openai",
         "size": "Small",
-        "input_cost_per_1m": 0.15,
-        "output_cost_per_1m": 0.60,
+        "input_cost_per_1m": 0.40,
+        "output_cost_per_1m": 1.60,
         "supports_tools": True,
     },
     "gpt-3.5-turbo": {
@@ -79,15 +94,15 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
     },
 
     # === Weak Models (for ITS demonstration) 🎯 ===
-    "gpt-3.5-turbo-weak": {
+    "gpt-4.1-nano": {
         "base_url": "https://api.openai.com/v1",
         "api_key_env_var": "OPENAI_API_KEY",
-        "model_name": "gpt-3.5-turbo-0125",  # Older, weaker version
-        "description": "🎯 GPT-3.5 Turbo 0125 (Weak baseline for ITS demo)",
+        "model_name": "gpt-4.1-nano",
+        "description": "🎯 GPT-4.1 Nano (Very small - great for ITS demo)",
         "provider": "openai",
         "size": "Small",
-        "input_cost_per_1m": 0.50,
-        "output_cost_per_1m": 1.50,
+        "input_cost_per_1m": 0.10,
+        "output_cost_per_1m": 0.40,
         "supports_tools": True,
     },
 
@@ -96,32 +111,47 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
     # ========================================================================
     # Setup: Get API key from https://openrouter.ai/keys
     # Set OPENROUTER_API_KEY in your .env file
-    #
-    # NOTE: OpenRouter model availability changes over time. If a model fails with
-    # "No endpoints found", check https://openrouter.ai/models for current list.
-    # Models below have been verified to work as of Feb 2024.
 
     # === Weak Models (Great for demonstrating ITS) 🎯 ===
-    "llama-3.1-8b": {
+    "qwen3-1.7b": {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "meta-llama/llama-3.1-8b-instruct",
-        "description": "🎯 Llama 3.1 8B (Weak - great for ITS demo)",
+        "model_name": "qwen/qwen3-1.7b",
+        "description": "🎯 Qwen3 1.7B (Very weak - dramatic ITS demo)",
         "provider": "openai",
-        "size": "8B",
-        "input_cost_per_1m": 0.06,
-        "output_cost_per_1m": 0.06,
-        "supports_tools": False,
+        "size": "1.7B",
+        "input_cost_per_1m": 0.05,
+        "output_cost_per_1m": 0.05,
     },
-    "mistral-7b": {
+    "llama-3.2-3b": {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "mistralai/mistral-7b-instruct",
-        "description": "🎯 Mistral 7B (Weak - great for ITS demo)",
+        "model_name": "meta-llama/llama-3.2-3b-instruct",
+        "description": "🎯 Llama 3.2 3B (Very weak - dramatic ITS demo)",
         "provider": "openai",
-        "size": "7B",
+        "size": "3B",
         "input_cost_per_1m": 0.06,
         "output_cost_per_1m": 0.06,
+    },
+    "granite-4.0-micro": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env_var": "OPENROUTER_API_KEY",
+        "model_name": "ibm-granite/granite-4.0-h-micro",
+        "description": "🏢🎯 IBM Granite 4.0 Micro 3B (Very weak - excellent for ITS demo)",
+        "provider": "openai",
+        "size": "3B",
+        "input_cost_per_1m": 0.017,
+        "output_cost_per_1m": 0.11,
+    },
+    "gemma-3-4b": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env_var": "OPENROUTER_API_KEY",
+        "model_name": "google/gemma-3-4b-it",
+        "description": "🎯 Gemma 3 4B (Weak - great for ITS demo)",
+        "provider": "openai",
+        "size": "4B",
+        "input_cost_per_1m": 0.04,
+        "output_cost_per_1m": 0.08,
     },
     "qwen-2.5-7b": {
         "base_url": "https://openrouter.ai/api/v1",
@@ -133,48 +163,38 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "input_cost_per_1m": 0.15,
         "output_cost_per_1m": 0.15,
     },
-    # Phi-3 Mini - Disabled (not currently available on OpenRouter)
-    # "phi-3-mini": {
-    #     "base_url": "https://openrouter.ai/api/v1",
-    #     "api_key_env_var": "OPENROUTER_API_KEY",
-    #     "model_name": "microsoft/phi-3-mini-128k-instruct",
-    #     "description": "🎯 Phi-3 Mini 3.8B (Very weak - dramatic ITS demo)",
-    #     "provider": "openai",
-    #     "size": "3.8B",
-    #     "input_cost_per_1m": 0.10,
-    #     "output_cost_per_1m": 0.10,
-    # },
-    "llama-3.2-3b": {
+    "deepseek-r1-distill-qwen-7b": {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "meta-llama/llama-3.2-3b-instruct",
-        "description": "🎯 Llama 3.2 3B (Very weak - dramatic ITS demo)",
+        "model_name": "deepseek/deepseek-r1-distill-qwen-7b",
+        "description": "🧠🎯 DeepSeek R1 Distill 7B (Reasoning, weak - ITS on reasoning)",
         "provider": "openai",
-        "size": "3B",
-        "input_cost_per_1m": 0.06,
-        "output_cost_per_1m": 0.06,
-    },
-    "gemma-2-9b": {
-        "base_url": "https://openrouter.ai/api/v1",
-        "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "google/gemma-2-9b-it",
-        "description": "🎯 Gemma 2 9B (Weak - great for ITS demo)",
-        "provider": "openai",
-        "size": "9B",
-        "input_cost_per_1m": 0.08,
-        "output_cost_per_1m": 0.08,
+        "size": "7B",
+        "input_cost_per_1m": 0.15,
+        "output_cost_per_1m": 0.15,
+        "is_reasoning": True,
     },
 
     # === Medium Models (Good balance) ⚖️ ===
-    "llama-3.1-70b": {
+    "llama-4-scout": {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "meta-llama/llama-3.1-70b-instruct",
-        "description": "⚖️ Llama 3.1 70B (Medium - good for comparison)",
+        "model_name": "meta-llama/llama-4-scout",
+        "description": "⚖️ Llama 4 Scout 17B/109B MoE (Medium - latest Llama)",
+        "provider": "openai",
+        "size": "17B active",
+        "input_cost_per_1m": 0.08,
+        "output_cost_per_1m": 0.30,
+    },
+    "llama-3.3-70b": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env_var": "OPENROUTER_API_KEY",
+        "model_name": "meta-llama/llama-3.3-70b-instruct",
+        "description": "⚖️ Llama 3.3 70B (Medium)",
         "provider": "openai",
         "size": "70B",
-        "input_cost_per_1m": 0.52,
-        "output_cost_per_1m": 0.75,
+        "input_cost_per_1m": 0.35,
+        "output_cost_per_1m": 0.40,
     },
     "qwen-2.5-72b": {
         "base_url": "https://openrouter.ai/api/v1",
@@ -186,236 +206,107 @@ MODEL_REGISTRY: Dict[str, ModelConfig] = {
         "input_cost_per_1m": 0.35,
         "output_cost_per_1m": 0.40,
     },
+    "qwq-32b": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env_var": "OPENROUTER_API_KEY",
+        "model_name": "qwen/qwq-32b",
+        "description": "🧠⚖️ QwQ 32B (Reasoning specialist)",
+        "provider": "openai",
+        "size": "32B",
+        "input_cost_per_1m": 0.15,
+        "output_cost_per_1m": 0.40,
+        "is_reasoning": True,
+    },
+    "gemma-3-27b": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env_var": "OPENROUTER_API_KEY",
+        "model_name": "google/gemma-3-27b-it",
+        "description": "⚖️ Gemma 3 27B (Medium - good balance)",
+        "provider": "openai",
+        "size": "27B",
+        "input_cost_per_1m": 0.04,
+        "output_cost_per_1m": 0.15,
+    },
+
+    # === Frontier Models 🏆 ===
     "deepseek-r1": {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key_env_var": "OPENROUTER_API_KEY",
         "model_name": "deepseek/deepseek-r1",
-        "description": "🏆 DeepSeek R1 (Frontier - reasoning specialist)",
+        "description": "🧠🏆 DeepSeek R1 671B MoE (Frontier - reasoning specialist)",
         "provider": "openai",
-        "size": "Large",
+        "size": "671B MoE",
         "input_cost_per_1m": 0.55,
         "output_cost_per_1m": 2.19,
+        "is_reasoning": True,
     },
-    "llama-3.3-70b": {
+    "llama-4-maverick": {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "meta-llama/llama-3.3-70b-instruct",
-        "description": "⚖️ Llama 3.3 70B (Medium - latest Llama)",
+        "model_name": "meta-llama/llama-4-maverick",
+        "description": "🏆 Llama 4 Maverick 17B/400B MoE (Frontier)",
         "provider": "openai",
-        "size": "70B",
-        "input_cost_per_1m": 0.35,
-        "output_cost_per_1m": 0.40,
+        "size": "17B active",
+        "input_cost_per_1m": 0.15,
+        "output_cost_per_1m": 0.60,
     },
-    "gemma-2-27b": {
-        "base_url": "https://openrouter.ai/api/v1",
-        "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "google/gemma-2-27b-it",
-        "description": "⚖️ Gemma 2 27B (Medium - good balance)",
-        "provider": "openai",
-        "size": "27B",
-        "input_cost_per_1m": 0.27,
-        "output_cost_per_1m": 0.27,
-    },
-
-    # === Coding-Specialized Models 💻 ===
-    "qwen-2.5-coder-32b": {
-        "base_url": "https://openrouter.ai/api/v1",
-        "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "qwen/qwen-2.5-coder-32b-instruct",
-        "description": "💻 Qwen 2.5 Coder 32B (Code specialist)",
-        "provider": "openai",
-        "size": "32B",
-        "input_cost_per_1m": 0.14,
-        "output_cost_per_1m": 0.14,
-    },
-    "deepseek-coder-v2": {
-        "base_url": "https://openrouter.ai/api/v1",
-        "api_key_env_var": "OPENROUTER_API_KEY",
-        "model_name": "deepseek/deepseek-coder",
-        "description": "💻 DeepSeek Coder V2 (Code specialist)",
-        "provider": "openai",
-        "size": "Large",
-        "input_cost_per_1m": 0.14,
-        "output_cost_per_1m": 0.28,
-    },
-
-    # === IBM Granite Models (via OpenRouter) 🏢 ===
-    # Disabled - not currently available on OpenRouter
-    # "granite-4.0-micro": {
-    #     "base_url": "https://openrouter.ai/api/v1",
-    #     "api_key_env_var": "OPENROUTER_API_KEY",
-    #     "model_name": "ibm-granite/granite-4.0-h-micro",
-    #     "description": "🏢 IBM Granite 4.0 Micro 3B (Very weak - excellent for ITS demo)",
-    #     "provider": "openai",
-    #     "size": "3B",
-    #     "input_cost_per_1m": 0.017,  # $0.017 per 1M tokens
-    #     "output_cost_per_1m": 0.11,   # $0.11 per 1M tokens
-    # },
 
     # ========================================================================
-    # VERTEX AI MODEL GARDEN (Open-source models via Google Cloud)
-    # ========================================================================
-    # To enable these models:
-    # 1. Go to: https://console.cloud.google.com/vertex-ai/model-garden
-    # 2. Search for the model (e.g., "Llama 3.1")
-    # 3. Click "Enable" and accept the model license
-    # 4. Note which region the model is available in
-    # 5. Set VERTEX_MODEL_GARDEN_LOCATION in .env (usually us-central1)
-    # 6. Uncomment the model entries below
-    #
-    # Uses litellm's vertex_ai/ prefix for routing and your existing
-    # Vertex AI credentials for authentication.
-
-    # --- Uncomment after enabling in Model Garden ---
-    # "llama-3.1-8b-vertex": {
-    #     "base_url": "",
-    #     "api_key_env_var": "GOOGLE_APPLICATION_CREDENTIALS",
-    #     "model_name": "meta/llama-3.1-8b-instruct-maas",
-    #     "description": "🎯 Llama 3.1 8B (Vertex AI, Weak - great for ITS demo)",
-    #     "provider": "vertex_ai_model_garden",
-    #     "vertex_project": os.getenv("VERTEX_PROJECT", "your-gcp-project-id"),
-    #     "vertex_location": os.getenv("VERTEX_MODEL_GARDEN_LOCATION", "us-central1"),
-    #     "size": "8B",
-    #     "input_cost_per_1m": 0.20,
-    #     "output_cost_per_1m": 0.20,
-    # },
-    # "llama-3.1-70b-vertex": {
-    #     "base_url": "",
-    #     "api_key_env_var": "GOOGLE_APPLICATION_CREDENTIALS",
-    #     "model_name": "meta/llama-3.1-70b-instruct-maas",
-    #     "description": "⚡ Llama 3.1 70B (Vertex AI, Medium)",
-    #     "provider": "vertex_ai_model_garden",
-    #     "vertex_project": os.getenv("VERTEX_PROJECT", "your-gcp-project-id"),
-    #     "vertex_location": os.getenv("VERTEX_MODEL_GARDEN_LOCATION", "us-central1"),
-    #     "size": "70B",
-    #     "input_cost_per_1m": 0.88,
-    #     "output_cost_per_1m": 0.88,
-    # },
-    # "mistral-nemo-vertex": {
-    #     "base_url": "",
-    #     "api_key_env_var": "GOOGLE_APPLICATION_CREDENTIALS",
-    #     "model_name": "mistral-nemo@2407",
-    #     "description": "🎯 Mistral Nemo 12B (Vertex AI, Weak - great for ITS demo)",
-    #     "provider": "vertex_ai_model_garden",
-    #     "vertex_project": os.getenv("VERTEX_PROJECT", "your-gcp-project-id"),
-    #     "vertex_location": os.getenv("VERTEX_MODEL_GARDEN_LOCATION", "us-central1"),
-    #     "size": "12B",
-    #     "input_cost_per_1m": 0.30,
-    #     "output_cost_per_1m": 0.30,
-    # },
-    # "mistral-large-vertex": {
-    #     "base_url": "",
-    #     "api_key_env_var": "GOOGLE_APPLICATION_CREDENTIALS",
-    #     "model_name": "mistral-large@2407",
-    #     "description": "🏆 Mistral Large (Vertex AI, Frontier)",
-    #     "provider": "vertex_ai_model_garden",
-    #     "vertex_project": os.getenv("VERTEX_PROJECT", "your-gcp-project-id"),
-    #     "vertex_location": os.getenv("VERTEX_MODEL_GARDEN_LOCATION", "us-central1"),
-    #     "size": "Large",
-    #     "input_cost_per_1m": 2.00,
-    #     "output_cost_per_1m": 6.00,
-    # },
-
-    # ========================================================================
-    # VERTEX AI MODELS (Google Cloud - Native)
+    # VERTEX AI MODELS (Google Cloud)
     # ========================================================================
     # Setup: https://console.cloud.google.com/vertex-ai
     # Authentication: gcloud auth application-default login
     # Or set GOOGLE_APPLICATION_CREDENTIALS to service account JSON path
 
     # === Claude Models (via Vertex AI) ===
-    # Frontier Models 🏆
     "claude-sonnet-vertex": {
         "base_url": "",  # Not used for Vertex AI
         "api_key_env_var": "GOOGLE_APPLICATION_CREDENTIALS",
-        "model_name": "claude-3-5-sonnet-v2@20241022",
-        "description": "🏆 Claude 3.5 Sonnet (Vertex AI, Frontier)",
+        "model_name": "claude-sonnet-4-6",
+        "description": "🏆 Claude Sonnet 4.6 (Vertex AI, Frontier)",
         "provider": "vertex_ai",
         "vertex_project": os.getenv("VERTEX_PROJECT", "your-gcp-project-id"),
         "vertex_location": os.getenv("VERTEX_LOCATION", "us-east5"),
         "size": "Large",
         "input_cost_per_1m": 3.00,
         "output_cost_per_1m": 15.00,
+        "supports_tools": True,
     },
-    "claude-opus-vertex": {
-        "base_url": "",  # Not used for Vertex AI
-        "api_key_env_var": "GOOGLE_APPLICATION_CREDENTIALS",
-        "model_name": "claude-3-opus@20240229",
-        "description": "🏆 Claude 3 Opus (Vertex AI, Frontier)",
-        "provider": "vertex_ai",
-        "vertex_project": os.getenv("VERTEX_PROJECT", "your-gcp-project-id"),
-        "vertex_location": os.getenv("VERTEX_LOCATION", "us-east5"),
-        "size": "Large",
-        "input_cost_per_1m": 15.00,
-        "output_cost_per_1m": 75.00,
-    },
-    # Small/Fast Models ⚡
     "claude-haiku-vertex": {
         "base_url": "",  # Not used for Vertex AI
         "api_key_env_var": "GOOGLE_APPLICATION_CREDENTIALS",
-        "model_name": "claude-3-5-haiku@20241022",
-        "description": "⚡ Claude 3.5 Haiku (Vertex AI, Small)",
+        "model_name": "claude-haiku-4-5",
+        "description": "⚡ Claude Haiku 4.5 (Vertex AI, Small)",
         "provider": "vertex_ai",
         "vertex_project": os.getenv("VERTEX_PROJECT", "your-gcp-project-id"),
         "vertex_location": os.getenv("VERTEX_LOCATION", "us-east5"),
         "size": "Small",
-        "input_cost_per_1m": 0.80,
-        "output_cost_per_1m": 4.00,
-    },
-
-    # === Gemini Models (via Vertex AI) ===
-    # Frontier Models 🏆
-    "gemini-pro-vertex": {
-        "base_url": "",  # Not used for Vertex AI
-        "api_key_env_var": "GOOGLE_APPLICATION_CREDENTIALS",
-        "model_name": "gemini-1.5-pro-002",
-        "description": "🏆 Gemini 1.5 Pro (Vertex AI, Frontier)",
-        "provider": "vertex_ai",
-        "vertex_project": os.getenv("VERTEX_PROJECT", "your-gcp-project-id"),
-        "vertex_location": os.getenv("VERTEX_LOCATION", "us-east5"),
-        "size": "Large",
-        "input_cost_per_1m": 1.25,
+        "input_cost_per_1m": 1.00,
         "output_cost_per_1m": 5.00,
-    },
-    # Small/Fast Models ⚡
-    "gemini-flash-vertex": {
-        "base_url": "",  # Not used for Vertex AI
-        "api_key_env_var": "GOOGLE_APPLICATION_CREDENTIALS",
-        "model_name": "gemini-1.5-flash-002",
-        "description": "⚡ Gemini 1.5 Flash (Vertex AI, Small)",
-        "provider": "vertex_ai",
-        "vertex_project": os.getenv("VERTEX_PROJECT", "your-gcp-project-id"),
-        "vertex_location": os.getenv("VERTEX_LOCATION", "us-east5"),
-        "size": "Small",
-        "input_cost_per_1m": 0.075,
-        "output_cost_per_1m": 0.30,
+        "supports_tools": True,
     },
 
     # ========================================================================
-    # IBM GRANITE MODELS
+    # IBM GRANITE MODELS (Self-hosted)
     # ========================================================================
     # IBM's open-source Granite models for enterprise AI
-    # Latest versions: Granite 4.0 and Granite 3.3
-    # Available via Hugging Face or self-hosted via vLLM
-
-    # === Granite Models (IBM Open-Source) ===
     # Note: Requires vLLM server running on GRANITE_BASE_URL
-    # vLLM works best on Linux with GPU. May have compatibility issues on macOS/CPU.
-    # Start with: python -m vllm.entrypoints.openai.api_server --model ibm-granite/granite-3.3-8b-instruct --port 8100 --max-model-len 8192
+    # Start with: python -m vllm.entrypoints.openai.api_server \
+    #   --model ibm-granite/granite-3.3-8b-instruct --port 8100 --max-model-len 8192
     "granite-3.3-8b": {
         "base_url": os.getenv("GRANITE_BASE_URL", "http://localhost:8100/v1"),
         "api_key_env_var": "GRANITE_API_KEY",
         "model_name": "ibm-granite/granite-3.3-8b-instruct",
-        "description": "🏢 IBM Granite 3.3 8B Instruct (Open-source)",
+        "description": "🏢 IBM Granite 3.3 8B Instruct (Self-hosted)",
         "provider": "openai",
         "size": "8B",
         "input_cost_per_1m": 0.0,  # Free if self-hosted
         "output_cost_per_1m": 0.0,
     },
-    # Note: Granite 4.0 models are not yet available as instruction-tuned models on Hugging Face
-    # Use granite-3.3-8b-instruct or granite-8b-code-instruct instead
 
-    # ===== LOCAL/CUSTOM MODELS =====
+    # ========================================================================
+    # LOCAL / CUSTOM MODELS
+    # ========================================================================
     # For running your own vLLM server with any open-source model
     "local-vllm": {
         "base_url": os.getenv("VLLM_BASE_URL", "http://localhost:8100/v1"),

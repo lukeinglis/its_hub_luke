@@ -280,6 +280,16 @@
     flex: 1;
 }
 
+.iw-model-chip-reasoning {
+    font-size: 10px;
+    color: var(--warning);
+    text-transform: uppercase;
+    padding: 2px 6px;
+    background: rgba(235, 203, 139, 0.15);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
 .iw-model-chip-size {
     color: var(--text-tertiary);
     font-size: 11px;

@@ -67,8 +67,8 @@ from .vertex_lm import VertexAIClaudeModel, VertexAIGeminiModel
 from .llm_prm import LLMProcessRewardModel
 
 # ── Algorithm / model defaults ────────────────────────────────────────
-DEFAULT_JUDGE_MODEL = "gpt-4o-mini"
-DEFAULT_PRM_MODEL = "gpt-4o-mini"
+DEFAULT_JUDGE_MODEL = "gpt-4.1-mini"
+DEFAULT_PRM_MODEL = "gpt-4.1-mini"
 DEFAULT_STEP_GEN_MAX_STEPS = 8
 DEFAULT_STEP_GEN_TEMPERATURE = 0.8
 DEFAULT_STEP_GEN_TOKEN = "\n\n"
@@ -271,21 +271,21 @@ async def check_providers():
         "openai": {
             "enabled": bool(openai_key),
             "name": "OpenAI",
-            "description": "GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo",
+            "description": "GPT-4o, GPT-4.1, GPT-4.1 Mini/Nano, GPT-3.5 Turbo",
             "env_var": "OPENAI_API_KEY",
             "setup": "export OPENAI_API_KEY=sk-...",
         },
         "openrouter": {
             "enabled": bool(openrouter_key),
             "name": "OpenRouter",
-            "description": "Llama 3, Mistral 7B, Qwen 2.5, Gemma 2, DeepSeek (15+ open-source models)",
+            "description": "Llama 4/3, Qwen 3/2.5, Gemma 3, DeepSeek R1, Granite 4.0 (15+ open-source models)",
             "env_var": "OPENROUTER_API_KEY",
             "setup": "export OPENROUTER_API_KEY=sk-or-...",
         },
         "vertex_ai": {
             "enabled": bool(vertex_project),
             "name": "Google Cloud Vertex AI",
-            "description": "Claude 3.5 Sonnet/Opus/Haiku, Gemini 1.5 Pro/Flash",
+            "description": "Claude Sonnet 4.6, Claude Haiku 4.5",
             "env_var": "VERTEX_PROJECT",
             "setup": "export VERTEX_PROJECT=your-project-id\ngcloud auth application-default login",
         },
@@ -329,6 +329,7 @@ async def list_models(use_case: str | None = None):
             "model_name": config["model_name"],
             "size": config.get("size", "Unknown"),
             "supports_tools": config.get("supports_tools", False),
+            "is_reasoning": config.get("is_reasoning", False),
             "provider": provider_group,
         }
 

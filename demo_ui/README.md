@@ -54,15 +54,15 @@ The model dropdowns in step 4 are dynamically populated based on which providers
   - **System Prompts**: Applies QWEN system prompt for math questions to ensure consistent answer formatting
 - **Backend**: FastAPI server with comprehensive API endpoints
 - **Frontend**: Modern HTML/JS interface with expandable sections, algorithm traces, and real-time metrics
-- **Models**: OpenAI, OpenRouter, and Vertex AI models
-  - **OpenAI**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo
+- **Models**: OpenAI, OpenRouter, Vertex AI, and self-hosted models across 7 families
+  - **OpenAI**: GPT-4o, GPT-4.1, GPT-4.1 Mini, GPT-4.1 Nano, GPT-3.5 Turbo
   - **OpenRouter**:
-    - Weak models (3B-9B): Llama 3.1/3.2, Mistral 7B, Qwen 2.5, Gemma 2 - **great for ITS demos**
-    - Medium models (27B-70B): Llama 3.1/3.3 70B, Qwen 2.5 72B, Gemma 2 27B
-    - Frontier models: DeepSeek R1 (reasoning specialist)
-    - Code specialists: Qwen 2.5 Coder, DeepSeek Coder V2
-  - **Vertex AI Claude**: Sonnet, Opus, Haiku
-  - **Vertex AI Gemini**: Pro, Flash
+    - Weak models (1.7B-7B): Qwen3 1.7B, Llama 3.2 3B, Granite 4.0 Micro 3B, Gemma 3 4B, Qwen 2.5 7B - **great for ITS demos**
+    - Reasoning models: DeepSeek R1 Distill 7B, QwQ 32B, DeepSeek R1 671B
+    - Medium models (17B-72B): Llama 4 Scout, Llama 3.3 70B, Qwen 2.5 72B, Gemma 3 27B
+    - Frontier models: DeepSeek R1, Llama 4 Maverick
+  - **Vertex AI Claude**: Sonnet 4.6, Haiku 4.5
+  - **IBM Granite**: Granite 4.0 Micro (OpenRouter), Granite 3.3 8B (self-hosted via vLLM)
   - **Local**: vLLM server (any self-hosted model)
 - **Algorithms**:
   - Outcome-based: Best-of-N, Self-Consistency (with answer extraction and tool voting)
@@ -150,7 +150,7 @@ demo_ui/
 ├── backend/
 │   ├── __init__.py
 │   ├── main.py                                 # FastAPI app (/compare, /models, /providers, /examples)
-│   ├── config.py                               # Model registry (28 models across 4 providers)
+│   ├── config.py                               # Model registry (22 models across 7 families)
 │   ├── models.py                               # Pydantic request/response models
 │   ├── tools.py                                # Tool definitions for agent demos
 │   ├── example_questions.py                    # Curated example questions library
@@ -212,17 +212,21 @@ Edit `.env` and add your credentials:
 # Required: OpenAI API (for GPT models + LLM judge)
 OPENAI_API_KEY=your-openai-api-key-here
 
-# Optional: OpenRouter (for Llama, Mistral, Qwen, Gemma, DeepSeek models)
+# Optional: OpenRouter (for Llama 4, Qwen 3, Gemma 3, DeepSeek R1, Granite 4.0 Micro)
 # Get your key from: https://openrouter.ai/keys
 # Provides access to 15+ open-source and specialized models
 OPENROUTER_API_KEY=your-openrouter-api-key-here
 
-# Optional: Google Cloud Vertex AI (for Claude and Gemini)
+# Optional: Google Cloud Vertex AI (for Claude Sonnet 4.6 and Haiku 4.5)
 # Setup: gcloud auth application-default login
 VERTEX_PROJECT=your-gcp-project-id
-VERTEX_LOCATION=us-central1
+VERTEX_LOCATION=us-east5
 
-# Optional: Local vLLM server
+# Optional: Self-hosted IBM Granite via vLLM (see "Self-Hosting IBM Granite" below)
+# GRANITE_BASE_URL=http://localhost:8100/v1
+# GRANITE_API_KEY=NO_API_KEY
+
+# Optional: Local vLLM server (any model)
 # VLLM_BASE_URL=http://localhost:8100/v1
 # VLLM_API_KEY=NO_API_KEY
 # VLLM_MODEL_NAME=your-model-name
@@ -428,11 +432,12 @@ List available models. Now includes `provider` field for each model.
 {
   "models": [
     {
-      "id": "gpt-4o-mini",
-      "description": "OpenAI GPT-4o Mini",
-      "model_name": "gpt-4o-mini",
+      "id": "gpt-4.1-mini",
+      "description": "⚡ GPT-4.1 Mini (Small, fast)",
+      "model_name": "gpt-4.1-mini",
       "size": "Small",
       "supports_tools": true,
+      "is_reasoning": false,
       "provider": "openai"
     }
   ]
@@ -608,32 +613,37 @@ OpenRouter provides access to 15+ open-source and specialized models through a u
 
 ### Available Model Categories
 
-**🎯 Weak Models (3B-9B) - Great for ITS Demos:**
-- **Llama 3.1 8B** - Good balance of performance and cost
+**🎯 Weak Models (1.7B-7B) - Great for ITS Demos:**
+- **Qwen3 1.7B** - Smallest model, most dramatic ITS gains
 - **Llama 3.2 3B** - Very weak, shows dramatic ITS improvement
-- **Mistral 7B** - Popular open-source model
+- **IBM Granite 4.0 Micro 3B** - Enterprise open-source, $0.017/1M input tokens
+- **Gemma 3 4B** - Google's latest small model, 131K context
 - **Qwen 2.5 7B** - Strong reasoning for its size
-- **Gemma 2 9B** - Google's open model
+- **DeepSeek R1 Distill 7B** - Reasoning model distilled from R1
 
 **Why use weak models?** They make mistakes on baseline but ITS corrects them, creating impressive before/after demos.
 
-**⚖️ Medium Models (27B-70B) - Good Balance:**
-- **Llama 3.1/3.3 70B** - Latest Meta models
+**🧠 Reasoning Models:**
+- **DeepSeek R1 Distill 7B** - Chain-of-thought reasoning distilled into 7B parameters
+- **QwQ 32B** - Qwen reasoning specialist, competitive with DeepSeek R1
+- **DeepSeek R1** - Full 671B MoE frontier reasoning model
+
+**⚖️ Medium Models (17B-72B) - Good Balance:**
+- **Llama 4 Scout** - Latest Llama, 17B active / 109B MoE
+- **Llama 3.3 70B** - Proven workhorse
 - **Qwen 2.5 72B** - Strong reasoning capabilities
-- **Gemma 2 27B** - Good mid-size option
+- **Gemma 3 27B** - Good mid-size option
 
 **🏆 Frontier Models:**
-- **DeepSeek R1** - Reasoning specialist
-
-**💻 Code Specialists:**
-- **Qwen 2.5 Coder 32B** - Code-focused model
-- **DeepSeek Coder V2** - Advanced coding model
+- **DeepSeek R1** - Reasoning specialist ($0.55/1M input)
+- **Llama 4 Maverick** - 17B active / 400B MoE, beats GPT-4o on many benchmarks
 
 ### OpenRouter Best Practices
 
 **✅ Use OpenRouter for:**
 - **Improve Model** demos - weak models show dramatic improvement
-- **Match Frontier** demos - Mistral 7B + ITS vs GPT-4o saves 73%
+- **Match Frontier** demos - Granite 4.0 Micro + ITS vs GPT-4.1 at 100x cost savings
+- **Reasoning model demos** - DeepSeek R1 Distill 7B shows ITS on top of chain-of-thought
 - **Cost-effective testing** - open-source models are much cheaper
 - **Model diversity** - test across different architectures
 
@@ -652,19 +662,101 @@ OpenRouter provides access to 15+ open-source and specialized models through a u
 **Best cost/impact ratio:**
 ```
 Use Case: Match Frontier
-Small Model: mistral-7b (via OpenRouter - $0.06/1M)
-Frontier Model: gpt-4o (via OpenAI - $10/1M)
-Cost Savings: 73%
+Small Model: granite-4.0-micro (via OpenRouter - $0.017/1M input)
+Frontier Model: gpt-4.1 (via OpenAI - $2/1M input)
+Cost Savings: ~99%
 ```
 
 **Most dramatic improvement:**
 ```
 Use Case: Improve Model
-Model: llama-3.2-3b (very weak - makes many mistakes)
+Model: qwen3-1.7b (1.7B params - makes many mistakes)
 Algorithm: self_consistency
 Budget: 8
 Expected: Baseline often wrong, ITS corrects through consensus
 ```
+
+**Reasoning model + ITS:**
+```
+Use Case: Improve Model
+Model: deepseek-r1-distill-qwen-7b (reasoning model)
+Algorithm: best_of_n
+Budget: 4
+Expected: Chain-of-thought reasoning enhanced further by ITS
+```
+
+## Self-Hosting IBM Granite
+
+IBM Granite 3.3 8B can be self-hosted via [vLLM](https://docs.vllm.ai/) for zero per-token cost. This is useful for offline demos, air-gapped environments, or when you want full control over the model.
+
+> **Note:** Granite 4.0 Micro is also available via OpenRouter (no self-hosting needed) — just set `OPENROUTER_API_KEY` in your `.env`.
+
+### Prerequisites
+
+- Linux machine with an NVIDIA GPU (16GB+ VRAM recommended)
+- CUDA toolkit installed
+- Python 3.10+
+
+> **macOS/CPU:** vLLM requires CUDA and does not run natively on macOS or CPU-only machines. For macOS demos, use Granite 4.0 Micro via OpenRouter instead.
+
+### 1. Install vLLM
+
+```bash
+pip install vllm
+```
+
+### 2. Start the Granite server
+
+```bash
+python -m vllm.entrypoints.openai.api_server \
+  --model ibm-granite/granite-3.3-8b-instruct \
+  --port 8100 \
+  --max-model-len 8192
+```
+
+The model weights will be downloaded automatically from Hugging Face on first run (~16GB).
+
+### 3. Verify the server is running
+
+```bash
+curl -s http://localhost:8100/v1/models | python -m json.tool
+```
+
+You should see `ibm-granite/granite-3.3-8b-instruct` listed.
+
+### 4. Configure the demo
+
+Add to your `demo_ui/.env`:
+
+```bash
+GRANITE_BASE_URL=http://localhost:8100/v1
+GRANITE_API_KEY=NO_API_KEY
+```
+
+Restart the demo backend — Granite 3.3 8B will appear in the model list automatically.
+
+### Serving on a remote machine
+
+If vLLM runs on a different host (e.g., a GPU server):
+
+```bash
+# On the GPU server
+python -m vllm.entrypoints.openai.api_server \
+  --model ibm-granite/granite-3.3-8b-instruct \
+  --host 0.0.0.0 --port 8100 \
+  --max-model-len 8192
+
+# In demo_ui/.env on the demo machine
+GRANITE_BASE_URL=http://gpu-server-ip:8100/v1
+GRANITE_API_KEY=NO_API_KEY
+```
+
+### Performance tips
+
+- **GPU memory:** Granite 3.3 8B needs ~16GB VRAM in FP16. Use `--dtype half` if needed.
+- **Quantization:** Add `--quantization awq` to reduce memory to ~8GB (requires AWQ model variant).
+- **Throughput:** Add `--tensor-parallel-size 2` if you have multiple GPUs.
+- **Context length:** Reduce `--max-model-len` to 4096 if memory is tight.
 
 ## Algorithm Details
 
@@ -677,7 +769,7 @@ The demo uses an **LLM-based Process Reward Model** for process-based algorithms
 - Scores partial responses during generation
 - Enables step-by-step reasoning evaluation
 - Works without requiring a separate reward model server
-- Uses GPT-4o Mini as the judge (configurable in code)
+- Uses GPT-4.1 Mini as the judge (configurable in code)
 
 For production use with process-based algorithms, consider using a dedicated process reward model server (e.g., via vLLM) for better performance and cost efficiency.
 

@@ -15,12 +15,12 @@ def sample_model_config():
     return {
         "base_url": "https://api.openai.com/v1",
         "api_key_env_var": "OPENAI_API_KEY",
-        "model_name": "gpt-4o-mini",
-        "description": "GPT-4o Mini",
+        "model_name": "gpt-4.1-mini",
+        "description": "GPT-4.1 Mini",
         "provider": "openai",
         "size": "Small",
-        "input_cost_per_1m": 0.15,
-        "output_cost_per_1m": 0.60,
+        "input_cost_per_1m": 0.40,
+        "output_cost_per_1m": 1.60,
         "supports_tools": True,
     }
 

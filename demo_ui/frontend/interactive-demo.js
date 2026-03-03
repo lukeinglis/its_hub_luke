@@ -349,10 +349,12 @@ async function iwCheckProviders() {
             const providerLabels = { openai: 'OpenAI', openrouter: 'OpenRouter', vertex_ai: 'Vertex AI', local: 'Local' };
             iwState.models.forEach(m => {
                 const pLabel = providerLabels[m.provider] || m.provider;
+                const reasoningBadge = m.is_reasoning ? '<span class="iw-model-chip-reasoning">Reasoning</span>' : '';
                 modelsHtml += `
                     <div class="iw-model-chip">
                         <span class="iw-model-chip-provider">${iwEscapeHtml(pLabel)}</span>
                         <span class="iw-model-chip-name">${iwEscapeHtml(m.description)}</span>
+                        ${reasoningBadge}
                         <span class="iw-model-chip-size">${iwEscapeHtml(m.size)}</span>
                     </div>
                 `;
@@ -415,7 +417,8 @@ function iwPopulateConfig() {
         modelHtml += `<optgroup label="${group}">`;
         models.forEach(m => {
             const sizeLabel = m.size ? ` [${iwEscapeHtml(m.size)}]` : '';
-            modelHtml += `<option value="${iwEscapeHtml(m.id)}">${iwEscapeHtml(m.description)}${sizeLabel}</option>`;
+            const reasoningLabel = m.is_reasoning ? ' [Reasoning]' : '';
+            modelHtml += `<option value="${iwEscapeHtml(m.id)}">${iwEscapeHtml(m.description)}${sizeLabel}${reasoningLabel}</option>`;
         });
         modelHtml += '</optgroup>';
     }

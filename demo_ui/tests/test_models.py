@@ -22,7 +22,7 @@ class TestCompareRequest:
     def test_valid_minimal_request(self):
         req = CompareRequest(
             question="What is 2+2?",
-            model_id="gpt-4o-mini",
+            model_id="gpt-4.1-mini",
             algorithm="self_consistency",
             budget=6,
         )
@@ -33,7 +33,7 @@ class TestCompareRequest:
     def test_valid_full_request(self):
         req = CompareRequest(
             question="What tools to use?",
-            model_id="gpt-4o-mini",
+            model_id="gpt-4.1-mini",
             algorithm="best_of_n",
             budget=8,
             use_case="tool_consensus",
@@ -48,7 +48,7 @@ class TestCompareRequest:
         with pytest.raises(ValidationError):
             CompareRequest(
                 question="",
-                model_id="gpt-4o-mini",
+                model_id="gpt-4.1-mini",
                 algorithm="self_consistency",
                 budget=6,
             )
@@ -57,7 +57,7 @@ class TestCompareRequest:
         with pytest.raises(ValidationError):
             CompareRequest(
                 question="Test",
-                model_id="gpt-4o-mini",
+                model_id="gpt-4.1-mini",
                 algorithm="self_consistency",
                 budget=0,
             )
@@ -66,7 +66,7 @@ class TestCompareRequest:
         with pytest.raises(ValidationError):
             CompareRequest(
                 question="Test",
-                model_id="gpt-4o-mini",
+                model_id="gpt-4.1-mini",
                 algorithm="self_consistency",
                 budget=33,
             )

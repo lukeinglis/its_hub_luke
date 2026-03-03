@@ -184,9 +184,15 @@ let wizardState = {
 // Model-to-Frontier mapping
 const FRONTIER_MODEL_MAP = {
     'GPT-3.5 Turbo': 'GPT-4o',
-    'GPT-4o Mini': 'GPT-4o',
-    'Claude 3.5 Haiku': 'Claude 3.5 Sonnet',
-    'Llama 3.2 3B': 'Llama 3.3 70B'
+    'GPT-4.1 Nano': 'GPT-4.1',
+    'GPT-4.1 Mini': 'GPT-4o',
+    'Claude Haiku 4.5': 'Claude Sonnet 4.6',
+    'Llama 3.2 3B': 'Llama 4 Maverick',
+    'Granite 4.0 Micro': 'GPT-4.1',
+    'Qwen3 1.7B': 'QwQ 32B',
+    'Qwen 2.5 7B': 'Qwen 2.5 72B',
+    'Gemma 3 4B': 'Gemma 3 27B',
+    'DeepSeek R1 Distill 7B': 'DeepSeek R1',
 };
 
 let currentWizardScenario = null;
