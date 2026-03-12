@@ -57,6 +57,43 @@
     font-weight: 700;
 }
 
+/* ===== INFERENCE CALLOUT ===== */
+.guided-inference-callout {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 18px;
+    background: rgba(235, 203, 139, 0.08);
+    border: 1px solid var(--warning, #ebcb8b);
+    border-left: 4px solid var(--warning, #ebcb8b);
+    margin-bottom: 20px;
+}
+
+.guided-inference-callout-icon {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--warning, #ebcb8b);
+    color: var(--bg-primary);
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.guided-inference-callout-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.guided-inference-callout-text strong {
+    color: var(--text-primary);
+}
+
 /* ===== PROMPT AREA ===== */
 .guided-prompt-area {
     padding: 24px;
@@ -207,6 +244,41 @@
     margin-bottom: 4px;
 }
 
+/* ===== INSIGHT BOX ===== */
+
+.guided-insight-box {
+    background: rgba(251, 191, 36, 0.08);
+    border: 2px solid rgba(251, 191, 36, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 16px;
+}
+
+.guided-insight-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.guided-insight-icon {
+    font-size: 20px;
+}
+
+.guided-insight-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--warning);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.guided-insight-content {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
 .guided-question-label {
     font-size: 11px;
     font-weight: 600;
@@ -328,6 +400,17 @@
     justify-content: center;
     font-size: 12px;
     font-weight: 700;
+}
+
+/* ===== TRACE EXPLAINER ===== */
+.guided-trace-explainer {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-tertiary);
+    font-style: italic;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
 }
 
 /* ===== NEXT AREA ===== */

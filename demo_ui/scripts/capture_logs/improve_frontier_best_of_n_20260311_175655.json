@@ -1,0 +1,54 @@
+{
+  "baseline": {
+    "response": "The four fundamental forces of nature are:\n\n1. **Gravitational Force**  \n   - **Force Carrier Particle:** Graviton (theoretically predicted but not yet observed)  \n   - **Example of a Phenomenon:** The orbit of planets around the Sun\n\n2. **Electromagnetic Force**  \n   - **Force Carrier Particle:** Photon  \n   - **Example of a Phenomenon:** The bending of light around massive objects (gravitational lensing) or the operation of a microwave oven\n\n3. **Strong Nuclear Force**  \n   - **Force Carrier Particle:** Gluon  \n   - **Example of a Phenomenon:** Binding protons and neutrons together within atomic nuclei\n\n4. **Weak Nuclear Force**  \n   - **Force Carrier Particles:** W and Z bosons  \n   - **Example of a Phenomenon:** Radioactive beta decay in nuclear reactions\n\nThese fundamental forces govern the behavior of everything in the universe at different scales.",
+    "latency_ms": 2139,
+    "input_tokens": 35,
+    "output_tokens": 200,
+    "cost_usd": 8.4e-05
+  },
+  "its": {
+    "response": "The four fundamental forces of nature are:\n\n1. **Gravitational Force**\n   - **Force Carrier Particle:** Graviton (hypothetical, not yet observed)\n   - **Example of a Phenomenon:** The orbit of the planets around the Sun.\n\n2. **Electromagnetic Force**\n   - **Force Carrier Particle:** Photon\n   - **Example of a Phenomenon:** The reflection of light from a mirror or the behavior of magnets.\n\n3. **Weak Nuclear Force**\n   - **Force Carrier Particles:** W and Z bosons\n   - **Example of a Phenomenon:** Radioactive beta decay in atomic nuclei.\n\n4. **Strong Nuclear Force**\n   - **Force Carrier Particles:** Gluons\n   - **Example of a Phenomenon:** The binding of quarks inside protons and neutrons, and holding the atomic nucleus together.\n\nThese forces govern everything from the largest cosmic structures to the tiniest particles in matter.",
+    "latency_ms": 7006,
+    "input_tokens": 1740,
+    "output_tokens": 1000,
+    "cost_usd": 0.000574
+  },
+  "trace": {
+    "algorithm": "best_of_n",
+    "candidates": [
+      {
+        "index": 0,
+        "content": "The four fundamental forces of nature are:\n\n1. **Gravitational Force**\n   - **Force Carrier Particle:** Graviton (hypothetical, not yet observed)\n   - **Example of a Phenomenon:** The orbit of the planets around the Sun.\n\n2. **Electromagnetic Force**\n   - **Force Carrier Particle:** Photon\n   - **Example of a Phenomenon:** The reflection of light from a mirror or the behavior of magnets.\n\n3. **Weak Nuclear Force**\n   - **Force Carrier Particles:** W and Z bosons\n   - **Example of a Phenomenon:** Radioactive beta decay in atomic nuclei.\n\n4. **Strong Nuclear Force**\n   - **Force Carrier Particles:** Gluons\n   - **Example of a Phenomenon:** The binding of quarks inside protons and neutrons, and holding the atomic nucleus together.\n\nThese forces govern everything from the largest cosmic structures to the tiniest particles in matter.",
+        "is_selected": true,
+        "tool_calls": null
+      },
+      {
+        "index": 1,
+        "content": "The four fundamental forces of nature are:\n\n1. **Gravitational Force**\n   - **Force Carrier Particle:** Graviton (hypothetical; not yet observed)\n   - **Example of a Phenomenon:** Gravity keeping planets in orbit around the Sun\n\n2. **Electromagnetic Force**\n   - **Force Carrier Particle:** Photon\n   - **Example of a Phenomenon:** Electricity causing lightning strikes\n\n3. **Weak Nuclear Force**\n   - **Force Carrier Particles:** W⁺, W⁻, and Z bosons\n   - **Example of a Phenomenon:** Radioactive beta decay\n\n4. **Strong Nuclear Force**\n   - **Force Carrier Particles:** Gluons\n   - **Example of a Phenomenon:** Binding protons and neutrons within atomic nuclei\n\nThese four forces govern everything from cosmic scales to subatomic processes.",
+        "is_selected": false,
+        "tool_calls": null
+      },
+      {
+        "index": 2,
+        "content": "The four fundamental forces of nature are:\n\n1. **Gravitational Force**\n   - **Force carrier particle:** Graviton (hypothetical, not yet observed)\n   - **Example of a phenomenon:** The Earth's orbit around the Sun is governed by gravity.\n\n2. **Electromagnetic Force**\n   - **Force carrier particle:** Photon\n   - **Example of a phenomenon:** The attraction and repulsion between charged particles, such as electrons and protons, or the propagation of light.\n\n3. **Weak Nuclear Force**\n   - **Force carrier particles:** W and Z bosons\n   - **Example of a phenomenon:** Radioactive beta decay, where a neutron decays into a proton, an electron, and an antineutrino.\n\n4. **Strong Nuclear Force**\n   - **Force carrier particles:** Gluons\n   - **Example of a phenomenon:** The binding of quarks within protons and neutrons, and the cohesion of atomic nuclei.\n\nThese four forces describe all fundamental interactions in the universe and are central to the field of physics.",
+        "is_selected": false,
+        "tool_calls": null
+      },
+      {
+        "index": 3,
+        "content": "The four fundamental forces of nature are:\n\n1. **Gravitational Force**  \n   - **Force Carrier Particle:** Graviton (theoretically postulated; not yet observed)  \n   - **Example Phenomenon:** The orbit of planets around the Sun — gravity keeps planets in their orbits.\n\n2. **Electromagnetic Force**  \n   - **Force Carrier Particle:** Photon  \n   - **Example Phenomenon:** Light from the Sun reaching Earth and enabling vision.\n\n3. **Strong Nuclear Force**  \n   - **Force Carrier Particles:** Gluons  \n   - **Example Phenomenon:** Holding protons and neutrons together within an atomic nucleus.\n\n4. **Weak Nuclear Force**  \n   - **Force Carrier Particles:** W and Z bosons  \n   - **Example Phenomenon:** Radioactive beta decay, where a neutron decays into a proton, an electron, and an antineutrino.\n\nThese fundamental forces govern the interactions and behaviors of all matter and energy in the universe.",
+        "is_selected": false,
+        "tool_calls": null
+      }
+    ],
+    "scores": [
+      10.0,
+      10.0,
+      10.0,
+      10.0
+    ],
+    "max_score": 10.0,
+    "min_score": 10.0
+  },
+  "question": "What are the four fundamental forces of nature? For each force, name the force carrier particle and give one example of a phenomenon it governs."
+}

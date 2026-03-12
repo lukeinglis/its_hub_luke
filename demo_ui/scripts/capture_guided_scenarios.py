@@ -7,11 +7,12 @@ and saves the results as guided-demo-data.json for offline playback.
 
 Usage:
     python capture_guided_scenarios.py [--backend-url URL]
+    python capture_guided_scenarios.py --scenario improve_frontier_self_consistency
 
 Requirements:
     - Backend server must be running (default: http://localhost:8000)
-    - Models must be configured and accessible (gpt-4o, qwen-2.5-7b,
-      gpt-4.1-nano, gpt-4.1, llama-3.2-3b)
+    - Models must be configured and accessible (gpt-4o, gpt-4.1-nano,
+      gpt-4.1, llama-3.2-3b)
 """
 
 import argparse
@@ -19,6 +20,7 @@ import asyncio
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -40,8 +42,8 @@ GUIDED_CONFIGS = [
         "algorithm": "self_consistency",
         "model_id": "gpt-4.1-nano",
         "budget": 8,
-        "question": "Three cards are drawn from a standard deck of 52 cards without replacement. What is the probability all three are hearts? Express as a simplified fraction.",
-        "expected_answer": "11/850",
+        "question": "A palindrome is a number that reads the same forwards and backwards. How many 5-digit palindromes are divisible by 3?",
+        "expected_answer": "300",
         "question_type": "math",
         "require_improvement": True,
     },
@@ -51,10 +53,10 @@ GUIDED_CONFIGS = [
         "use_case": "improve_model",
         "algorithm": "best_of_n",
         "model_id": "gpt-4.1-nano",
-        "budget": 8,
-        "question": "Explain the difference between correlation and causation with a concrete example that a business executive could use in a presentation.",
+        "budget": 4,
+        "question": "An investment of $10,000 earns 8% annual interest compounded quarterly. After 3 years, how much total interest has been earned? Round to the nearest cent.",
         "question_type": "general",
-        "judge_criterion": "Rate on accuracy, depth of explanation, and quality of the example. Be strict — only give 10 for exceptional responses.",
+        "judge_criterion": "Score 1-10 strictly: The correct formula is A = P(1 + r/n)^(nt) = 10000(1.02)^12 = $12,682.42. Interest earned = $2,682.42. Deduct 5 points if final answer is wrong by more than $1. Deduct 3 points if formula is wrong. Deduct 2 points if work is unclear or steps are missing. Only 9-10 if answer is exactly $2,682.42 with clear work shown.",
         "require_improvement": True,
     },
     # --- improve_opensource ---
@@ -67,8 +69,8 @@ GUIDED_CONFIGS = [
         "algorithm": "self_consistency",
         "model_id": "llama-3.2-3b",
         "budget": 8,
-        "question": "A bag contains 4 red balls, 3 blue balls, and 5 green balls. If 3 balls are drawn at random without replacement, what is the probability that exactly 2 are the same color? Express as a simplified fraction.",
-        "expected_answer": "29/44",
+        "question": "In how many ways can 5 letters be placed in 5 addressed envelopes so that no letter is in its correct envelope?",
+        "expected_answer": "44",
         "question_type": "math",
         "require_improvement": True,
     },
@@ -78,15 +80,15 @@ GUIDED_CONFIGS = [
         "use_case": "improve_model",
         "algorithm": "best_of_n",
         "model_id": "llama-3.2-3b",
-        "budget": 8,
-        "question": "What are the three laws of thermodynamics? Explain each briefly with a real-world example.",
+        "budget": 4,
+        "question": "A store buys shirts for $15 each and sells them for $25 each. Last month they sold 400 shirts. This month, they offered a 10% discount and sold 500 shirts. Calculate: (1) last month's profit, (2) this month's profit, (3) which month was more profitable and by how much.",
         "question_type": "general",
-        "judge_criterion": "Rate on scientific accuracy, clarity of examples, and completeness. Be strict — only give 10 for exceptional responses.",
+        "judge_criterion": "Score 1-10 strictly: Last month profit = 400 x (25-15) = $4000. This month sale price = $22.50, profit per shirt = $7.50, total = 500 x 7.50 = $3750. Last month more profitable by $250. Deduct 3 points per wrong calculation. Deduct 2 points if conclusion contradicts the numbers. Only 9-10 if all three parts calculated correctly with clear work.",
         "require_improvement": True,
     },
     # --- match_same_family ---
-    # GPT-4.1-nano vs GPT-4.1: card probability with clear vote divergence.
-    # ITS costs ~50% less than the frontier model while matching quality.
+    # GPT-4.1-nano vs GPT-4.1: modular arithmetic is error-prone for small models.
+    # ITS costs less than the frontier model while matching quality.
     {
         "key": "match_same_family_self_consistency",
         "scenario_id": "match_same_family",
@@ -95,9 +97,10 @@ GUIDED_CONFIGS = [
         "model_id": "gpt-4.1-nano",
         "frontier_model_id": "gpt-4.1",
         "budget": 8,
-        "question": "Three cards are drawn from a standard deck of 52 cards without replacement. What is the probability all three are hearts? Express as a simplified fraction.",
-        "expected_answer": "11/850",
+        "question": "A palindrome is a number that reads the same forwards and backwards. How many 5-digit palindromes are divisible by 3?",
+        "expected_answer": "300",
         "question_type": "math",
+        "require_improvement": True,
     },
     {
         "key": "match_same_family_best_of_n",
@@ -107,12 +110,13 @@ GUIDED_CONFIGS = [
         "model_id": "gpt-4.1-nano",
         "frontier_model_id": "gpt-4.1",
         "budget": 8,
-        "question": "Explain the difference between correlation and causation with a concrete example that a business executive could use in a presentation.",
+        "question": "An investment of $10,000 earns 8% annual interest compounded quarterly. After 3 years, how much total interest has been earned? Round to the nearest cent.",
         "question_type": "general",
+        "judge_criterion": "Score 1-10 strictly: The correct formula is A = P(1 + r/n)^(nt) = 10000(1.02)^12 = $12,682.42. Interest earned = $2,682.42. Deduct 5 points if final answer is wrong by more than $1. Deduct 3 points if formula is wrong. Deduct 2 points if work is unclear or steps are missing. Only 9-10 if answer is exactly $2,682.42 with clear work shown.",
     },
     # --- match_cross_family ---
-    # Llama 3.2 3B vs GPT-4o: combinatorics probability with ~75% accuracy.
-    # ITS costs ~15x less than the GPT-4o frontier while matching quality.
+    # Llama 3.2 3B vs GPT-4o: dramatic cost savings (~20x cheaper).
+    # ITS costs ~$0.0005 for Llama+ITS vs ~$0.01 for GPT-4o.
     {
         "key": "match_cross_family_self_consistency",
         "scenario_id": "match_cross_family",
@@ -121,9 +125,10 @@ GUIDED_CONFIGS = [
         "model_id": "llama-3.2-3b",
         "frontier_model_id": "gpt-4o",
         "budget": 8,
-        "question": "A bag contains 4 red balls, 3 blue balls, and 5 green balls. If 3 balls are drawn at random without replacement, what is the probability that exactly 2 are the same color? Express as a simplified fraction.",
-        "expected_answer": "29/44",
+        "question": "In how many ways can 5 letters be placed in 5 addressed envelopes so that no letter is in its correct envelope?",
+        "expected_answer": "44",
         "question_type": "math",
+        "require_improvement": True,
     },
     {
         "key": "match_cross_family_best_of_n",
@@ -133,8 +138,9 @@ GUIDED_CONFIGS = [
         "model_id": "llama-3.2-3b",
         "frontier_model_id": "gpt-4o",
         "budget": 8,
-        "question": "Explain why the sky is blue using the concept of Rayleigh scattering.",
+        "question": "A store buys shirts for $15 each and sells them for $25 each. Last month they sold 400 shirts. This month, they offered a 10% discount and sold 500 shirts. Calculate: (1) last month's profit, (2) this month's profit, (3) which month was more profitable and by how much.",
         "question_type": "general",
+        "judge_criterion": "Score 1-10 strictly: Last month profit = 400 x (25-15) = $4000. This month sale price = $22.50, profit per shirt = $7.50, total = 500 x 7.50 = $3750. Last month more profitable by $250. Deduct 3 points per wrong calculation. Deduct 2 points if conclusion contradicts the numbers. Only 9-10 if all three parts calculated correctly with clear work.",
     },
 ]
 
@@ -343,15 +349,32 @@ async def main() -> None:
         default=None,
         help="Output JSON path (default: ../frontend/guided-demo-data.json)",
     )
+    parser.add_argument(
+        "--scenario",
+        default=None,
+        help="Capture a single scenario by key (e.g. improve_frontier_self_consistency). "
+             "Merges into existing output file.",
+    )
     args = parser.parse_args()
 
     output_path = Path(args.output) if args.output else (
         Path(__file__).resolve().parent.parent / "frontend" / "guided-demo-data.json"
     )
 
+    # Filter configs if --scenario is specified
+    if args.scenario:
+        configs = [c for c in GUIDED_CONFIGS if c["key"] == args.scenario]
+        if not configs:
+            valid_keys = [c["key"] for c in GUIDED_CONFIGS]
+            print(f"Unknown scenario: {args.scenario}")
+            print(f"Valid keys: {', '.join(valid_keys)}")
+            sys.exit(1)
+    else:
+        configs = GUIDED_CONFIGS
+
     print(f"Backend URL: {args.backend_url}")
     print(f"Output file: {output_path}")
-    print(f"Scenarios:   {len(GUIDED_CONFIGS)}")
+    print(f"Scenarios:   {len(configs)}")
 
     # Health check
     async with httpx.AsyncClient() as client:
@@ -365,13 +388,23 @@ async def main() -> None:
             print("  cd demo_ui && uvicorn backend.main:app --port 8000")
             sys.exit(1)
 
-    # Capture all 8 combinations
+    # Load existing data if merging a single scenario
+    if args.scenario and output_path.exists():
+        results: dict[str, Any] = json.loads(output_path.read_text())
+        print(f"Loaded {len(results)} existing scenarios from {output_path}")
+    else:
+        results = {}
+
+    # Set up capture log directory
+    log_dir = Path(__file__).resolve().parent / "capture_logs"
+    log_dir.mkdir(exist_ok=True)
+
+    # Capture combinations
     # For configs with require_improvement=True, retry up to MAX_RETRIES
     # times until the baseline and ITS responses visibly differ.
     MAX_RETRIES = 5
-    results: dict[str, Any] = {}
     async with httpx.AsyncClient() as client:
-        for config in GUIDED_CONFIGS:
+        for config in configs:
             need_improvement = config.get("require_improvement", False)
             algo = config["algorithm"]
             best_result = None
@@ -396,6 +429,11 @@ async def main() -> None:
 
             if best_result:
                 results[config["key"]] = best_result
+                # Write capture log
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                log_file = log_dir / f"{config['key']}_{timestamp}.json"
+                log_file.write_text(json.dumps(best_result, indent=2, ensure_ascii=False) + "\n")
+                print(f"  Log saved: {log_file.name}")
             else:
                 print(f"  SKIPPED (failed): {config['key']}")
             await asyncio.sleep(1)

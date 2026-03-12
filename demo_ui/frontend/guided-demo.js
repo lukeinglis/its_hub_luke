@@ -45,43 +45,43 @@ const GUIDED_SCENARIOS = {
         id: 'improve_frontier',
         goal: 'improve_performance',
         title: 'Small Commercial Model',
-        subtitle: 'Boost accuracy of a small, fast model',
+        subtitle: 'Fix errors and improve reliability',
         icon: '🌟',
         model: 'GPT-4.1 Nano',
         provider: 'OpenAI',
-        description: 'Small models make frequent errors — ITS generates multiple reasoning paths and votes on the best answer, dramatically improving accuracy.',
+        description: 'Small models occasionally make calculation errors. ITS generates multiple reasoning paths and votes on the correct answer, catching mistakes that would slip through in a single pass.',
     },
     improve_opensource: {
         id: 'improve_opensource',
         goal: 'improve_performance',
         title: 'Open Source Model',
-        subtitle: 'Boost accuracy of an open-source model',
+        subtitle: 'Correct errors at lower cost than upgrading',
         icon: '🔓',
         model: 'Llama 3.2 3B',
         provider: 'OpenRouter',
-        description: 'A 3B open-source model makes mistakes on harder problems — ITS recovers the correct answer through consensus.',
+        description: 'Small open-source models make mistakes on complex reasoning. ITS corrects errors through consensus voting — achieving better accuracy without switching to a larger model.',
     },
     match_same_family: {
         id: 'match_same_family',
         goal: 'match_frontier',
         title: 'Same Model Family',
-        subtitle: 'Small model matching a larger model in the same family',
+        subtitle: 'Match quality while reducing costs',
         icon: '👨‍👦',
         smallModel: 'GPT-4.1 Nano',
         frontierModel: 'GPT-4.1',
         provider: 'OpenAI',
-        description: 'GPT-4.1 Nano + ITS can match GPT-4.1 quality at a fraction of the cost.',
+        description: 'GPT-4.1 Nano costs 85% less per token than GPT-4.1. With ITS, the small model matches frontier quality while maintaining significant cost savings.',
     },
     match_cross_family: {
         id: 'match_cross_family',
         goal: 'match_frontier',
         title: 'Cross-Family Match',
-        subtitle: 'Small open-source model matching a larger frontier model',
+        subtitle: 'Open-source quality matching proprietary models',
         icon: '🔀',
         smallModel: 'Llama 3.2 3B',
         frontierModel: 'GPT-4o',
         provider: 'OpenRouter / OpenAI',
-        description: 'A small open-source model + ITS competing with a large frontier model.',
+        description: 'A tiny open-source model with ITS can match expensive frontier model quality — enabling cost-effective alternatives to proprietary APIs.',
     },
 };
 
@@ -91,14 +91,14 @@ const GUIDED_SCENARIOS = {
 // ============================================================
 
 const GUIDED_MOCK_QUESTIONS = {
-    'improve_frontier_self_consistency': 'Three cards are drawn from a standard deck of 52 cards without replacement. What is the probability all three are hearts? Express as a simplified fraction.',
-    'improve_frontier_best_of_n': 'Explain the difference between correlation and causation with a concrete example that a business executive could use in a presentation.',
-    'improve_opensource_self_consistency': 'A bag contains 4 red balls, 3 blue balls, and 5 green balls. If 3 balls are drawn at random without replacement, what is the probability that exactly 2 are the same color? Express as a simplified fraction.',
-    'improve_opensource_best_of_n': 'What are the three laws of thermodynamics? Explain each briefly with a real-world example.',
-    'match_same_family_self_consistency': 'Three cards are drawn from a standard deck of 52 cards without replacement. What is the probability all three are hearts? Express as a simplified fraction.',
-    'match_same_family_best_of_n': 'Explain the difference between correlation and causation with a concrete example that a business executive could use in a presentation.',
-    'match_cross_family_self_consistency': 'A bag contains 4 red balls, 3 blue balls, and 5 green balls. If 3 balls are drawn at random without replacement, what is the probability that exactly 2 are the same color? Express as a simplified fraction.',
-    'match_cross_family_best_of_n': 'Explain why the sky is blue using the concept of Rayleigh scattering.',
+    'improve_frontier_self_consistency': 'A palindrome is a number that reads the same forwards and backwards. How many 5-digit palindromes are divisible by 3?',
+    'improve_frontier_best_of_n': 'An investment of $10,000 earns 8% annual interest compounded quarterly. After 3 years, how much total interest has been earned? Round to the nearest cent.',
+    'improve_opensource_self_consistency': 'In how many ways can 5 letters be placed in 5 addressed envelopes so that no letter is in its correct envelope?',
+    'improve_opensource_best_of_n': "A store buys shirts for $15 each and sells them for $25 each. Last month they sold 400 shirts. This month, they offered a 10% discount and sold 500 shirts. Calculate: (1) last month's profit, (2) this month's profit, (3) which month was more profitable and by how much.",
+    'match_same_family_self_consistency': 'A palindrome is a number that reads the same forwards and backwards. How many 5-digit palindromes are divisible by 3?',
+    'match_same_family_best_of_n': 'An investment of $10,000 earns 8% annual interest compounded quarterly. After 3 years, how much total interest has been earned? Round to the nearest cent.',
+    'match_cross_family_self_consistency': 'In how many ways can 5 letters be placed in 5 addressed envelopes so that no letter is in its correct envelope?',
+    'match_cross_family_best_of_n': "A store buys shirts for $15 each and sells them for $25 each. Last month they sold 400 shirts. This month, they offered a 10% discount and sold 500 shirts. Calculate: (1) last month's profit, (2) this month's profit, (3) which month was more profitable and by how much.",
 };
 
 // ============================================================
@@ -423,8 +423,10 @@ function guidedPopulateScenarios() {
 
 function renderScenarioCard(container, scenario) {
     const card = document.createElement('div');
-    card.className = 'guided-card';
+    card.className = 'wizard-card guided-card';
     card.dataset.scenario = scenario.id;
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
 
     let modelInfo = '';
     if (scenario.goal === 'match_frontier') {
@@ -442,7 +444,7 @@ function renderScenarioCard(container, scenario) {
     }
 
     card.innerHTML = `
-        <div class="guided-card-icon">${scenario.icon}</div>
+        <div class="wizard-card-icon guided-card-icon">${scenario.icon}</div>
         <h4>${scenario.title}</h4>
         <p>${scenario.description}</p>
         ${modelInfo}
@@ -512,6 +514,20 @@ function guidedPopulatePrompt() {
             <span class="tag-value">${methodLabel}</span>
         </span>
         ${modelTag}
+    `;
+
+    // Inference callout — explain that ITS doesn't touch the model
+    const calloutEl = document.getElementById('guidedInferenceCallout');
+    const modelName = scenario.model || scenario.smallModel;
+    const mechanismText = method === 'self_consistency'
+        ? `<strong>majority voting</strong> to pick the most consistent answer`
+        : `an <strong>LLM judge</strong> to score and select the highest-quality response`;
+    calloutEl.innerHTML = `
+        <div class="guided-inference-callout-icon">ℹ</div>
+        <div class="guided-inference-callout-text">
+            <strong>No training or finetuning involved.</strong>
+            ITS sends the same question to the same unchanged model (${modelName}) multiple times at inference, then uses ${mechanismText}. You're paying for extra inference calls, not a different model.
+        </div>
     `;
 
     // Prompt text — prefer captured data, fall back to mock questions
@@ -603,6 +619,12 @@ function guidedRenderResponses() {
         renderMath(container);
     }
 
+    // Add "Why is this better?" insight box for certain scenarios
+    const insightBox = buildScenarioInsight(guidedDemoState.scenario, method);
+    if (insightBox) {
+        container.innerHTML += insightBox;
+    }
+
     // Show trace button area
     const traceArea = document.getElementById('guidedTraceArea');
     setVisible(traceArea, true);
@@ -636,6 +658,60 @@ function guidedPreprocessLatex(text) {
     // Inline math: \( ... \)
     text = text.replace(/\\\((.+?)\\\)/g, '$$$1$$');
     return text;
+}
+
+/**
+ * Build insight box explaining why ITS is better for specific scenarios
+ */
+function buildScenarioInsight(scenarioId, method) {
+    const key = `${scenarioId}_${method}`;
+    const insights = {
+        'improve_frontier_self_consistency': {
+            title: 'What to Look For',
+            content: 'Compare the final answers and reasoning. ITS uses majority voting across multiple candidates to catch errors and improve reliability. Look for cases where the baseline makes calculation mistakes that ITS corrects through consensus.'
+        },
+        'improve_opensource_self_consistency': {
+            title: 'What to Look For',
+            content: 'Small models often make mistakes on complex reasoning. ITS generates multiple attempts and votes on the most common answer. Check if the baseline got the wrong answer and ITS corrected it — this shows how ITS can improve accuracy without upgrading to a larger model.'
+        },
+        'improve_frontier_best_of_n': {
+            title: 'What to Look For',
+            content: 'Best-of-N generates multiple responses and uses an LLM judge to select the highest quality. Compare response completeness, clarity, and usefulness. The ITS answer should be more comprehensive and better structured than the baseline.'
+        },
+        'improve_opensource_best_of_n': {
+            title: 'What to Look For',
+            content: 'Look for differences in completeness and accuracy. The baseline may give incomplete or incorrect information, while ITS selects the best response from multiple attempts. This shows how quality improves with inference-time scaling.'
+        },
+        'match_same_family_self_consistency': {
+            title: 'Value Proposition',
+            content: 'The goal is to show that a small model + ITS can match the quality of its larger sibling at lower cost. Compare the small baseline vs small+ITS vs frontier. Check if small+ITS gets the same answer as frontier while maintaining cost savings.'
+        },
+        'match_cross_family_self_consistency': {
+            title: 'Value Proposition',
+            content: 'Demonstrates that a tiny open-source model with ITS can match expensive proprietary model quality. Compare costs: the open-source model with ITS should be dramatically cheaper while achieving similar correctness.'
+        },
+        'match_same_family_best_of_n': {
+            title: 'Value Proposition',
+            content: 'Small model + ITS should produce responses comparable in quality to the larger frontier model. Look at response depth, completeness, and accuracy. The cost should still favor the small model even with ITS overhead.'
+        },
+        'match_cross_family_best_of_n': {
+            title: 'Value Proposition',
+            content: 'Open-source model with ITS competing with proprietary frontier quality. Compare response comprehensiveness and accuracy. The dramatic cost difference makes this an attractive alternative for production use cases.'
+        }
+    };
+
+    if (!insights[key]) return null;
+
+    const insight = insights[key];
+    return `
+        <div class="guided-insight-box" style="grid-column: 1 / -1; margin-top: 16px;">
+            <div class="guided-insight-header">
+                <span class="guided-insight-icon">💡</span>
+                <span class="guided-insight-title">${insight.title}</span>
+            </div>
+            <div class="guided-insight-content">${insight.content}</div>
+        </div>
+    `;
 }
 
 function guidedBuildResponsePane(title, type, data) {
@@ -682,6 +758,10 @@ function guidedRunTraceAnimation() {
     let html = '<div class="guided-trace-animation">';
 
     // Phase 1: Generate candidates
+    const numCandidates = mockData.trace.candidates.length;
+    const phase1Explainer = method === 'self_consistency'
+        ? `The same question is sent to the same model ${numCandidates} separate times. Each call may reason differently and arrive at a different answer — this variance is what ITS exploits.`
+        : `The same question is sent to the same model ${numCandidates} separate times. Each response varies in quality, structure, and completeness.`;
     html += `
         <div class="guided-trace-phase" id="tracePhase1">
             <div class="guided-trace-phase-label">
@@ -689,8 +769,9 @@ function guidedRunTraceAnimation() {
                 Generate Multiple Candidates
             </div>
             <div style="padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color);">
+                <p class="guided-trace-explainer">${phase1Explainer}</p>
                 <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
-                    ${mockData.trace.candidates.length} candidate responses generated in parallel
+                    ${numCandidates} candidate responses generated in parallel
                 </p>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px;">
     `;
@@ -706,6 +787,9 @@ function guidedRunTraceAnimation() {
     html += '</div></div></div>';
 
     // Phase 2: Evaluate / Compare
+    const phase2Explainer = method === 'self_consistency'
+        ? `Each candidate's final answer is extracted and compared. Answers that appear most frequently across independent runs are more likely correct — errors tend to be random, but correct reasoning converges.`
+        : `A separate LLM judge evaluates each candidate on specific quality criteria and assigns a score. The judge sees each response independently.`;
     html += `
         <div class="guided-trace-phase" id="tracePhase2">
             <div class="guided-trace-phase-label">
@@ -713,6 +797,7 @@ function guidedRunTraceAnimation() {
                 ${method === 'self_consistency' ? 'Vote on Answers' : 'Score by LLM Judge'}
             </div>
             <div style="padding: 12px; background: var(--bg-primary); border: 1px solid var(--border-color);">
+                <p class="guided-trace-explainer">${phase2Explainer}</p>
     `;
 
     if (method === 'self_consistency' && mockData.trace.vote_counts) {
@@ -756,6 +841,9 @@ function guidedRunTraceAnimation() {
     html += '</div></div>';
 
     // Phase 3: Select best
+    const phase3Text = method === 'self_consistency'
+        ? 'The answer with the most votes is selected as the final output. This is the same model, with no changes — just smarter use of inference.'
+        : 'The highest-scored response becomes the final output. The model was never retrained — ITS simply chose the best of several attempts.';
     html += `
         <div class="guided-trace-phase" id="tracePhase3">
             <div class="guided-trace-phase-label">
@@ -770,9 +858,7 @@ function guidedRunTraceAnimation() {
                     </span>
                 </div>
                 <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
-                    ${method === 'self_consistency'
-                        ? 'The answer with the most votes was selected, ensuring reliability through consensus.'
-                        : 'The response with the highest quality score from the LLM judge was selected.'}
+                    ${phase3Text}
                 </p>
             </div>
         </div>
@@ -837,6 +923,11 @@ function guidedRenderPerformance() {
             </div>
         `;
     }
+    // Determine budget from trace data
+    const mockResp = getMockResponse(guidedDemoState.scenario, method);
+    const budget = mockResp.trace?.candidates?.length || 8;
+    const budgetValue = `${budget} candidate${budget !== 1 ? 's' : ''}`;
+
     summaryItems += `
         <div class="guided-perf-summary-item">
             <div class="guided-perf-summary-label">ITS Method</div>
@@ -844,7 +935,7 @@ function guidedRenderPerformance() {
         </div>
         <div class="guided-perf-summary-item">
             <div class="guided-perf-summary-label">Budget</div>
-            <div class="guided-perf-summary-value">8 candidates</div>
+            <div class="guided-perf-summary-value">${budgetValue}</div>
         </div>
     `;
     summaryEl.innerHTML = summaryItems;
