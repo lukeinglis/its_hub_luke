@@ -93,6 +93,12 @@ const GUIDED_SCENARIOS = {
         description: 'Given 4 available tools, the model must pick the right one to look up a stock price. The baseline sometimes picks web_search instead of the structured get_data tool. ITS votes across attempts to select the correct tool.',
         availableTools: ['web_search', 'calculate', 'get_data', 'code_executor'],
         source: 'Adapted from BFCL multiple_56 (Berkeley Function Calling Leaderboard)',
+        expectedTool: {
+            name: 'get_data',
+            arguments: { data_type: 'stock_price', parameters: { symbol: 'AAPL' } },
+        },
+        correctExplanation: 'The get_data tool with data_type="stock_price" returns structured, machine-readable data (price, change, volume) from a reliable data source. web_search returns unstructured HTML snippets that require parsing and may contain stale or inconsistent information. In production agentic pipelines, structured APIs are always preferred for data retrieval.',
+        baselineExplanation: 'The baseline picked web_search — a general-purpose tool that returns search result snippets. While it may contain the price, extracting it requires parsing free text, and the data may be delayed or inconsistent across sources.',
     },
     tool_currency: {
         id: 'tool_currency',
@@ -105,6 +111,12 @@ const GUIDED_SCENARIOS = {
         description: 'The model must retrieve an exchange rate using the structured get_data tool rather than web_search or calculate. ITS votes on both the tool and the correct parameters.',
         availableTools: ['web_search', 'calculate', 'get_data', 'code_executor'],
         source: 'Adapted from BFCL multiple_52 (Berkeley Function Calling Leaderboard)',
+        expectedTool: {
+            name: 'get_data',
+            arguments: { data_type: 'currency_rate', parameters: { from: 'EUR', to: 'USD' } },
+        },
+        correctExplanation: 'The get_data tool with data_type="currency_rate" returns the precise, current exchange rate as structured data. This can be directly used for calculation (100 × rate) without any text parsing. In agentic workflows, using the structured API ensures reliable, programmatic access to the data.',
+        baselineExplanation: 'The baseline picked web_search, which returns search snippets like "1 USD = 0.92 EUR". The rate is buried in free text, may be in the wrong direction (USD→EUR vs EUR→USD), and requires regex or LLM extraction to use programmatically.',
     },
 };
 
@@ -868,6 +880,41 @@ function guidedRenderResponses() {
             <div class="guided-expected-answer-bar" style="grid-column: 1 / -1;">
                 <span class="guided-expected-label">Expected Answer:</span>
                 <span class="guided-expected-value">${expectedAnswer}</span>
+            </div>
+        `;
+    }
+
+    // Tool calling: expected tool + correctness explanation
+    if (isToolCalling && scenario.expectedTool) {
+        const expectedJson = JSON.stringify(scenario.expectedTool.arguments, null, 2);
+        const baselineTool = mockData.baseline.tool_call ? mockData.baseline.tool_call.name : '';
+        const itsTool = mockData.its.tool_call ? mockData.its.tool_call.name : '';
+        const baselineCorrect = baselineTool === scenario.expectedTool.name;
+        const itsCorrect = itsTool === scenario.expectedTool.name;
+
+        container.innerHTML += `
+            <div class="guided-tool-expected" style="grid-column: 1 / -1;">
+                <div class="guided-tool-expected-header">
+                    <span class="guided-tool-expected-label">BFCL Ground Truth</span>
+                    <span class="guided-tool-expected-tool">${scenario.expectedTool.name}</span>
+                </div>
+                <pre class="guided-tool-args-json guided-tool-expected-args">${escapeHtml(expectedJson)}</pre>
+                <div class="guided-tool-verdict">
+                    <div class="guided-tool-verdict-item ${baselineCorrect ? 'correct' : 'incorrect'}">
+                        <span class="guided-tool-verdict-icon">${baselineCorrect ? '✓' : '✗'}</span>
+                        <div>
+                            <strong>Baseline: ${baselineTool}</strong>
+                            <p>${scenario.baselineExplanation}</p>
+                        </div>
+                    </div>
+                    <div class="guided-tool-verdict-item ${itsCorrect ? 'correct' : 'incorrect'}">
+                        <span class="guided-tool-verdict-icon">${itsCorrect ? '✓' : '✗'}</span>
+                        <div>
+                            <strong>ITS: ${itsTool}</strong>
+                            <p>${scenario.correctExplanation}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     }

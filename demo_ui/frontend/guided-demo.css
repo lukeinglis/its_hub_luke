@@ -841,6 +841,95 @@ details.guided-reasoning-toggle[open] > .guided-reasoning-summary::before {
     color: var(--primary);
 }
 
+/* ===== TOOL CALLING EXPECTED ANSWER + VERDICT ===== */
+
+.guided-tool-expected {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 16px;
+}
+
+.guided-tool-expected-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.guided-tool-expected-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+}
+
+.guided-tool-expected-tool {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.guided-tool-expected-args {
+    margin-bottom: 16px;
+    font-size: 11px;
+}
+
+.guided-tool-verdict {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.guided-tool-verdict-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.guided-tool-verdict-item.correct {
+    background: rgba(163, 190, 140, 0.08);
+    border-color: rgba(163, 190, 140, 0.3);
+}
+
+.guided-tool-verdict-item.incorrect {
+    background: rgba(191, 97, 106, 0.08);
+    border-color: rgba(191, 97, 106, 0.3);
+}
+
+.guided-tool-verdict-icon {
+    flex-shrink: 0;
+    font-size: 18px;
+    line-height: 1.4;
+}
+
+.guided-tool-verdict-item.correct .guided-tool-verdict-icon {
+    color: #a3be8c;
+}
+
+.guided-tool-verdict-item.incorrect .guided-tool-verdict-icon {
+    color: #bf616a;
+}
+
+.guided-tool-verdict-item strong {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.guided-tool-verdict-item p {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
 /* ===== BENCHMARK ATTRIBUTION CALLOUT ===== */
 
 .guided-benchmark-callout {
