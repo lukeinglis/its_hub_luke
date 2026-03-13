@@ -31,6 +31,38 @@ import httpx
 # ============================================================
 
 GUIDED_CONFIGS = [
+    # --- tool_weather ---
+    # GPT-4.1 Nano with tools: should choose get_data for weather, but
+    # sometimes picks web_search. SC tool voting corrects the selection.
+    {
+        "key": "tool_weather_self_consistency",
+        "scenario_id": "tool_weather",
+        "use_case": "tool_consensus",
+        "algorithm": "self_consistency",
+        "model_id": "gpt-4.1-nano",
+        "budget": 8,
+        "question": "What is the current weather in San Francisco?",
+        "question_type": "tool_calling",
+        "enable_tools": True,
+        "tool_vote": "tool_name",
+        "require_improvement": True,
+    },
+    # --- tool_calculation ---
+    # GPT-4.1 Nano with tools: should use calculate for compound interest,
+    # but sometimes picks code_executor. SC tool voting fixes tool selection.
+    {
+        "key": "tool_calculation_self_consistency",
+        "scenario_id": "tool_calculation",
+        "use_case": "tool_consensus",
+        "algorithm": "self_consistency",
+        "model_id": "gpt-4.1-nano",
+        "budget": 8,
+        "question": "If I invest $10,000 at 5% annual interest compounded annually, how much will I have after 5 years?",
+        "question_type": "tool_calling",
+        "enable_tools": True,
+        "tool_vote": "tool_name",
+        "require_improvement": True,
+    },
     # --- improve_frontier ---
     # GPT-4.1 Nano: small model that makes frequent errors on moderate math.
     # SC majority voting recovers the correct answer.
@@ -238,6 +270,10 @@ async def capture_one(
         request_body["expected_answer"] = config["expected_answer"]
     if config.get("judge_criterion"):
         request_body["judge_criterion"] = config["judge_criterion"]
+    if config.get("enable_tools"):
+        request_body["enable_tools"] = True
+    if config.get("tool_vote"):
+        request_body["tool_vote"] = config["tool_vote"]
 
     try:
         resp = await client.post(
@@ -260,13 +296,21 @@ async def capture_one(
     # --- Build result dict in guided-demo format ---
 
     def _detail(rd: dict) -> dict:
-        return {
+        detail = {
             "response": rd["answer"],
             "latency_ms": rd["latency_ms"],
             "input_tokens": rd.get("input_tokens", 0) or 0,
             "output_tokens": rd.get("output_tokens", 0) or 0,
             "cost_usd": rd.get("cost_usd", 0) or 0,
         }
+        # Include tool call data if present
+        if rd.get("tool_calls"):
+            tc = rd["tool_calls"][0]  # Use first tool call for display
+            detail["tool_call"] = {
+                "name": tc.get("name", ""),
+                "arguments": tc.get("arguments", {}),
+            }
+        return detail
 
     if is_match:
         # match_frontier: API small_baseline → guided baseline,
@@ -309,14 +353,24 @@ async def capture_one(
     return result
 
 
-def _responses_differ(result: dict[str, Any], algo: str) -> bool:
+def _responses_differ(result: dict[str, Any], algo: str, use_case: str = "") -> bool:
     """Check whether the ITS response is meaningfully different from baseline.
 
+    For tool_consensus: the baseline and ITS should pick different tools.
     For SC: the baseline and ITS final answers should differ (baseline wrong,
     ITS right via majority vote).
     For BoN: the ITS response should be longer or structurally different from
     baseline (judge selected a better candidate).
     """
+    # Tool calling: compare tool names
+    if use_case == "tool_consensus":
+        b_tool = result["baseline"].get("tool_call", {}).get("name", "")
+        i_tool = result["its"].get("tool_call", {}).get("name", "")
+        if b_tool and i_tool:
+            return b_tool != i_tool
+        # Fallback to response comparison if no tool calls captured
+        return result["baseline"]["response"].strip() != result["its"]["response"].strip()
+
     b_resp = result["baseline"]["response"]
     i_resp = result["its"]["response"]
 
@@ -417,7 +471,7 @@ async def main() -> None:
                 if not result:
                     continue
 
-                if not need_improvement or _responses_differ(result, algo):
+                if not need_improvement or _responses_differ(result, algo, config.get("use_case", "")):
                     best_result = result
                     if need_improvement:
                         print(f"  Found improvement on attempt {attempt}")
