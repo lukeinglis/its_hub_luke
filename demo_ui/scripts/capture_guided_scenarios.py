@@ -34,6 +34,7 @@ GUIDED_CONFIGS = [
     # --- tool_weather ---
     # GPT-4.1 Nano with tools: should choose get_data for weather, but
     # sometimes picks web_search. SC tool voting corrects the selection.
+    # Question adapted from BFCL live_multiple_3-2-0.
     {
         "key": "tool_weather_self_consistency",
         "scenario_id": "tool_weather",
@@ -41,23 +42,24 @@ GUIDED_CONFIGS = [
         "algorithm": "self_consistency",
         "model_id": "gpt-4.1-nano",
         "budget": 8,
-        "question": "What is the current weather in San Francisco?",
+        "question": "What are the current weather conditions in Hanoi, Vietnam?",
         "question_type": "tool_calling",
         "enable_tools": True,
         "tool_vote": "tool_name",
         "require_improvement": True,
     },
-    # --- tool_calculation ---
-    # GPT-4.1 Nano with tools: should use calculate for compound interest,
-    # but sometimes picks code_executor. SC tool voting fixes tool selection.
+    # --- tool_currency ---
+    # GPT-4.1 Nano with tools: should use get_data for currency rates,
+    # but sometimes picks web_search or calculate. SC tool voting fixes it.
+    # Question adapted from BFCL multiple_52.
     {
-        "key": "tool_calculation_self_consistency",
-        "scenario_id": "tool_calculation",
+        "key": "tool_currency_self_consistency",
+        "scenario_id": "tool_currency",
         "use_case": "tool_consensus",
         "algorithm": "self_consistency",
         "model_id": "gpt-4.1-nano",
         "budget": 8,
-        "question": "If I invest $10,000 at 5% annual interest compounded annually, how much will I have after 5 years?",
+        "question": "I have 100 euros. How much is that in US dollars at the current exchange rate?",
         "question_type": "tool_calling",
         "enable_tools": True,
         "tool_vote": "tool_name",

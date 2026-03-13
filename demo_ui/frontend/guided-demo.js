@@ -92,17 +92,19 @@ const GUIDED_SCENARIOS = {
         provider: 'OpenAI',
         description: 'Given 4 available tools, the model must pick the right one for a weather query. The baseline sometimes picks web_search instead of the structured get_data tool. ITS votes across attempts to select the correct tool.',
         availableTools: ['web_search', 'calculate', 'get_data', 'code_executor'],
+        source: 'Adapted from BFCL live_multiple_3-2-0 (Berkeley Function Calling Leaderboard)',
     },
-    tool_calculation: {
-        id: 'tool_calculation',
+    tool_currency: {
+        id: 'tool_currency',
         goal: 'tool_calling',
-        title: 'Financial Calculation',
-        subtitle: 'Pick the right tool and arguments',
-        icon: '🔧',
+        title: 'Currency Exchange Rate',
+        subtitle: 'Structured API vs general search',
+        icon: '💱',
         model: 'GPT-4.1 Nano',
         provider: 'OpenAI',
-        description: 'The model must choose the right tool and supply correct arguments for a compound interest calculation. The baseline may pick code_executor or malform the expression. ITS votes on both tool name and arguments.',
+        description: 'The model must retrieve an exchange rate using the structured get_data tool rather than web_search or calculate. ITS votes on both the tool and the correct parameters.',
         availableTools: ['web_search', 'calculate', 'get_data', 'code_executor'],
+        source: 'Adapted from BFCL multiple_52 (Berkeley Function Calling Leaderboard)',
     },
 };
 
@@ -120,8 +122,8 @@ const GUIDED_MOCK_QUESTIONS = {
     'match_same_family_best_of_n': 'An investment of $10,000 earns 8% annual interest compounded quarterly. After 3 years, how much total interest has been earned? Round to the nearest cent.',
     'match_cross_family_self_consistency': 'In how many ways can 5 letters be placed in 5 addressed envelopes so that no letter is in its correct envelope?',
     'match_cross_family_best_of_n': "A store buys shirts for $15 each and sells them for $25 each. Last month they sold 400 shirts. This month, they offered a 10% discount and sold 500 shirts. Calculate: (1) last month's profit, (2) this month's profit, (3) which month was more profitable and by how much.",
-    'tool_weather_self_consistency': 'What is the current weather in San Francisco?',
-    'tool_calculation_self_consistency': 'If I invest $10,000 at 5% annual interest compounded annually, how much will I have after 5 years?',
+    'tool_weather_self_consistency': 'What are the current weather conditions in Hanoi, Vietnam?',
+    'tool_currency_self_consistency': 'I have 100 euros. How much is that in US dollars at the current exchange rate?',
 };
 
 // ============================================================
@@ -246,50 +248,54 @@ function getMockResponse(scenarioId, method) {
 // TOOL CALLING MOCK DATA
 // ============================================================
 
+// Questions adapted from the Berkeley Function Calling Leaderboard (BFCL)
+// https://gorilla.cs.berkeley.edu/leaderboard.html
+// Weather scenario: adapted from BFCL live_multiple_3-2-0
+// Currency scenario: adapted from BFCL multiple_52
 function getToolCallingMockResponse(scenarioId) {
     if (scenarioId === 'tool_weather') {
         return {
             baseline: {
-                response: 'Let me search for the current weather in San Francisco.',
+                response: 'Let me search the web for the current weather in Hanoi.',
                 latency_ms: 520,
                 input_tokens: 45,
                 output_tokens: 38,
                 cost_usd: 0.000033,
                 tool_call: {
                     name: 'web_search',
-                    arguments: { query: 'current weather San Francisco' },
+                    arguments: { query: 'current weather Hanoi Vietnam' },
                 },
             },
             its: {
-                response: 'I\'ll retrieve the structured weather data for San Francisco.',
+                response: 'I\'ll retrieve the structured weather data for Hanoi.',
                 latency_ms: 1280,
                 input_tokens: 360,
                 output_tokens: 52,
                 cost_usd: 0.000210,
                 tool_call: {
                     name: 'get_data',
-                    arguments: { data_type: 'weather', parameters: { location: 'San Francisco' } },
+                    arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } },
                 },
             },
             trace: {
                 algorithm: 'self_consistency',
                 candidates: [
-                    { index: 0, content: 'I\'ll use get_data to retrieve structured weather information.', is_selected: false,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'San Francisco' } } }] },
-                    { index: 1, content: 'Let me search the web for the current weather.', is_selected: false,
-                      tool_calls: [{ name: 'web_search', arguments: { query: 'San Francisco weather today' } }] },
+                    { index: 0, content: 'I\'ll use get_data to retrieve structured weather information for Hanoi.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
+                    { index: 1, content: 'Let me search the web for the current weather in Hanoi.', is_selected: false,
+                      tool_calls: [{ name: 'web_search', arguments: { query: 'Hanoi Vietnam weather today' } }] },
                     { index: 2, content: 'I\'ll retrieve weather data using the get_data tool.', is_selected: true,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'San Francisco' } } }] },
-                    { index: 3, content: 'I\'ll use the get_data API for weather info.', is_selected: false,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'San Francisco' } } }] },
-                    { index: 4, content: 'Let me search for weather information online.', is_selected: false,
-                      tool_calls: [{ name: 'web_search', arguments: { query: 'weather San Francisco current' } }] },
-                    { index: 5, content: 'I\'ll query get_data for San Francisco weather.', is_selected: false,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'San Francisco' } } }] },
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
+                    { index: 3, content: 'I\'ll use the get_data API for Hanoi weather info.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
+                    { index: 4, content: 'Let me search for Hanoi weather information online.', is_selected: false,
+                      tool_calls: [{ name: 'web_search', arguments: { query: 'weather Hanoi current conditions' } }] },
+                    { index: 5, content: 'I\'ll query get_data for Hanoi weather conditions.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
                     { index: 6, content: 'Using the get_data tool for weather retrieval.', is_selected: false,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'San Francisco' } } }] },
-                    { index: 7, content: 'I\'ll use get_data to look up weather conditions.', is_selected: false,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'San Francisco' } } }] },
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
+                    { index: 7, content: 'I\'ll use get_data to look up weather conditions in Hanoi.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
                 ],
                 vote_counts: { 'get_data': 6, 'web_search': 2 },
                 total_votes: 8,
@@ -303,56 +309,56 @@ function getToolCallingMockResponse(scenarioId) {
         };
     }
 
-    if (scenarioId === 'tool_calculation') {
+    if (scenarioId === 'tool_currency') {
         return {
             baseline: {
-                response: 'Let me write some code to calculate compound interest.',
-                latency_ms: 580,
-                input_tokens: 52,
-                output_tokens: 44,
-                cost_usd: 0.000038,
+                response: 'Let me search the web for the current EUR to USD exchange rate.',
+                latency_ms: 540,
+                input_tokens: 48,
+                output_tokens: 42,
+                cost_usd: 0.000035,
                 tool_call: {
-                    name: 'code_executor',
-                    arguments: { code: 'principal = 10000\nrate = 0.05\nyears = 5\nresult = principal * (1 + rate) ** years\nprint(result)', purpose: 'compound interest calculation' },
+                    name: 'web_search',
+                    arguments: { query: '100 euros to USD exchange rate today' },
                 },
             },
             its: {
-                response: 'I\'ll calculate compound interest using the calculate tool with the standard formula.',
-                latency_ms: 1350,
-                input_tokens: 416,
-                output_tokens: 48,
-                cost_usd: 0.000230,
+                response: 'I\'ll retrieve the current EUR to USD exchange rate using the structured data API.',
+                latency_ms: 1320,
+                input_tokens: 384,
+                output_tokens: 50,
+                cost_usd: 0.000220,
                 tool_call: {
-                    name: 'calculate',
-                    arguments: { expression: '10000 * (1 + 0.05)^5', method: 'numeric' },
+                    name: 'get_data',
+                    arguments: { data_type: 'currency_rate', parameters: { from: 'EUR', to: 'USD' } },
                 },
             },
             trace: {
                 algorithm: 'self_consistency',
                 candidates: [
-                    { index: 0, content: 'I\'ll use the calculate tool for this formula.', is_selected: false,
-                      tool_calls: [{ name: 'calculate', arguments: { expression: '10000 * (1 + 0.05)^5', method: 'numeric' } }] },
-                    { index: 1, content: 'Let me write code to solve this.', is_selected: false,
-                      tool_calls: [{ name: 'code_executor', arguments: { code: 'print(10000 * 1.05 ** 5)', purpose: 'compound interest' } }] },
-                    { index: 2, content: 'I\'ll calculate this with the calculate tool.', is_selected: true,
-                      tool_calls: [{ name: 'calculate', arguments: { expression: '10000 * (1 + 0.05)^5', method: 'numeric' } }] },
-                    { index: 3, content: 'Using the calculate tool for compound interest.', is_selected: false,
-                      tool_calls: [{ name: 'calculate', arguments: { expression: '10000 * (1.05)^5', method: 'numeric' } }] },
-                    { index: 4, content: 'I\'ll run a calculation using the calculate function.', is_selected: false,
-                      tool_calls: [{ name: 'calculate', arguments: { expression: '10000 * (1 + 0.05)^5', method: 'numeric' } }] },
-                    { index: 5, content: 'Let me execute code to compute this.', is_selected: false,
-                      tool_calls: [{ name: 'code_executor', arguments: { code: 'result = 10000 * (1 + 0.05)**5\nprint(f"${result:.2f}")', purpose: 'interest calc' } }] },
-                    { index: 6, content: 'I\'ll use calculate for this arithmetic.', is_selected: false,
-                      tool_calls: [{ name: 'calculate', arguments: { expression: '10000 * (1 + 0.05)^5', method: 'numeric' } }] },
-                    { index: 7, content: 'Using calculate tool for compound interest formula.', is_selected: false,
-                      tool_calls: [{ name: 'calculate', arguments: { expression: '10000 * 1.05^5', method: 'numeric' } }] },
+                    { index: 0, content: 'I\'ll use get_data to retrieve the EUR/USD exchange rate.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'currency_rate', parameters: { from: 'EUR', to: 'USD' } } }] },
+                    { index: 1, content: 'Let me search for the current exchange rate online.', is_selected: false,
+                      tool_calls: [{ name: 'web_search', arguments: { query: 'EUR to USD exchange rate today' } }] },
+                    { index: 2, content: 'I\'ll query the currency rate data source.', is_selected: true,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'currency_rate', parameters: { from: 'EUR', to: 'USD' } } }] },
+                    { index: 3, content: 'I\'ll calculate 100 * the exchange rate.', is_selected: false,
+                      tool_calls: [{ name: 'calculate', arguments: { expression: '100 * 1.09', method: 'numeric' } }] },
+                    { index: 4, content: 'Using the get_data tool for currency conversion.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'currency_rate', parameters: { from: 'EUR', to: 'USD' } } }] },
+                    { index: 5, content: 'I\'ll look up the currency rate via get_data.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'currency_rate', parameters: { from: 'EUR', to: 'USD' } } }] },
+                    { index: 6, content: 'Let me search for EUR to USD conversion.', is_selected: false,
+                      tool_calls: [{ name: 'web_search', arguments: { query: 'euro to dollar conversion rate' } }] },
+                    { index: 7, content: 'I\'ll retrieve the exchange rate from the data API.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'currency_rate', parameters: { from: 'EUR', to: 'USD' } } }] },
                 ],
-                vote_counts: { 'calculate': 6, 'code_executor': 2 },
+                vote_counts: { 'get_data': 5, 'web_search': 2, 'calculate': 1 },
                 total_votes: 8,
                 tool_voting: {
                     tool_vote_type: 'tool_name',
-                    tool_counts: { 'calculate': 6, 'code_executor': 2 },
-                    winning_tool: 'calculate',
+                    tool_counts: { 'get_data': 5, 'web_search': 2, 'calculate': 1 },
+                    winning_tool: 'get_data',
                     total_tool_calls: 8,
                 },
             },
@@ -644,7 +650,7 @@ function guidedPopulateScenarios() {
     } else if (goal === 'tool_calling') {
         subtitle.textContent = 'Choose a tool-calling scenario';
         renderScenarioCard(container, GUIDED_SCENARIOS.tool_weather);
-        renderScenarioCard(container, GUIDED_SCENARIOS.tool_calculation);
+        renderScenarioCard(container, GUIDED_SCENARIOS.tool_currency);
         // Back button should go to Step 1 (Step 2 was skipped)
         const backBtn = document.querySelector('#guidedStep3 .guided-back-btn');
         if (backBtn) backBtn.onclick = () => guidedGoBack(1);
@@ -944,12 +950,12 @@ function buildScenarioInsight(scenarioId, method) {
             content: 'Open-source model with ITS competing with proprietary frontier quality. Compare response comprehensiveness and accuracy. The dramatic cost difference makes this an attractive alternative for production use cases.'
         },
         'tool_weather_self_consistency': {
-            title: 'What to Look For',
+            title: 'What to Look For (BFCL live_multiple_3-2-0)',
             content: 'Compare the tool chosen by the baseline vs ITS. The baseline picked web_search (a general-purpose search) when get_data with data_type="weather" is the precise, structured API. ITS voting across 8 candidates corrects this — 6 out of 8 chose the right tool.'
         },
-        'tool_calculation_self_consistency': {
-            title: 'What to Look For',
-            content: 'The baseline reached for code_executor to write a script, when the simpler calculate tool with the right expression is more appropriate. ITS generates multiple tool calls and votes on both the tool name and arguments, converging on the correct calculate call.'
+        'tool_currency_self_consistency': {
+            title: 'What to Look For (BFCL multiple_52)',
+            content: 'The baseline used web_search to look up the exchange rate, when get_data with data_type="currency_rate" returns structured, reliable data. Notice how one candidate even tried calculate with a hardcoded rate — ITS consensus filters these out.'
         }
     };
 
