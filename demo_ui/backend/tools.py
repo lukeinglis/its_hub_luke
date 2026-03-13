@@ -16,12 +16,18 @@ import random
 from datetime import datetime
 
 
+def _safe_pow(base, exp):
+    if abs(exp) > 1000:
+        raise ValueError(f"Exponent too large: {exp}")
+    return operator.pow(base, exp)
+
+
 _SAFE_OPS = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
     ast.Mult: operator.mul,
     ast.Div: operator.truediv,
-    ast.Pow: operator.pow,
+    ast.Pow: _safe_pow,
     ast.USub: operator.neg,
     ast.UAdd: operator.pos,
     ast.Mod: operator.mod,

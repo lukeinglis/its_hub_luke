@@ -43,7 +43,7 @@ load_dotenv(dotenv_path=env_path)
 # Verify API key is loaded (log only if exists, don't log the actual key)
 openai_key = os.getenv("OPENAI_API_KEY")
 if openai_key:
-    logger.info(f"OPENAI_API_KEY loaded successfully (length: {len(openai_key)})")
+    logger.info("OPENAI_API_KEY loaded successfully")
 else:
     logger.warning("OPENAI_API_KEY not found in environment!")
 

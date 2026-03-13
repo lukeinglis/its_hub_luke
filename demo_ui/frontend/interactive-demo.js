@@ -12,14 +12,10 @@
  * 5. iwRenderPerformance()  — Add real quality/judge scores
  */
 
-function iwEscapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
-}
+// iwEscapeHtml delegates to the global escapeHtml() in app.js
+function iwEscapeHtml(text) { return escapeHtml(text); }
 
-// iwFormatLatency is now the global formatLatency() in app.js
-function iwFormatLatency(ms) { return formatLatency(ms); }
+// iwFormatLatency removed — use global formatLatency() from app.js directly
 
 // ============================================================
 // STATE
@@ -806,13 +802,13 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
             </div>
             <div class="iw-pane-body">
                 <div class="iw-response-time">
-                    <span class="response-time-value">${iwFormatLatency(latency)}</span>
+                    <span class="response-time-value">${formatLatency(latency)}</span>
                     <span class="response-time-label">response time</span>
                 </div>
                 ${finalAnswerHtml}
                 <div class="iw-pane-response">${responseHtml}</div>
                 <div class="iw-pane-meta">
-                    <span class="iw-meta-tag"><span class="meta-label">Latency:</span><span class="meta-value">${iwFormatLatency(latency)}</span></span>
+                    <span class="iw-meta-tag"><span class="meta-label">Latency:</span><span class="meta-value">${formatLatency(latency)}</span></span>
                     <span class="iw-meta-tag"><span class="meta-label">Cost${isEstimated ? ' (est.)' : ''}:</span><span class="meta-value">${costFmt}</span></span>
                     <span class="iw-meta-tag"><span class="meta-label">Tokens${isEstimated ? ' (est.)' : ''}:</span><span class="meta-value">${isEstimated ? '~' : ''}${(data.input_tokens || 0) + (data.output_tokens || 0)}</span></span>
                 </div>
@@ -833,7 +829,7 @@ function iwBuildResultPane(data, type, title, minCost, minLatency) {
                 </button>
                 <div class="iw-expand-content">
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px;">
-                        <span style="color:var(--text-tertiary)">Latency</span><span style="font-family:'IBM Plex Mono',monospace">${iwFormatLatency(latency)}</span>
+                        <span style="color:var(--text-tertiary)">Latency</span><span style="font-family:'IBM Plex Mono',monospace">${formatLatency(latency)}</span>
                         <span style="color:var(--text-tertiary)">Cost${isEstimated ? ' (est.)' : ''}</span><span style="font-family:'IBM Plex Mono',monospace">${costFmt}</span>
                         <span style="color:var(--text-tertiary)">Input Tokens${isEstimated ? ' (est.)' : ''}</span><span style="font-family:'IBM Plex Mono',monospace">${isEstimated ? '~' : ''}${(data.input_tokens || 0).toLocaleString()}</span>
                         <span style="color:var(--text-tertiary)">Output Tokens${isEstimated ? ' (est.)' : ''}</span><span style="font-family:'IBM Plex Mono',monospace">${isEstimated ? '~' : ''}${(data.output_tokens || 0).toLocaleString()}</span>

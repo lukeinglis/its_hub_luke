@@ -145,8 +145,9 @@ class PerformanceVizV2 {
     }
 
     renderMetricComparison(title, unit, items, betterWhen = 'lower') {
-        const maxValue = Math.max(...items.map(i => i.value));
-        const minValue = Math.min(...items.map(i => i.value));
+        const validValues = items.map(i => i.value).filter(v => v != null);
+        const maxValue = validValues.length > 0 ? Math.max(...validValues) : 0;
+        const minValue = validValues.length > 0 ? Math.min(...validValues) : 0;
 
         let html = `
             <div class="perf-v2-metric">
@@ -156,8 +157,8 @@ class PerformanceVizV2 {
 
         items.forEach(item => {
             const val = item.value != null ? item.value : 0;
-            const percentage = maxValue > 0 ? (val / maxValue * 100) : 0;
-            const isBest = betterWhen === 'lower' ? val === minValue : val === maxValue;
+            const percentage = (item.value != null && maxValue > 0) ? (val / maxValue * 100) : 0;
+            const isBest = item.value != null && (betterWhen === 'lower' ? val === minValue : val === maxValue);
             const displayValue = item.value == null ? 'N/A' :
                                 unit === '$' ? this.formatCost(item.value) :
                                 unit === 'ms' ? Math.round(item.value).toLocaleString() :

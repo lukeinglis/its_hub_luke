@@ -26,8 +26,7 @@ let _guidedDataPromise = fetch('guided-demo-data.json')
 // STATE
 // ============================================================
 
-// guidedFormatLatency is now the global formatLatency() in app.js
-function guidedFormatLatency(ms) { return formatLatency(ms); }
+// guidedFormatLatency removed — use global formatLatency() from app.js directly
 
 const guidedDemoState = {
     goal: null,        // 'improve_performance' or 'match_frontier'
@@ -868,7 +867,7 @@ function guidedBuildResponsePane(title, type, data) {
                     ${title}
                 </div>
                 <div class="guided-pane-badges">
-                    <span class="guided-pane-badge">${guidedFormatLatency(data.latency_ms)}</span>
+                    <span class="guided-pane-badge">${formatLatency(data.latency_ms)}</span>
                     <span class="guided-pane-badge">${costFmt}</span>
                 </div>
             </div>
