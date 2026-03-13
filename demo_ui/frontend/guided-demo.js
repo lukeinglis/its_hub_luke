@@ -643,6 +643,10 @@ function guidedPopulateScenarios() {
 
     const goal = guidedDemoState.goal;
 
+    // Hide benchmark callout unless tool_calling
+    const existingCallout = document.getElementById('guidedBenchmarkCallout');
+    if (existingCallout) setVisible(existingCallout, goal === 'tool_calling');
+
     if (goal === 'improve_performance') {
         subtitle.textContent = 'Which type of model do you want to improve?';
         renderScenarioCard(container, GUIDED_SCENARIOS.improve_frontier);
@@ -650,9 +654,14 @@ function guidedPopulateScenarios() {
     } else if (goal === 'tool_calling') {
         subtitle.textContent = 'Choose a tool-calling scenario';
 
-        // Benchmark attribution callout
-        const callout = document.createElement('div');
-        callout.className = 'guided-benchmark-callout';
+        // Benchmark attribution callout — insert before the cards grid
+        let callout = document.getElementById('guidedBenchmarkCallout');
+        if (!callout) {
+            callout = document.createElement('div');
+            callout.id = 'guidedBenchmarkCallout';
+            callout.className = 'guided-benchmark-callout';
+            container.parentNode.insertBefore(callout, container);
+        }
         callout.innerHTML = `
             <div class="guided-benchmark-badge">BFCL</div>
             <div class="guided-benchmark-text">
@@ -660,7 +669,7 @@ function guidedPopulateScenarios() {
                 <span>BFCL is a standardised benchmark for evaluating LLM tool/function calling accuracy, maintained by UC Berkeley. These questions test whether a model selects the correct tool from multiple options — a common failure point in agentic AI pipelines.</span>
             </div>
         `;
-        container.appendChild(callout);
+        setVisible(callout, true);
 
         renderScenarioCard(container, GUIDED_SCENARIOS.tool_stock);
         renderScenarioCard(container, GUIDED_SCENARIOS.tool_currency);
