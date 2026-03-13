@@ -615,5 +615,324 @@
       "min_score": 5.0
     },
     "question": "A store buys shirts for $15 each and sells them for $25 each. Last month they sold 400 shirts. This month, they offered a 10% discount and sold 500 shirts. Calculate: (1) last month's profit, (2) this month's profit, (3) which month was more profitable and by how much."
+  },
+  "tool_currency_self_consistency": {
+    "baseline": {
+      "response": "[Tool call: web_search Tool args: \"{\\\"query\\\":\\\"current EUR to USD exchange rate\\\"}\"]\n\n**Tool Used:** web_search\n**Result:** {\"results\": [{\"title\": \"USD to EUR Exchange Rate\", \"snippet\": \"1 USD = 0.92 EUR. Updated 5 minutes ago.\", \"url\": \"https://currency.example.com\"}], \"total_found\": 1}",
+      "latency_ms": 434,
+      "input_tokens": 288,
+      "output_tokens": 19,
+      "cost_usd": 3.6e-05,
+      "tool_call": {
+        "name": "web_search",
+        "arguments": {
+          "query": "current EUR to USD exchange rate"
+        }
+      }
+    },
+    "its": {
+      "response": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"currency_rate\\\"}\"]\n\n**Tool Used:** get_data\n**Result:** {\"from\": \"USD\", \"to\": \"EUR\", \"rate\": 0.92, \"timestamp\": \"2026-03-13T11:37:36.577885\"}",
+      "latency_ms": 581,
+      "input_tokens": 2304,
+      "output_tokens": 152,
+      "cost_usd": 0.000291,
+      "tool_call": {
+        "name": "get_data",
+        "arguments": {
+          "data_type": "currency_rate"
+        }
+      }
+    },
+    "trace": {
+      "algorithm": "self_consistency",
+      "candidates": [
+        {
+          "index": 0,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"currency_rate\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "currency_rate"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"currency_rate\\\"}\"]",
+          "is_selected": true,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "currency_rate"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"currency_rate\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "currency_rate"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"currency_rate\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "currency_rate"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"currency_rate\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "currency_rate"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"currency_rate\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "currency_rate"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"currency_rate\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "currency_rate"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"currency_rate\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "currency_rate"
+              },
+              "result": null
+            }
+          ]
+        }
+      ],
+      "vote_counts": {
+        "get_data": 8
+      },
+      "total_votes": 8,
+      "tool_voting": {
+        "tool_vote_type": "tool_name",
+        "tool_counts": {
+          "get_data": 8
+        },
+        "winning_tool": "get_data",
+        "total_tool_calls": 8
+      }
+    },
+    "question": "I have 100 euros. How much is that in US dollars at the current exchange rate?"
+  },
+  "tool_stock_self_consistency": {
+    "baseline": {
+      "response": "[Tool call: web_search Tool args: \"{\\\"query\\\":\\\"Current stock price of Apple (AAPL)\\\",\\\"num_results\\\":1}\"]\n\n**Tool Used:** web_search\n**Result:** {\"results\": [{\"title\": \"Apple Inc. (AAPL) Stock Price Today\", \"snippet\": \"AAPL stock is trading at $178.42, up 2.3% today. Market cap: $2.8T\", \"url\": \"https://finance.example.com/aapl\"}], \"total_found\": 2}",
+      "latency_ms": 693,
+      "input_tokens": 281,
+      "output_tokens": 27,
+      "cost_usd": 3.9e-05,
+      "tool_call": {
+        "name": "web_search",
+        "arguments": {
+          "query": "Current stock price of Apple (AAPL)",
+          "num_results": 1
+        }
+      }
+    },
+    "its": {
+      "response": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"stock_price\\\"}\"]\n\n**Tool Used:** get_data\n**Result:** {\"symbol\": \"UNKNOWN\", \"price\": 100.0, \"change\": 1.37, \"change_percent\": 2.42, \"volume\": 59126493, \"timestamp\": \"2026-03-13T11:41:34.743324\"}",
+      "latency_ms": 573,
+      "input_tokens": 2248,
+      "output_tokens": 216,
+      "cost_usd": 0.000311,
+      "tool_call": {
+        "name": "get_data",
+        "arguments": {
+          "data_type": "stock_price"
+        }
+      }
+    },
+    "trace": {
+      "algorithm": "self_consistency",
+      "candidates": [
+        {
+          "index": 0,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"stock_price\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "stock_price"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"stock_price\\\"}\"]",
+          "is_selected": true,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "stock_price"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "content": "[Tool call: web_search Tool args: \"{\\\"query\\\":\\\"current stock price of Apple (AAPL)\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "web_search",
+              "arguments": {
+                "query": "current stock price of Apple (AAPL)"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "content": "[Tool call: web_search Tool args: \"{\\\"query\\\":\\\"current stock price of Apple (AAPL)\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "web_search",
+              "arguments": {
+                "query": "current stock price of Apple (AAPL)"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"stock_price\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "stock_price"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"stock_price\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "stock_price"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "content": "[Tool call: web_search Tool args: \"{\\\"query\\\":\\\"current stock price of Apple (AAPL)\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "web_search",
+              "arguments": {
+                "query": "current stock price of Apple (AAPL)"
+              },
+              "result": null
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "content": "[Tool call: get_data Tool args: \"{\\\"data_type\\\":\\\"stock_price\\\"}\"]",
+          "is_selected": false,
+          "tool_calls": [
+            {
+              "name": "get_data",
+              "arguments": {
+                "data_type": "stock_price"
+              },
+              "result": null
+            }
+          ]
+        }
+      ],
+      "vote_counts": {
+        "get_data": 5,
+        "web_search": 3
+      },
+      "total_votes": 8,
+      "tool_voting": {
+        "tool_vote_type": "tool_name",
+        "tool_counts": {
+          "get_data": 5,
+          "web_search": 3
+        },
+        "winning_tool": "get_data",
+        "total_tool_calls": 8
+      }
+    },
+    "question": "What is the current stock price of Apple (AAPL)?"
   }
 }

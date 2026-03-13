@@ -82,17 +82,17 @@ const GUIDED_SCENARIOS = {
         provider: 'OpenRouter / OpenAI',
         description: 'A tiny open-source model with ITS can match expensive frontier model quality — enabling cost-effective alternatives to proprietary APIs.',
     },
-    tool_weather: {
-        id: 'tool_weather',
+    tool_stock: {
+        id: 'tool_stock',
         goal: 'tool_calling',
-        title: 'Weather Data Retrieval',
+        title: 'Stock Price Lookup',
         subtitle: 'Correct tool selection via consensus',
-        icon: '🌤️',
+        icon: '📈',
         model: 'GPT-4.1 Nano',
         provider: 'OpenAI',
-        description: 'Given 4 available tools, the model must pick the right one for a weather query. The baseline sometimes picks web_search instead of the structured get_data tool. ITS votes across attempts to select the correct tool.',
+        description: 'Given 4 available tools, the model must pick the right one to look up a stock price. The baseline sometimes picks web_search instead of the structured get_data tool. ITS votes across attempts to select the correct tool.',
         availableTools: ['web_search', 'calculate', 'get_data', 'code_executor'],
-        source: 'Adapted from BFCL live_multiple_3-2-0 (Berkeley Function Calling Leaderboard)',
+        source: 'Adapted from BFCL multiple_56 (Berkeley Function Calling Leaderboard)',
     },
     tool_currency: {
         id: 'tool_currency',
@@ -122,7 +122,7 @@ const GUIDED_MOCK_QUESTIONS = {
     'match_same_family_best_of_n': 'An investment of $10,000 earns 8% annual interest compounded quarterly. After 3 years, how much total interest has been earned? Round to the nearest cent.',
     'match_cross_family_self_consistency': 'In how many ways can 5 letters be placed in 5 addressed envelopes so that no letter is in its correct envelope?',
     'match_cross_family_best_of_n': "A store buys shirts for $15 each and sells them for $25 each. Last month they sold 400 shirts. This month, they offered a 10% discount and sold 500 shirts. Calculate: (1) last month's profit, (2) this month's profit, (3) which month was more profitable and by how much.",
-    'tool_weather_self_consistency': 'What are the current weather conditions in Hanoi, Vietnam?',
+    'tool_stock_self_consistency': 'What is the current stock price of Apple (AAPL)?',
     'tool_currency_self_consistency': 'I have 100 euros. How much is that in US dollars at the current exchange rate?',
 };
 
@@ -250,52 +250,52 @@ function getMockResponse(scenarioId, method) {
 
 // Questions adapted from the Berkeley Function Calling Leaderboard (BFCL)
 // https://gorilla.cs.berkeley.edu/leaderboard.html
-// Weather scenario: adapted from BFCL live_multiple_3-2-0
+// Stock scenario: adapted from BFCL multiple_56
 // Currency scenario: adapted from BFCL multiple_52
 function getToolCallingMockResponse(scenarioId) {
-    if (scenarioId === 'tool_weather') {
+    if (scenarioId === 'tool_stock') {
         return {
             baseline: {
-                response: 'Let me search the web for the current weather in Hanoi.',
+                response: 'Let me search the web for the current Apple stock price.',
                 latency_ms: 520,
                 input_tokens: 45,
                 output_tokens: 38,
                 cost_usd: 0.000033,
                 tool_call: {
                     name: 'web_search',
-                    arguments: { query: 'current weather Hanoi Vietnam' },
+                    arguments: { query: 'AAPL Apple stock price today' },
                 },
             },
             its: {
-                response: 'I\'ll retrieve the structured weather data for Hanoi.',
+                response: 'I\'ll retrieve the current AAPL stock price from the data API.',
                 latency_ms: 1280,
                 input_tokens: 360,
                 output_tokens: 52,
                 cost_usd: 0.000210,
                 tool_call: {
                     name: 'get_data',
-                    arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } },
+                    arguments: { data_type: 'stock_price', parameters: { symbol: 'AAPL' } },
                 },
             },
             trace: {
                 algorithm: 'self_consistency',
                 candidates: [
-                    { index: 0, content: 'I\'ll use get_data to retrieve structured weather information for Hanoi.', is_selected: false,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
-                    { index: 1, content: 'Let me search the web for the current weather in Hanoi.', is_selected: false,
-                      tool_calls: [{ name: 'web_search', arguments: { query: 'Hanoi Vietnam weather today' } }] },
-                    { index: 2, content: 'I\'ll retrieve weather data using the get_data tool.', is_selected: true,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
-                    { index: 3, content: 'I\'ll use the get_data API for Hanoi weather info.', is_selected: false,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
-                    { index: 4, content: 'Let me search for Hanoi weather information online.', is_selected: false,
-                      tool_calls: [{ name: 'web_search', arguments: { query: 'weather Hanoi current conditions' } }] },
-                    { index: 5, content: 'I\'ll query get_data for Hanoi weather conditions.', is_selected: false,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
-                    { index: 6, content: 'Using the get_data tool for weather retrieval.', is_selected: false,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
-                    { index: 7, content: 'I\'ll use get_data to look up weather conditions in Hanoi.', is_selected: false,
-                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'weather', parameters: { location: 'Hanoi' } } }] },
+                    { index: 0, content: 'I\'ll use get_data to retrieve the AAPL stock price.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'stock_price', parameters: { symbol: 'AAPL' } } }] },
+                    { index: 1, content: 'Let me search the web for Apple\'s current stock price.', is_selected: false,
+                      tool_calls: [{ name: 'web_search', arguments: { query: 'AAPL Apple stock price today' } }] },
+                    { index: 2, content: 'I\'ll query get_data for AAPL stock data.', is_selected: true,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'stock_price', parameters: { symbol: 'AAPL' } } }] },
+                    { index: 3, content: 'I\'ll use the get_data API for stock price info.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'stock_price', parameters: { symbol: 'AAPL' } } }] },
+                    { index: 4, content: 'Let me search for Apple stock information online.', is_selected: false,
+                      tool_calls: [{ name: 'web_search', arguments: { query: 'Apple AAPL stock price current' } }] },
+                    { index: 5, content: 'I\'ll retrieve stock data via the get_data tool.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'stock_price', parameters: { symbol: 'AAPL' } } }] },
+                    { index: 6, content: 'Using get_data for AAPL stock price retrieval.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'stock_price', parameters: { symbol: 'AAPL' } } }] },
+                    { index: 7, content: 'I\'ll look up Apple stock price using get_data.', is_selected: false,
+                      tool_calls: [{ name: 'get_data', arguments: { data_type: 'stock_price', parameters: { symbol: 'AAPL' } } }] },
                 ],
                 vote_counts: { 'get_data': 6, 'web_search': 2 },
                 total_votes: 8,
@@ -649,7 +649,7 @@ function guidedPopulateScenarios() {
         renderScenarioCard(container, GUIDED_SCENARIOS.improve_opensource);
     } else if (goal === 'tool_calling') {
         subtitle.textContent = 'Choose a tool-calling scenario';
-        renderScenarioCard(container, GUIDED_SCENARIOS.tool_weather);
+        renderScenarioCard(container, GUIDED_SCENARIOS.tool_stock);
         renderScenarioCard(container, GUIDED_SCENARIOS.tool_currency);
         // Back button should go to Step 1 (Step 2 was skipped)
         const backBtn = document.querySelector('#guidedStep3 .guided-back-btn');
@@ -949,9 +949,9 @@ function buildScenarioInsight(scenarioId, method) {
             title: 'Value Proposition',
             content: 'Open-source model with ITS competing with proprietary frontier quality. Compare response comprehensiveness and accuracy. The dramatic cost difference makes this an attractive alternative for production use cases.'
         },
-        'tool_weather_self_consistency': {
-            title: 'What to Look For (BFCL live_multiple_3-2-0)',
-            content: 'Compare the tool chosen by the baseline vs ITS. The baseline picked web_search (a general-purpose search) when get_data with data_type="weather" is the precise, structured API. ITS voting across 8 candidates corrects this — 6 out of 8 chose the right tool.'
+        'tool_stock_self_consistency': {
+            title: 'What to Look For (BFCL multiple_56)',
+            content: 'Compare the tool chosen by the baseline vs ITS. The baseline picked web_search (a general-purpose search) when get_data with data_type="stock_price" returns precise, structured data. ITS voting across 8 candidates corrects this by reaching consensus on the right tool.'
         },
         'tool_currency_self_consistency': {
             title: 'What to Look For (BFCL multiple_52)',

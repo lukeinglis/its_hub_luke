@@ -31,18 +31,18 @@ import httpx
 # ============================================================
 
 GUIDED_CONFIGS = [
-    # --- tool_weather ---
-    # GPT-4.1 Nano with tools: should choose get_data for weather, but
-    # sometimes picks web_search. SC tool voting corrects the selection.
-    # Question adapted from BFCL live_multiple_3-2-0.
+    # --- tool_stock ---
+    # GPT-4.1 Nano with tools: should choose get_data for stock price,
+    # but sometimes picks web_search. SC tool voting corrects the selection.
+    # Question adapted from BFCL multiple_56.
     {
-        "key": "tool_weather_self_consistency",
-        "scenario_id": "tool_weather",
+        "key": "tool_stock_self_consistency",
+        "scenario_id": "tool_stock",
         "use_case": "tool_consensus",
         "algorithm": "self_consistency",
         "model_id": "gpt-4.1-nano",
         "budget": 8,
-        "question": "What are the current weather conditions in Hanoi, Vietnam?",
+        "question": "What is the current stock price of Apple (AAPL)?",
         "question_type": "tool_calling",
         "enable_tools": True,
         "tool_vote": "tool_name",
