@@ -841,6 +841,14 @@ details.guided-reasoning-toggle[open] > .guided-reasoning-summary::before {
     color: var(--primary);
 }
 
+.guided-tool-result {
+    padding: 4px;
+}
+
+.guided-tool-result .guided-tool-args-json {
+    font-size: 11px;
+}
+
 .guided-available-tools {
     display: flex;
     gap: 8px;

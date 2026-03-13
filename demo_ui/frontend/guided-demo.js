@@ -810,10 +810,10 @@ function guidedRenderResponses() {
     if (isToolCalling) {
         // Tool calling: always 2-column, use tool call panes
         container.innerHTML += guidedBuildToolCallPane(
-            modelName + ' (Baseline)', 'baseline', mockData.baseline
+            modelName + ' (Baseline)', 'baseline', mockData.baseline, guidedDemoState.scenario
         );
         container.innerHTML += guidedBuildToolCallPane(
-            modelName + ' + ITS', 'its', mockData.its
+            modelName + ' + ITS', 'its', mockData.its, guidedDemoState.scenario
         );
     } else {
         // Baseline pane
@@ -1092,7 +1092,48 @@ function guidedBuildResponsePane(title, type, data) {
     `;
 }
 
-function guidedBuildToolCallPane(title, type, data) {
+// Simulated tool results — shows what each tool would return for the query.
+// These match the mock tool implementations in backend/tools.py.
+const TOOL_RESULT_MOCKS = {
+    'get_data:stock_price': {
+        symbol: 'AAPL', price: 178.42, change: 2.34,
+        change_percent: 1.32, volume: 75000000,
+    },
+    'get_data:currency_rate': {
+        from: 'EUR', to: 'USD', rate: 1.09,
+    },
+    'get_data:weather': {
+        location: 'Hanoi', temperature_f: 72, temperature_c: 22,
+        condition: 'Partly Cloudy', humidity: 65, wind_mph: 8,
+    },
+    'web_search:stock': {
+        results: [
+            { title: 'Apple Inc. (AAPL) Stock Price Today',
+              snippet: 'AAPL stock is trading at $178.42, up 2.3% today. Market cap: $2.8T' },
+            { title: 'Apple Reports Q4 Earnings Beat',
+              snippet: 'Apple reported earnings of $1.46 per share, beating estimates of $1.39' },
+        ],
+    },
+    'web_search:currency': {
+        results: [
+            { title: 'USD to EUR Exchange Rate',
+              snippet: '1 USD = 0.92 EUR. Updated 5 minutes ago.' },
+        ],
+    },
+};
+
+function guidedGetToolResult(tc, scenarioId) {
+    if (tc.name === 'get_data' && tc.arguments.data_type) {
+        return TOOL_RESULT_MOCKS['get_data:' + tc.arguments.data_type] || null;
+    }
+    if (tc.name === 'web_search') {
+        if (scenarioId.includes('stock')) return TOOL_RESULT_MOCKS['web_search:stock'];
+        if (scenarioId.includes('currency')) return TOOL_RESULT_MOCKS['web_search:currency'];
+    }
+    return null;
+}
+
+function guidedBuildToolCallPane(title, type, data, scenarioId) {
     const indicatorClass = type === 'its' ? 'its' : 'baseline';
     const paneClass = type === 'its' ? ' its-pane' : '';
     const costFmt = data.cost_usd < 0.0001
@@ -1101,6 +1142,10 @@ function guidedBuildToolCallPane(title, type, data) {
 
     const tc = data.tool_call;
     const argsJson = JSON.stringify(tc.arguments, null, 2);
+
+    // Show what the tool would return
+    const toolResult = guidedGetToolResult(tc, scenarioId || '');
+    const resultJson = toolResult ? JSON.stringify(toolResult, null, 2) : null;
 
     return `
         <div class="guided-response-pane${paneClass}">
@@ -1124,10 +1169,14 @@ function guidedBuildToolCallPane(title, type, data) {
                     <pre class="guided-tool-args-json">${escapeHtml(argsJson)}</pre>
                 </div>
             </div>
+            ${resultJson ? `
             <details class="guided-reasoning-toggle">
-                <summary class="guided-reasoning-summary">Show Response Text</summary>
-                <div class="guided-pane-response"><p>${escapeHtml(data.response)}</p></div>
+                <summary class="guided-reasoning-summary">Show Tool Result</summary>
+                <div class="guided-tool-result">
+                    <pre class="guided-tool-args-json">${escapeHtml(resultJson)}</pre>
+                </div>
             </details>
+            ` : ''}
         </div>
     `;
 }
